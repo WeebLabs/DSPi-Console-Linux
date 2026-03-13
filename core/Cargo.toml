@@ -1,0 +1,13 @@
+[package]
+name = "dspi-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+rusb = "0.9"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "2"
