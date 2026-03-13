@@ -1,0 +1,28 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/Sidebar.qml</file>
+        <file>qml/FilterResponseView.qml</file>
+        <file>qml/DashboardView.qml</file>
+        <file>qml/FilterListView.qml</file>
+        <file>qml/ChannelSettingsView.qml</file>
+        <file>qml/MatrixMixerWindow.qml</file>
+        <file>qml/LoudnessWindow.qml</file>
+        <file>qml/CrossfeedWindow.qml</file>
+        <file>qml/StatsWindow.qml</file>
+        <file>qml/SettingsWindow.qml</file>
+        <file>qml/Theme.qml</file>
+        <file>qml/components/ValueField.qml</file>
+        <file>qml/components/CustomSlider.qml</file>
+        <file>qml/components/MeterBar.qml</file>
+        <file>qml/components/GraphLegend.qml</file>
+        <file>qml/components/ChannelRow.qml</file>
+        <file>qml/components/FilterRow.qml</file>
+        <file>qml/components/CpuSection.qml</file>
+        <file>qml/components/MatrixPoint.qml</file>
+        <file>qml/components/DashboardCard.qml</file>
+        <file>qml/components/BorderlessComboBox.qml</file>
+        <file>qml/qmldir</file>
+        <file>qml/components/qmldir</file>
+    </qresource>
+</RCC>

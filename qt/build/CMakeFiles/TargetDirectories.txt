@@ -1,0 +1,5 @@
+/Users/weeblabs/DSPi Console Unified/qt/build/CMakeFiles/DSPiConsole.dir
+/Users/weeblabs/DSPi Console Unified/qt/build/CMakeFiles/edit_cache.dir
+/Users/weeblabs/DSPi Console Unified/qt/build/CMakeFiles/rebuild_cache.dir
+/Users/weeblabs/DSPi Console Unified/qt/build/CMakeFiles/DSPiConsole_autogen_timestamp_deps.dir
+/Users/weeblabs/DSPi Console Unified/qt/build/CMakeFiles/DSPiConsole_autogen.dir

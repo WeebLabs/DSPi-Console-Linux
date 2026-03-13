@@ -1,0 +1,11 @@
+module components
+ValueField 1.0 ValueField.qml
+CustomSlider 1.0 CustomSlider.qml
+MeterBar 1.0 MeterBar.qml
+GraphLegend 1.0 GraphLegend.qml
+ChannelRow 1.0 ChannelRow.qml
+FilterRow 1.0 FilterRow.qml
+CpuSection 1.0 CpuSection.qml
+MatrixPoint 1.0 MatrixPoint.qml
+DashboardCard 1.0 DashboardCard.qml
+BorderlessComboBox 1.0 BorderlessComboBox.qml
