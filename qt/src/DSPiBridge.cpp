@@ -130,6 +130,11 @@ void DSPiBridge::pollStatus()
 void DSPiBridge::pollHotplug()
 {
     dspi_poll_hotplug(m_core);
+    // Retry scan if not connected — covers the case where initial scan
+    // ran before USB enumeration completed and hotplug missed the device
+    if (!connected()) {
+        scanDevices();
+    }
 }
 
 // ── Property getters ──

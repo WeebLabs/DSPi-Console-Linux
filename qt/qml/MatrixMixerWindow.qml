@@ -253,10 +253,11 @@ Window {
                         opacity: bridge.outputEnabled(modelData) ? 1.0 : 0.3
 
                         TextField {
+                            id: gainField
                             width: 50; height: 20
                             anchors.centerIn: parent
                             font.pixelSize: 11
-                            font.family: "Menlo"
+                            font.family: root.monoFont
                             color: activeFocus ? "#0078d4" : Qt.rgba(1, 1, 1, 0.65)
                             horizontalAlignment: Text.AlignCenter
                             selectByMouse: true
@@ -274,7 +275,7 @@ Window {
                             Connections {
                                 target: bridge
                                 function onStateChanged() {
-                                    gainVal = bridge.outputGainDB(modelData)
+                                    gainField.gainVal = bridge.outputGainDB(modelData)
                                 }
                             }
 
@@ -317,10 +318,11 @@ Window {
                         opacity: bridge.outputEnabled(modelData) ? 1.0 : 0.3
 
                         TextField {
+                            id: delayField
                             width: 50; height: 20
                             anchors.centerIn: parent
                             font.pixelSize: 11
-                            font.family: "Menlo"
+                            font.family: root.monoFont
                             color: activeFocus ? "#0078d4" : Qt.rgba(1, 1, 1, 0.65)
                             horizontalAlignment: Text.AlignCenter
                             selectByMouse: true
@@ -338,7 +340,7 @@ Window {
                             Connections {
                                 target: bridge
                                 function onStateChanged() {
-                                    delayVal = bridge.outputDelayMS(modelData)
+                                    delayField.delayVal = bridge.outputDelayMS(modelData)
                                 }
                             }
 

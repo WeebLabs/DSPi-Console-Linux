@@ -15,13 +15,16 @@ ApplicationWindow {
     maximumWidth: 950
     maximumHeight: 813
     title: "DSPi Console"
-    color: "transparent"
+    color: isMacOS ? "transparent" : "#303030"
 
-    // Titlebar inset for integrated window frame
-    property int titlebarHeight: 28
+    // Titlebar inset: macOS integrated titlebar needs offset, Linux uses standard decorations
+    property int titlebarHeight: isMacOS ? 28 : 0
+
+    // Platform-aware monospace font
+    readonly property string monoFont: isMacOS ? "Menlo" : "monospace"
 
     // Graph settings (shared between SettingsWindow and BodePlotItem)
-    property bool graphShowGlow: true
+    property bool graphShowGlow: false
     property real graphLineWidth: 2.0
     property bool graphShowFreqGrid: true
     property bool graphShowFreqLabels: true
@@ -192,21 +195,30 @@ ApplicationWindow {
 
     Component {
         id: outputEditorComponent
-        Column {
-            spacing: 16
+        Item {
             ChannelSettingsView {
-                width: parent.width
+                id: outputSettings
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
                 outputIndex: root.selectedOutput
             }
             FilterListView {
-                width: parent.width
+                anchors.top: outputSettings.bottom
+                anchors.topMargin: 16
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
                 channelId: root.selectedOutput + 2
             }
         }
     }
 
-    // Native-style window border highlight
+    // Native-style window border highlight (macOS only — Linux uses WM decorations)
     Rectangle {
+        visible: isMacOS
         anchors.fill: parent
         z: 1000
         color: "transparent"

@@ -127,7 +127,7 @@ Window {
             text: value
             font.pixelSize: 12
             font.weight: Font.Bold
-            font.family: "Menlo"
+            font.family: root.monoFont
             color: "white"
             horizontalAlignment: Text.AlignRight
             width: parent.width / 2

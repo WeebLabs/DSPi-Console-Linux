@@ -5,7 +5,7 @@ import "components"
 
 Rectangle {
     id: sidebarRoot
-    color: "transparent"
+    color: isMacOS ? "transparent" : "#2a2a2a"
 
     // Right edge separator (matches native macOS sidebar)
     Rectangle {

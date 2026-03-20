@@ -6,10 +6,16 @@ Cargo.lock
 # Generated files
 /include/dspi_core.h
 
+# CMake / Qt build
+qt/build/
+
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
+Thumbs.db

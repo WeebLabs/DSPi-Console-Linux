@@ -29,7 +29,7 @@ Rectangle {
             width: 24
             text: (bandIndex + 1).toString()
             font.pixelSize: 11
-            font.family: "Menlo"
+            font.family: root.monoFont
             color: Qt.rgba(1, 1, 1, 0.5)
             horizontalAlignment: Text.AlignCenter
             anchors.verticalCenter: parent.verticalCenter
@@ -116,7 +116,7 @@ Rectangle {
                 height: 20
                 anchors.centerIn: parent
                 font.pixelSize: 11
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
@@ -163,7 +163,7 @@ Rectangle {
                 height: 20
                 anchors.centerIn: parent
                 font.pixelSize: 11
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
@@ -210,7 +210,7 @@ Rectangle {
                 height: 20
                 anchors.centerIn: parent
                 font.pixelSize: 11
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter

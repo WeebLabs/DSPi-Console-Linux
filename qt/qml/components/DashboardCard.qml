@@ -155,7 +155,7 @@ Item {
                         width: 20
                         text: (index + 1).toString()
                         font.pixelSize: 10
-                        font.family: "Menlo"
+                        font.family: root.monoFont
                         color: Qt.rgba(1, 1, 1, 0.5)
                         horizontalAlignment: Text.AlignCenter
                         anchors.verticalCenter: parent.verticalCenter
@@ -185,7 +185,7 @@ Item {
                                 visible: bridge.filterType(leftChannel, index) > 0
                                 text: bridge.filterFreq(leftChannel, index).toFixed(1) + " Hz"
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -193,7 +193,7 @@ Item {
                                 visible: bridge.filterType(leftChannel, index) > 0
                                 text: bridge.filterGain(leftChannel, index).toFixed(1) + " dB"
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -201,7 +201,7 @@ Item {
                                 visible: bridge.filterType(leftChannel, index) > 0
                                 text: "Q " + bridge.filterQ(leftChannel, index).toFixed(3)
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -233,7 +233,7 @@ Item {
                                 visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
                                 text: bridge.filterFreq(rightChannel, index).toFixed(1) + " Hz"
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -241,7 +241,7 @@ Item {
                                 visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
                                 text: bridge.filterGain(rightChannel, index).toFixed(1) + " dB"
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -249,7 +249,7 @@ Item {
                                 visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
                                 text: "Q " + bridge.filterQ(rightChannel, index).toFixed(3)
                                 font.pixelSize: 10
-                                font.family: "Menlo"
+                                font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
                                 anchors.verticalCenter: parent.verticalCenter
                             }

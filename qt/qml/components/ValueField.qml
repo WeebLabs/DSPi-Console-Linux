@@ -20,7 +20,7 @@ Row {
         width: fieldWidth
         height: parent.height
         font.pixelSize: 12
-        font.family: "Menlo"
+        font.family: root.monoFont
         color: activeFocus ? "#0078d4" : "white"
         horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter

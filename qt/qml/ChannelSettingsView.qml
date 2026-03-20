@@ -15,8 +15,6 @@ Rectangle {
     property real delayMS: bridge.outputDelayMS(outputIndex)
     property bool isMuted: bridge.outputMuted(outputIndex)
 
-    anchors.leftMargin: 16
-    anchors.rightMargin: 16
 
     Connections {
         target: bridge
@@ -30,6 +28,7 @@ Rectangle {
     Row {
         anchors.fill: parent
         anchors.margins: 12
+        anchors.rightMargin: 38
         spacing: 12
 
         // Gain section
@@ -57,7 +56,10 @@ Rectangle {
 
             Slider {
                 id: gainSlider
-                width: parent.width - 100
+                width: parent.width - 130
+                height: 20
+                topPadding: 0
+                bottomPadding: 0
                 from: -60; to: 10
                 value: gainDB
                 anchors.verticalCenter: parent.verticalCenter
@@ -68,7 +70,7 @@ Rectangle {
 
                 background: Rectangle {
                     x: gainSlider.leftPadding
-                    y: gainSlider.topPadding + gainSlider.availableHeight / 2 - height / 2
+                    y: (gainSlider.height - height) / 2
                     width: gainSlider.availableWidth
                     height: 3; radius: 2
                     color: Qt.rgba(1, 1, 1, 0.15)
@@ -80,7 +82,8 @@ Rectangle {
                 }
                 handle: Rectangle {
                     x: gainSlider.leftPadding + gainSlider.visualPosition * (gainSlider.availableWidth - width)
-                    y: gainSlider.topPadding + gainSlider.availableHeight / 2 - height / 2
+                    y: (gainSlider.height - height) / 2
+                    implicitWidth: 12; implicitHeight: 12
                     width: 12; height: 12; radius: 6; color: "white"
                 }
             }
@@ -114,7 +117,10 @@ Rectangle {
 
             Slider {
                 id: delaySlider
-                width: parent.width - 100
+                width: parent.width - 130
+                height: 20
+                topPadding: 0
+                bottomPadding: 0
                 from: 0; to: 85
                 value: delayMS
                 anchors.verticalCenter: parent.verticalCenter
@@ -125,7 +131,7 @@ Rectangle {
 
                 background: Rectangle {
                     x: delaySlider.leftPadding
-                    y: delaySlider.topPadding + delaySlider.availableHeight / 2 - height / 2
+                    y: (delaySlider.height - height) / 2
                     width: delaySlider.availableWidth
                     height: 3; radius: 2
                     color: Qt.rgba(1, 1, 1, 0.15)
@@ -137,7 +143,8 @@ Rectangle {
                 }
                 handle: Rectangle {
                     x: delaySlider.leftPadding + delaySlider.visualPosition * (delaySlider.availableWidth - width)
-                    y: delaySlider.topPadding + delaySlider.availableHeight / 2 - height / 2
+                    y: (delaySlider.height - height) / 2
+                    implicitWidth: 12; implicitHeight: 12
                     width: 12; height: 12; radius: 6; color: "white"
                 }
             }
@@ -149,7 +156,7 @@ Rectangle {
         // Mute button
         Rectangle {
             id: muteBtn
-            width: 60
+            width: 36
             height: 36
             radius: 5
             color: isMuted ? Qt.rgba(1, 0, 0, 0.1) : "transparent"

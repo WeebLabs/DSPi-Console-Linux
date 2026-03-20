@@ -145,7 +145,7 @@ Window {
                         width: parent.width
                         Text { text: "Line Width"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
                         Item { width: 1; height: 1 }
-                        Text { text: root.graphLineWidth.toFixed(1) + " pt"; font.pixelSize: 11; font.family: "Menlo"; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: root.graphLineWidth.toFixed(1) + " pt"; font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
                     }
                     CustomSlider { width: parent.width; from: 1.0; to: 4.0; stepSize: 0.5; value: root.graphLineWidth; onMoved: root.graphLineWidth = value }
                 }
@@ -165,7 +165,7 @@ Window {
                         width: parent.width
                         Text { text: "Vertical Range"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
                         Item { width: 1; height: 1 }
-                        Text { text: Math.round(root.graphDbRange) + " dB"; font.pixelSize: 11; font.family: "Menlo"; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: Math.round(root.graphDbRange) + " dB"; font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
                     }
                     CustomSlider { width: parent.width; from: 10; to: 100; value: root.graphDbRange; onMoved: root.graphDbRange = Math.round(value) }
                 }
@@ -183,7 +183,7 @@ Window {
                                 var h = root.graphDbRange / 2
                                 return c + " dB → +" + (c + h) + " to " + (c - h)
                             }
-                            font.pixelSize: 11; font.family: "Menlo"; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter
+                            font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                     CustomSlider { width: parent.width; from: -40; to: 20; value: root.graphDbCenter; onMoved: root.graphDbCenter = Math.round(value) }
@@ -249,7 +249,7 @@ Window {
                         }
                         Text {
                             text: "Pin " + bridge.outputPin(modelData.index)
-                            font.pixelSize: 12; font.family: "Menlo"
+                            font.pixelSize: 12; font.family: root.monoFont
                             color: Qt.rgba(1,1,1,0.7)
                             anchors.verticalCenter: parent.verticalCenter
                         }

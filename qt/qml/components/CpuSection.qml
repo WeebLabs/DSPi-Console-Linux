@@ -42,7 +42,7 @@ Item {
             Text {
                 text: cpu0 + "%"
                 font.pixelSize: 9
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
                 width: 30
@@ -81,7 +81,7 @@ Item {
             Text {
                 text: cpu1 + "%"
                 font.pixelSize: 9
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
                 width: 30

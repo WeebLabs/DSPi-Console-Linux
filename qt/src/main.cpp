@@ -10,6 +10,10 @@
 #include <objc/message.h>
 #endif
 
+#ifdef HAS_KDE_BLUR
+#include <KWindowEffects>
+#endif
+
 #include <QWindow>
 #include <QQuickWindow>
 
@@ -17,7 +21,9 @@
 #include "BodePlotItem.h"
 #include "MeterItem.h"
 
-static void setMacOSDarkMode()
+static const int SIDEBAR_WIDTH = 260;
+
+static void setPlatformDarkMode()
 {
 #ifdef Q_OS_MACOS
     // Force dark appearance via NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
@@ -31,6 +37,85 @@ static void setMacOSDarkMode()
 #endif
 }
 
+static void setupPlatformEffects(QQuickWindow *qw)
+{
+    if (!qw) return;
+
+#ifdef Q_OS_MACOS
+    // Make Qt scene graph clear to transparent so vibrancy shows through
+    qw->setColor(Qt::transparent);
+
+    auto nsView = reinterpret_cast<id>(qw->winId());
+    id nsWindow = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
+        nsView, sel_registerName("window"));
+
+    // --- Integrated titlebar ---
+    reinterpret_cast<void (*)(id, SEL, BOOL)>(objc_msgSend)(
+        nsWindow, sel_registerName("setTitlebarAppearsTransparent:"), YES);
+    reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
+        nsWindow, sel_registerName("setTitleVisibility:"), 1);
+    long styleMask = reinterpret_cast<long (*)(id, SEL)>(objc_msgSend)(
+        nsWindow, sel_registerName("styleMask"));
+    styleMask |= (1 << 15); // NSWindowStyleMaskFullSizeContentView
+    reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
+        nsWindow, sel_registerName("setStyleMask:"), styleMask);
+
+    // --- Translucent sidebar via NSVisualEffectView ---
+    // Make window non-opaque
+    reinterpret_cast<void (*)(id, SEL, BOOL)>(objc_msgSend)(
+        nsWindow, sel_registerName("setOpaque:"), NO);
+    id clearColor = reinterpret_cast<id (*)(Class, SEL)>(objc_msgSend)(
+        objc_getClass("NSColor"), sel_registerName("clearColor"));
+    reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(
+        nsWindow, sel_registerName("setBackgroundColor:"), clearColor);
+
+    // Get contentView and its superview (the window's frame view)
+    id contentView = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
+        nsWindow, sel_registerName("contentView"));
+    id frameView = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
+        contentView, sel_registerName("superview"));
+
+    // Create NSVisualEffectView sized to the sidebar
+    typedef struct { double x, y, w, h; } NSRect;
+    NSRect sidebarFrame = {0, 0, (double)SIDEBAR_WIDTH, 900}; // tall enough, autoresizes
+    id veView = reinterpret_cast<id (*)(Class, SEL)>(objc_msgSend)(
+        objc_getClass("NSVisualEffectView"), sel_registerName("alloc"));
+    veView = reinterpret_cast<id (*)(id, SEL, NSRect)>(objc_msgSend)(
+        veView, sel_registerName("initWithFrame:"), sidebarFrame);
+
+    // material = NSVisualEffectMaterialSidebar (7)
+    reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
+        veView, sel_registerName("setMaterial:"), 7);
+    // blendingMode = NSVisualEffectBlendingModeBehindWindow (0)
+    reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
+        veView, sel_registerName("setBlendingMode:"), 0);
+    // state = NSVisualEffectStateActive (1)
+    reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
+        veView, sel_registerName("setState:"), 1);
+    // autoresizingMask = NSViewHeightSizable (16)
+    reinterpret_cast<void (*)(id, SEL, unsigned long)>(objc_msgSend)(
+        veView, sel_registerName("setAutoresizingMask:"), 16);
+
+    // Insert VE view as sibling of contentView, below it in z-order
+    // NSWindowBelow = -1
+    reinterpret_cast<void (*)(id, SEL, id, long, id)>(objc_msgSend)(
+        frameView, sel_registerName("addSubview:positioned:relativeTo:"),
+        veView, (long)-1, contentView);
+
+#elif defined(HAS_KDE_BLUR)
+    // KDE Plasma: request blur behind the sidebar region via KWin
+    qw->setColor(Qt::transparent);
+    QRegion sidebarRegion(0, 0, SIDEBAR_WIDTH, qw->height());
+    KWindowEffects::enableBlurBehind(qw->winId(), true, sidebarRegion);
+
+    // Update blur region when window resizes
+    QObject::connect(qw, &QWindow::heightChanged, [qw](int h) {
+        QRegion region(0, 0, SIDEBAR_WIDTH, h);
+        KWindowEffects::enableBlurBehind(qw->winId(), true, region);
+    });
+#endif
+}
+
 int main(int argc, char *argv[])
 {
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -38,9 +123,9 @@ int main(int argc, char *argv[])
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
 
-    setMacOSDarkMode();
+    setPlatformDarkMode();
 
-    // Fusion style — but native titlebar/menubar comes from QApplication
+    // Fusion style — consistent dark look across platforms
     QQuickStyle::setStyle("Fusion");
 
     // Dark palette
@@ -62,10 +147,24 @@ int main(int argc, char *argv[])
     darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(128, 128, 128));
     app.setPalette(darkPalette);
 
-    // Default font
+    // Platform-appropriate default font
+#ifdef Q_OS_MACOS
     QFont defaultFont(".AppleSystemUIFont", 13);
+#else
+    QFont defaultFont("Noto Sans", 13);
+    // Fallback chain: Noto Sans → Segoe UI → system default
+    if (!QFont(defaultFont).exactMatch()) {
+        defaultFont = QFont("sans-serif", 13);
+    }
+#endif
     defaultFont.setStyleStrategy(QFont::PreferAntialias);
     app.setFont(defaultFont);
+
+    // Expose platform info to QML for conditional font selection
+    bool isMacOS = false;
+#ifdef Q_OS_MACOS
+    isMacOS = true;
+#endif
 
     // Register QML types
     qmlRegisterType<BodePlotItem>("DSPi", 1, 0, "BodePlotItem");
@@ -76,6 +175,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("bridge", &bridge);
+    engine.rootContext()->setContextProperty("isMacOS", isMacOS);
 
     // Add QML import path for our custom module
     engine.addImportPath("qrc:/");
@@ -84,71 +184,7 @@ int main(int argc, char *argv[])
     if (engine.rootObjects().isEmpty())
         return -1;
 
-#ifdef Q_OS_MACOS
-    QQuickWindow *qw = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
-    if (qw) {
-        // Make Qt scene graph clear to transparent so vibrancy shows through
-        qw->setColor(Qt::transparent);
-
-        auto nsView = reinterpret_cast<id>(qw->winId());
-        id nsWindow = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
-            nsView, sel_registerName("window"));
-
-        // --- Integrated titlebar ---
-        reinterpret_cast<void (*)(id, SEL, BOOL)>(objc_msgSend)(
-            nsWindow, sel_registerName("setTitlebarAppearsTransparent:"), YES);
-        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-            nsWindow, sel_registerName("setTitleVisibility:"), 1);
-        long styleMask = reinterpret_cast<long (*)(id, SEL)>(objc_msgSend)(
-            nsWindow, sel_registerName("styleMask"));
-        styleMask |= (1 << 15); // NSWindowStyleMaskFullSizeContentView
-        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-            nsWindow, sel_registerName("setStyleMask:"), styleMask);
-
-        // --- Translucent sidebar via NSVisualEffectView ---
-        // Make window non-opaque
-        reinterpret_cast<void (*)(id, SEL, BOOL)>(objc_msgSend)(
-            nsWindow, sel_registerName("setOpaque:"), NO);
-        id clearColor = reinterpret_cast<id (*)(Class, SEL)>(objc_msgSend)(
-            objc_getClass("NSColor"), sel_registerName("clearColor"));
-        reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(
-            nsWindow, sel_registerName("setBackgroundColor:"), clearColor);
-
-        // Get contentView and its superview (the window's frame view)
-        id contentView = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
-            nsWindow, sel_registerName("contentView"));
-        id frameView = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
-            contentView, sel_registerName("superview"));
-
-        // Create NSVisualEffectView sized to the sidebar
-        typedef struct { double x, y, w, h; } NSRect;
-        NSRect sidebarFrame = {0, 0, 260, 900}; // tall enough, autoresizes
-        id veView = reinterpret_cast<id (*)(Class, SEL)>(objc_msgSend)(
-            objc_getClass("NSVisualEffectView"), sel_registerName("alloc"));
-        veView = reinterpret_cast<id (*)(id, SEL, NSRect)>(objc_msgSend)(
-            veView, sel_registerName("initWithFrame:"), sidebarFrame);
-
-        // material = NSVisualEffectMaterialSidebar (7)
-        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-            veView, sel_registerName("setMaterial:"), 7);
-        // blendingMode = NSVisualEffectBlendingModeBehindWindow (0)
-        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-            veView, sel_registerName("setBlendingMode:"), 0);
-        // state = NSVisualEffectStateActive (1)
-        reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-            veView, sel_registerName("setState:"), 1);
-        // autoresizingMask = NSViewHeightSizable (16)
-        reinterpret_cast<void (*)(id, SEL, unsigned long)>(objc_msgSend)(
-            veView, sel_registerName("setAutoresizingMask:"), 16);
-
-        // Insert VE view as sibling of contentView, below it in z-order
-        // NSWindowBelow = -1
-        reinterpret_cast<void (*)(id, SEL, id, long, id)>(objc_msgSend)(
-            frameView, sel_registerName("addSubview:positioned:relativeTo:"),
-            veView, (long)-1, contentView);
-
-    }
-#endif
+    setupPlatformEffects(qobject_cast<QQuickWindow *>(engine.rootObjects().first()));
 
     return app.exec();
 }

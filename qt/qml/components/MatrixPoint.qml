@@ -33,7 +33,7 @@ Item {
                 height: 20
                 anchors.centerIn: parent
                 font.pixelSize: 11
-                font.family: "Menlo"
+                font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : Qt.rgba(1, 1, 1, 0.65)
                 horizontalAlignment: Text.AlignCenter
                 verticalAlignment: Text.AlignVCenter

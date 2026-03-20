@@ -86,6 +86,7 @@ Item {
             model: 10
 
             FilterRow {
+                id: filterRowDelegate
                 width: parent.width
                 channelId: filterListRoot.channelId
                 bandIndex: index
@@ -101,10 +102,10 @@ Item {
                 Connections {
                     target: bridge
                     function onStateChanged() {
-                        filterType = bridge.filterType(filterListRoot.channelId, index)
-                        filterFreq = bridge.filterFreq(filterListRoot.channelId, index)
-                        filterGain = bridge.filterGain(filterListRoot.channelId, index)
-                        filterQ = bridge.filterQ(filterListRoot.channelId, index)
+                        filterRowDelegate.filterType = bridge.filterType(filterListRoot.channelId, index)
+                        filterRowDelegate.filterFreq = bridge.filterFreq(filterListRoot.channelId, index)
+                        filterRowDelegate.filterGain = bridge.filterGain(filterListRoot.channelId, index)
+                        filterRowDelegate.filterQ = bridge.filterQ(filterListRoot.channelId, index)
                     }
                 }
             }
