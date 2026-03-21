@@ -50,6 +50,7 @@ Column {
 
     // Bode plot
     Item {
+        id: plotContainer
         width: parent.width
         height: 250
 
@@ -96,6 +97,41 @@ Column {
                         // Scroll down — zoom out (increase range)
                         root.graphDbRange = Math.min(120, root.graphDbRange + step)
                     }
+                }
+            }
+        }
+    }
+
+    // Resize handle
+    Item {
+        width: parent.width
+        height: 8
+
+        Rectangle {
+            width: 32
+            height: 3
+            radius: 1.5
+            color: resizeArea.containsMouse || resizeArea.drag.active ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.15)
+            anchors.centerIn: parent
+        }
+
+        MouseArea {
+            id: resizeArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.SplitVCursor
+            property real startY: 0
+            property real startHeight: 0
+
+            onPressed: {
+                startY = mouseY + parent.mapToItem(filterResponseRoot, 0, 0).y
+                startHeight = plotContainer.height
+            }
+            onPositionChanged: {
+                if (pressed) {
+                    var currentY = mouseY + parent.mapToItem(filterResponseRoot, 0, 0).y
+                    var newHeight = startHeight + (currentY - startY)
+                    plotContainer.height = Math.max(250, Math.min(350, newHeight))
                 }
             }
         }
