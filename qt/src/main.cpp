@@ -128,7 +128,8 @@ int main(int argc, char *argv[])
     // Fusion style — consistent dark look across platforms
     QQuickStyle::setStyle("Fusion");
 
-    // Dark palette
+    // Dark palette: use system palette on Linux, hardcoded dark on macOS/other
+#ifdef Q_OS_MACOS
     QPalette darkPalette;
     darkPalette.setColor(QPalette::Window, QColor(48, 48, 48));
     darkPalette.setColor(QPalette::WindowText, Qt::white);
@@ -146,6 +147,7 @@ int main(int argc, char *argv[])
     darkPalette.setColor(QPalette::Disabled, QPalette::Text, QColor(128, 128, 128));
     darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(128, 128, 128));
     app.setPalette(darkPalette);
+#endif
 
     // Platform-appropriate default font
 #ifdef Q_OS_MACOS
@@ -176,6 +178,17 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("bridge", &bridge);
     engine.rootContext()->setContextProperty("isMacOS", isMacOS);
+
+    bool hasBlurBehind = isMacOS;
+#ifdef HAS_KDE_BLUR
+    hasBlurBehind = true;
+#endif
+    engine.rootContext()->setContextProperty("hasBlurBehind", hasBlurBehind);
+    QPalette sysPal = QGuiApplication::palette();
+    engine.rootContext()->setContextProperty("nativeWindowColor", sysPal.color(QPalette::Window));
+    engine.rootContext()->setContextProperty("nativeButtonColor", sysPal.color(QPalette::Button));
+    engine.rootContext()->setContextProperty("nativeBaseColor", sysPal.color(QPalette::Base));
+    engine.rootContext()->setContextProperty("nativeAltBaseColor", sysPal.color(QPalette::AlternateBase));
 
     // Add QML import path for our custom module
     engine.addImportPath("qrc:/");

@@ -58,7 +58,7 @@ Column {
             anchors.leftMargin: 16
             anchors.rightMargin: 16
             radius: 8
-            color: "#2C2C2C"
+            color: isMacOS ? "#2C2C2C" : Qt.lighter(nativeBaseColor, 1.4)
             border.color: Qt.rgba(1, 1, 1, 0.1)
             border.width: 1
             clip: true

@@ -5,7 +5,7 @@ import "components"
 
 Rectangle {
     id: sidebarRoot
-    color: isMacOS ? "transparent" : "#2a2a2a"
+    color: hasBlurBehind ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#2a2a2a"
 
     // Right edge separator (matches native macOS sidebar)
     Rectangle {
@@ -58,6 +58,7 @@ Rectangle {
                 Repeater {
                     model: 2
                     ChannelRow {
+                        id: inputRow
                         width: channelColumn.width
                         channelIndex: index
                         channelName: bridge.channelName(index)
@@ -68,6 +69,14 @@ Rectangle {
                         isSelected: root.selection === "channel:" + index
 
                         onClicked: root.selectChannel(index)
+
+                        Connections {
+                            target: bridge
+                            function onStatusChanged() {
+                                inputRow.meterLevel = bridge.peakLevel(index)
+                                inputRow.isClipping = bridge.isClipping(index)
+                            }
+                        }
                     }
                 }
 
@@ -96,6 +105,7 @@ Rectangle {
                     model: bridge.numOutputChannels
 
                     ChannelRow {
+                        id: outputRow
                         width: channelColumn.width
                         visible: bridge.outputEnabled(index)
                         channelIndex: index + 2
@@ -108,6 +118,14 @@ Rectangle {
                         isSelected: root.selection === "output:" + index
 
                         onClicked: root.selectOutput(index)
+
+                        Connections {
+                            target: bridge
+                            function onStatusChanged() {
+                                outputRow.meterLevel = bridge.peakLevel(index + 2)
+                                outputRow.isClipping = bridge.isClipping(index + 2)
+                            }
+                        }
                     }
                 }
             }

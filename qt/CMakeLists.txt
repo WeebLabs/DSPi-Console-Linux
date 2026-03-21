@@ -48,7 +48,7 @@ elseif(UNIX)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
     target_include_directories(DSPiConsole PRIVATE ${LIBUSB_INCLUDE_DIRS})
-    target_link_libraries(DSPiConsole PRIVATE ${LIBUSB_LIBRARIES} pthread dl)
+    target_link_libraries(DSPiConsole PRIVATE ${LIBUSB_LIBRARIES} pthread dl udev)
 
     # Optional: KDE blur-behind support
     find_package(KF5WindowSystem QUIET)

@@ -7,7 +7,7 @@ BodePlotItem::BodePlotItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
     setAntialiasing(true);
-    setRenderTarget(QQuickPaintedItem::FramebufferObject);
+    setRenderTarget(QQuickPaintedItem::Image);
 
     m_animation = new QVariantAnimation(this);
     m_animation->setDuration(200);
@@ -186,15 +186,29 @@ QPainterPath BodePlotItem::buildCurvePath(const QVector<double> &magnitudes, con
     float viewLogSpan = viewLogMax - viewLogMin;
 
     int count = magnitudes.size();
+
+    // Build point list
+    QVector<QPointF> pts(count);
     for (int i = 0; i < count; i++) {
         float dataLog = dataLogMin + float(i) / float(count - 1) * (dataLogMax - dataLogMin);
         qreal x = static_cast<qreal>((dataLog - viewLogMin) / viewLogSpan) * w;
         float db = static_cast<float>(magnitudes[i]);
         float normalized = (db - m_dbBottom) / (m_dbTop - m_dbBottom);
         qreal y = h - static_cast<qreal>(normalized) * h;
+        pts[i] = QPointF(x, y);
+    }
 
-        if (i == 0) path.moveTo(x, y);
-        else path.lineTo(x, y);
+    // Catmull-Rom → cubic Bezier spline for smooth curves
+    path.moveTo(pts[0]);
+    for (int i = 0; i < count - 1; i++) {
+        QPointF p0 = pts[qMax(0, i - 1)];
+        QPointF p1 = pts[i];
+        QPointF p2 = pts[qMin(count - 1, i + 1)];
+        QPointF p3 = pts[qMin(count - 1, i + 2)];
+
+        QPointF cp1 = p1 + (p2 - p0) / 6.0;
+        QPointF cp2 = p2 - (p3 - p1) / 6.0;
+        path.cubicTo(cp1, cp2, p2);
     }
     return path;
 }

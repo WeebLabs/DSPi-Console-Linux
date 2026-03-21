@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 
 Rectangle {
     id: filterRowRoot
-    height: 24
+    height: 36
     color: bandIndex % 2 === 0 ? Qt.rgba(1, 1, 1, 0.03) : "transparent"
 
     property int channelId: 0
@@ -16,6 +16,8 @@ Rectangle {
     readonly property var typeNames: ["Off", "Peaking", "Low Shelf", "High Shelf", "Low Pass", "High Pass"]
     readonly property bool isActive: filterType !== 0
 
+    property real savedPeakingQ: filterType === 1 ? filterQ : 1.0
+
     signal filterChanged(int type, real freq, real gain, real q)
 
     Row {
@@ -26,27 +28,45 @@ Rectangle {
 
         // Band index
         Text {
-            width: 24
+            width: 30
             text: (bandIndex + 1).toString()
-            font.pixelSize: 11
+            font.pixelSize: 12
             font.family: root.monoFont
-            color: Qt.rgba(1, 1, 1, 0.5)
-            horizontalAlignment: Text.AlignCenter
+            color: Qt.rgba(1, 1, 1, 0.4)
+            horizontalAlignment: Text.AlignLeft
             anchors.verticalCenter: parent.verticalCenter
         }
 
         // Type combo
         ComboBox {
             id: typeCombo
-            width: 100
-            height: 22
+            width: 120
+            height: 30
             model: typeNames
             currentIndex: filterType
-            font.pixelSize: 11
+            font.pixelSize: 12
             anchors.verticalCenter: parent.verticalCenter
 
             onActivated: {
-                filterRowRoot.filterChanged(index, filterFreq, filterGain, filterQ)
+                var q = filterQ
+                var wasPeaking = (filterType === 1)
+                var isPeaking = (index === 1)
+
+                // Save current Q when leaving peaking
+                if (wasPeaking && !isPeaking)
+                    savedPeakingQ = filterQ
+
+                if (index === 0) {
+                    // Turning off — keep current Q
+                } else if (isPeaking) {
+                    // Switching to peaking — restore saved Q
+                    q = savedPeakingQ
+                } else {
+                    // Non-peaking filter — use 0.707
+                    q = 0.707
+                }
+
+                filterRowRoot.filterChanged(index, filterFreq, filterGain, q)
             }
 
             background: Rectangle {
@@ -57,13 +77,21 @@ Rectangle {
 
             contentItem: Text {
                 text: typeCombo.displayText
-                font: typeCombo.font
+                font.pixelSize: 12
+                font.weight: Font.Bold
                 color: isActive ? "white" : Qt.rgba(1, 1, 1, 0.4)
                 verticalAlignment: Text.AlignVCenter
                 leftPadding: 4
             }
 
-            indicator: Item {}
+            indicator: Text {
+                x: typeCombo.width - width - 4
+                anchors.verticalCenter: parent.verticalCenter
+                text: "\u2195"
+                font.pixelSize: 9
+                color: Qt.rgba(1, 1, 1, 0.3)
+                visible: typeCombo.hovered
+            }
 
             popup: Popup {
                 y: typeCombo.height
@@ -72,7 +100,7 @@ Rectangle {
                 padding: 1
 
                 background: Rectangle {
-                    color: "#353535"
+                    color: isMacOS ? "#353535" : nativeAltBaseColor
                     border.color: Qt.rgba(1, 1, 1, 0.15)
                     radius: 6
                 }
@@ -87,10 +115,10 @@ Rectangle {
 
             delegate: ItemDelegate {
                 width: typeCombo.width
-                height: 22
+                height: 26
                 contentItem: Text {
                     text: modelData
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     color: highlighted ? "white" : Qt.rgba(1, 1, 1, 0.8)
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 4
@@ -103,25 +131,35 @@ Rectangle {
             }
         }
 
-        // Frequency
-        Item {
-            width: 104
-            height: parent.height
-            visible: isActive
+        // "Filter Disabled" label when inactive
+        Text {
+            visible: !isActive
+            text: "Filter Disabled"
+            font.pixelSize: 11
+            color: Qt.rgba(1, 1, 1, 0.25)
             anchors.verticalCenter: parent.verticalCenter
+            leftPadding: 8
+        }
+
+        // Frequency value + unit
+        Row {
+            visible: isActive
+            width: 100
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
 
             TextField {
                 id: freqField
-                width: 80
-                height: 20
-                anchors.centerIn: parent
-                font.pixelSize: 11
+                width: 70
+                height: 28
+                font.pixelSize: 12
                 font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 selectByMouse: true
                 padding: 2
+                leftPadding: 8
 
                 background: Rectangle {
                     color: "transparent"
@@ -148,27 +186,33 @@ Rectangle {
                     }
                 }
             }
+            Text {
+                text: "Hz"
+                font.pixelSize: 10
+                color: Qt.rgba(1, 1, 1, 0.35)
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
-        // Gain
-        Item {
-            width: 84
-            height: parent.height
+        // Gain value + unit
+        Row {
             visible: isActive
+            width: 90
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
 
             TextField {
                 id: gainField
                 width: 60
-                height: 20
-                anchors.centerIn: parent
-                font.pixelSize: 11
+                height: 28
+                font.pixelSize: 12
                 font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 selectByMouse: true
                 padding: 2
+                leftPadding: 8
 
                 background: Rectangle {
                     color: "transparent"
@@ -195,27 +239,33 @@ Rectangle {
                     }
                 }
             }
+            Text {
+                text: "dB"
+                font.pixelSize: 10
+                color: Qt.rgba(1, 1, 1, 0.35)
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
-        // Q/Width
-        Item {
-            width: 74
-            height: parent.height
+        // Q/Width value + unit
+        Row {
             visible: isActive
+            width: 80
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
 
             TextField {
                 id: qField
-                width: 50
-                height: 20
-                anchors.centerIn: parent
-                font.pixelSize: 11
+                width: 56
+                height: 28
+                font.pixelSize: 12
                 font.family: root.monoFont
                 color: activeFocus ? "#0078d4" : "white"
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 selectByMouse: true
                 padding: 2
+                leftPadding: 8
 
                 background: Rectangle {
                     color: "transparent"
@@ -242,16 +292,12 @@ Rectangle {
                     }
                 }
             }
-        }
-
-        // "Filter Disabled" label when inactive
-        Text {
-            visible: !isActive
-            text: "Filter Disabled"
-            font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.3)
-            anchors.verticalCenter: parent.verticalCenter
-            leftPadding: 16
+            Text {
+                text: "Q"
+                font.pixelSize: 10
+                color: Qt.rgba(1, 1, 1, 0.35)
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
     }
 }

@@ -11,9 +11,7 @@ ApplicationWindow {
     width: 950
     height: 813
     minimumWidth: 950
-    minimumHeight: 813
-    maximumWidth: 950
-    maximumHeight: 813
+    minimumHeight: 600
     title: "DSPi Console"
     color: isMacOS ? "transparent" : "#303030"
 
@@ -25,7 +23,7 @@ ApplicationWindow {
 
     // Graph settings (shared between SettingsWindow and BodePlotItem)
     property bool graphShowGlow: false
-    property real graphLineWidth: 2.0
+    property real graphLineWidth: 1.5
     property bool graphShowFreqGrid: true
     property bool graphShowFreqLabels: true
     property bool graphShowDbGrid: true
@@ -146,7 +144,7 @@ ApplicationWindow {
         Rectangle {
             width: parent.width - 260
             height: parent.height
-            color: "#303030"
+            color: isMacOS ? "transparent" : nativeWindowColor
 
             Column {
                 anchors.fill: parent
@@ -169,10 +167,8 @@ ApplicationWindow {
                     sourceComponent: {
                         if (root.selection === "overview")
                             return dashboardComponent
-                        else if (root.selection.startsWith("channel:"))
-                            return filterListComponent
-                        else if (root.selection.startsWith("output:"))
-                            return outputEditorComponent
+                        else if (root.selection.startsWith("channel:") || root.selection.startsWith("output:"))
+                            return channelEditorComponent
                         return dashboardComponent
                     }
                 }
@@ -187,31 +183,25 @@ ApplicationWindow {
     }
 
     Component {
-        id: filterListComponent
-        FilterListView {
-            channelId: root.selectedChannel
-        }
-    }
-
-    Component {
-        id: outputEditorComponent
+        id: channelEditorComponent
         Item {
             ChannelSettingsView {
                 id: outputSettings
+                visible: root.selectedOutput >= 0
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 16
                 anchors.rightMargin: 16
-                outputIndex: root.selectedOutput
+                outputIndex: root.selectedOutput >= 0 ? root.selectedOutput : 0
             }
             FilterListView {
-                anchors.top: outputSettings.bottom
-                anchors.topMargin: 16
+                anchors.top: root.selectedOutput >= 0 ? outputSettings.bottom : parent.top
+                anchors.topMargin: root.selectedOutput >= 0 ? 16 : 0
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                channelId: root.selectedOutput + 2
+                channelId: root.selectedOutput >= 0 ? root.selectedOutput + 2 : root.selectedChannel
             }
         }
     }

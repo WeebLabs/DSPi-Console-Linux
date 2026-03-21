@@ -46,7 +46,7 @@ Item {
             anchors.fill: parent
             anchors.margins: 1
             radius: 9
-            color: "#252525"
+            color: isMacOS ? "#252525" : nativeAltBaseColor
         }
     }
 
@@ -166,20 +166,22 @@ Item {
                         width: isStereo ? (parent.width - 20) / 2 : parent.width - 20
                         height: parent.height
 
-                        Row {
-                            anchors.fill: parent
-                            spacing: 8
+                        Text {
+                            anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
+                            width: 24
+                            text: typeShort[bridge.filterType(leftChannel, index)] || "OFF"
+                            font.pixelSize: 10
+                            font.weight: Font.Bold
+                            color: bridge.filterType(leftChannel, index) > 0 ? parsedLeftColor : Qt.rgba(1, 1, 1, 0.3)
+                            horizontalAlignment: Text.AlignLeft
+                        }
 
-                            Text {
-                                width: 24
-                                text: typeShort[bridge.filterType(leftChannel, index)] || "OFF"
-                                font.pixelSize: 10
-                                font.weight: Font.Bold
-                                color: bridge.filterType(leftChannel, index) > 0 ? "white" : Qt.rgba(1, 1, 1, 0.3)
-                                horizontalAlignment: Text.AlignCenter
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
+                        Row {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 24
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
 
                             Text {
                                 visible: bridge.filterType(leftChannel, index) > 0
@@ -187,6 +189,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -195,6 +198,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -203,6 +207,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -214,20 +219,22 @@ Item {
                         width: (parent.width - 20) / 2
                         height: parent.height
 
-                        Row {
-                            anchors.fill: parent
-                            spacing: 8
+                        Text {
+                            anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
+                            width: 24
+                            text: rightChannel >= 0 ? (typeShort[bridge.filterType(rightChannel, index)] || "OFF") : ""
+                            font.pixelSize: 10
+                            font.weight: Font.Bold
+                            color: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0 ? parsedRightColor : Qt.rgba(1, 1, 1, 0.3)
+                            horizontalAlignment: Text.AlignLeft
+                        }
 
-                            Text {
-                                width: 24
-                                text: rightChannel >= 0 ? (typeShort[bridge.filterType(rightChannel, index)] || "OFF") : ""
-                                font.pixelSize: 10
-                                font.weight: Font.Bold
-                                color: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0 ? "white" : Qt.rgba(1, 1, 1, 0.3)
-                                horizontalAlignment: Text.AlignCenter
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
+                        Row {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 24
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
 
                             Text {
                                 visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
@@ -235,6 +242,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -243,6 +251,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -251,6 +260,7 @@ Item {
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
+                                horizontalAlignment: Text.AlignRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }

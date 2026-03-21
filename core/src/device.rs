@@ -98,13 +98,7 @@ impl DeviceManager {
                 Err(_) => continue,
             };
             if dev_serial == serial {
-                // On Linux, detach kernel driver if needed
-                #[cfg(target_os = "linux")]
-                {
-                    let _ = handle.set_auto_detach_kernel_driver(true);
-                }
-
-                let _ = handle.claim_interface(0);
+                let _ = handle.claim_interface(2);
                 self.connection = Some(UsbConnection::new(handle));
                 self.selected_serial = Some(serial.to_owned());
                 info!("Connected to DSPi device: {serial}");

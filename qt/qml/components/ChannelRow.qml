@@ -54,7 +54,7 @@ Rectangle {
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         height: 6
-        level: meterLevel
+        targetLevel: meterLevel
         clipping: isClipping
         barColor: channelColor
     }
