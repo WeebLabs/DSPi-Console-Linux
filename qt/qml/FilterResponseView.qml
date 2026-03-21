@@ -78,6 +78,26 @@ Column {
                 maxFreq: root.graphMaxFreq
                 Component.onCompleted: setBridge(bridge)
             }
+
+            // Scroll zone over dB axis labels for vertical zoom
+            MouseArea {
+                x: 0
+                y: 0
+                width: 48
+                height: parent.height
+                acceptedButtons: Qt.NoButton
+                onWheel: {
+                    var delta = wheel.angleDelta.y
+                    var step = root.graphDbRange * 0.1
+                    if (delta > 0) {
+                        // Scroll up — zoom in (reduce range)
+                        root.graphDbRange = Math.max(6, root.graphDbRange - step)
+                    } else {
+                        // Scroll down — zoom out (increase range)
+                        root.graphDbRange = Math.min(120, root.graphDbRange + step)
+                    }
+                }
+            }
         }
     }
 

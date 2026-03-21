@@ -29,7 +29,7 @@ Rectangle {
         Flickable {
             id: channelList
             width: parent.width
-            height: parent.height - root.titlebarHeight - 10 - globalSection.height - cpuSection.height - 2
+            height: parent.height - root.titlebarHeight - 10 - globalSection.height - cpuSection.height - 40
             clip: true
             contentHeight: channelColumn.height
             boundsBehavior: Flickable.StopAtBounds
@@ -307,6 +307,141 @@ Rectangle {
                 width: parent.width
                 cpu0: bridge.cpu0
                 cpu1: bridge.cpu1
+            }
+        }
+
+        // Divider
+        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
+
+        // Menu button
+        Rectangle {
+            width: parent.width
+            height: 36
+            color: menuArea.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 6
+
+                Text {
+                    text: "\u2630"
+                    font.pixelSize: 14
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    text: "Menu"
+                    font.pixelSize: 10
+                    font.weight: Font.Medium
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                id: menuArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: appMenu.open()
+            }
+
+            Popup {
+                id: appMenu
+                x: 0
+                y: -appMenu.height
+                width: 220
+                padding: 4
+
+                background: Rectangle {
+                    color: isMacOS ? "#353535" : nativeAltBaseColor
+                    border.color: Qt.rgba(1, 1, 1, 0.15)
+                    radius: 8
+                }
+
+                Column {
+                    width: parent.width
+                    spacing: 0
+
+                    // Section: File
+                    Text {
+                        text: "FILE"
+                        font.pixelSize: 9
+                        font.weight: Font.Bold
+                        color: Qt.rgba(1, 1, 1, 0.3)
+                        leftPadding: 12
+                        topPadding: 8
+                        bottomPadding: 4
+                    }
+
+                    MenuItem {
+                        text: "Commit Parameters"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { bridge.saveParams(); appMenu.close() }
+                    }
+                    MenuItem {
+                        text: "Revert to Saved"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { bridge.loadParams(); appMenu.close() }
+                    }
+                    MenuItem {
+                        text: "Factory Reset"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { bridge.factoryReset(); appMenu.close() }
+                    }
+
+                    // Separator
+                    Rectangle { width: parent.width - 16; height: 1; color: Qt.rgba(1, 1, 1, 0.1); anchors.horizontalCenter: parent.horizontalCenter }
+
+                    // Section: Tools
+                    Text {
+                        text: "TOOLS"
+                        font.pixelSize: 9
+                        font.weight: Font.Bold
+                        color: Qt.rgba(1, 1, 1, 0.3)
+                        leftPadding: 12
+                        topPadding: 8
+                        bottomPadding: 4
+                    }
+
+                    MenuItem {
+                        text: "Matrix Mixer"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { matrixWindow.visible = true; appMenu.close() }
+                    }
+                    MenuItem {
+                        text: "Loudness Compensation"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { loudnessWindow.visible = true; appMenu.close() }
+                    }
+                    MenuItem {
+                        text: "Headphone Crossfeed"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { crossfeedWindow.visible = true; appMenu.close() }
+                    }
+                    MenuItem {
+                        text: "Stats"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { statsWindow.visible = true; appMenu.close() }
+                    }
+
+                    // Separator
+                    Rectangle { width: parent.width - 16; height: 1; color: Qt.rgba(1, 1, 1, 0.1); anchors.horizontalCenter: parent.horizontalCenter }
+
+                    MenuItem {
+                        text: "Settings"
+                        width: parent.width
+                        height: 30
+                        onTriggered: { settingsWindow.visible = true; appMenu.close() }
+                    }
+                }
             }
         }
     }
