@@ -58,15 +58,13 @@ impl DspiCore {
         Ok(())
     }
 
-    /// Fetch device status (peaks, CPU, clips).
+    /// Fetch device status (peaks, CPU, clips). The response size depends
+    /// on platform and firmware generation (18/21/26/41 bytes), so request
+    /// more than any format needs and let the parser dispatch on length.
     pub fn fetch_status(&mut self) -> Result<SystemStatus> {
-        let num_ch = self.state.num_channels as usize;
-        let response_size = (num_ch * 2 + 4) as u16;
-        let data = self.get_exact(REQ_GET_STATUS, 9, WINDEX_GLOBAL, response_size, response_size as usize)?;
-        parse_status(&data, num_ch).ok_or(UsbError::ShortRead {
-            expected: response_size as usize,
-            actual: data.len(),
-        })
+        let data = self.get_exact(REQ_GET_STATUS, 9, WINDEX_GLOBAL, 64, 18)?;
+        let actual = data.len();
+        parse_status(&data).ok_or(UsbError::ShortRead { expected: 26, actual })
     }
 
     // ═══════════════════════════════════════════════════════════════

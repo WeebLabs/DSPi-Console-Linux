@@ -487,24 +487,53 @@ pub fn build_matrix_route_packet(input: u8, output: u8, enabled: bool, gain: f32
     packet
 }
 
-/// Parse status response bytes into SystemStatus.
-pub fn parse_status(data: &[u8], num_channels: usize) -> Option<SystemStatus> {
-    let expected_len = num_channels * 2 + 4;
-    if data.len() < expected_len {
-        return None;
-    }
+/// Parse a GET_STATUS response into SystemStatus, normalizing to the
+/// app's 2-input + N-output channel model.
+///
+/// Four wire formats exist, distinguished by response length:
+///   18 = fw ≤ 1.1.x RP2040:  7 peaks (2 in + 5 out), cpu×2, clip u16
+///   26 = fw ≤ 1.1.x RP2350: 11 peaks (2 in + 9 out), cpu×2, clip u16
+///   21 = newer     RP2040:  7 peaks (2 in + 5 out), cpu×2, clip u32, active u8
+///   41 = newer     RP2350: 17 peaks (8 in + 9 out), cpu×2, clip u32, active u8
+///
+/// On the 17-channel format only USB inputs L/R (wire channels 0-1) are
+/// surfaced; multichannel input peaks have no home in the app's model yet.
+pub fn parse_status(data: &[u8]) -> Option<SystemStatus> {
+    let (wire_channels, wire_inputs, extended) = match data.len() {
+        18 => (7usize, 2usize, false),
+        26 => (11, 2, false),
+        21 => (7, 2, true),
+        41 => (17, 8, true),
+        _ => return None,
+    };
+    let num_outputs = wire_channels - wire_inputs;
 
     let mut status = SystemStatus::default();
-    status.num_channels = num_channels as u8;
+    status.num_channels = (2 + num_outputs) as u8;
 
-    for i in 0..num_channels {
-        let raw = read_u16_le(data, i * 2);
-        status.peaks[i] = raw as f32 / 32767.0;
+    let peak = |i: usize| read_u16_le(data, i * 2) as f32 / 32767.0;
+    status.peaks[0] = peak(0);
+    status.peaks[1] = peak(1);
+    for out in 0..num_outputs {
+        status.peaks[2 + out] = peak(wire_inputs + out);
     }
 
-    status.cpu0 = data[num_channels * 2];
-    status.cpu1 = data[num_channels * 2 + 1];
-    status.clip_flags = read_u16_le(data, num_channels * 2 + 2);
+    let off = wire_channels * 2;
+    status.cpu0 = data[off];
+    status.cpu1 = data[off + 1];
+
+    let clip_raw = if extended {
+        read_u32_le(data, off + 2)
+    } else {
+        read_u16_le(data, off + 2) as u32
+    };
+    let mut clip = (clip_raw & 0b11) as u16;
+    for out in 0..num_outputs {
+        if clip_raw & (1 << (wire_inputs + out)) != 0 {
+            clip |= 1 << (2 + out);
+        }
+    }
+    status.clip_flags = clip;
 
     Some(status)
 }
@@ -574,8 +603,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_status() {
-        // 7 channels: 14 bytes peaks + 4 bytes = 18 bytes
+    fn test_parse_status_old_rp2040() {
+        // 7 channels: 14 bytes peaks + cpu×2 + clip u16 = 18 bytes
         let mut data = vec![0u8; 18];
         // Peak channel 0: 16384 => 16384/32767 ≈ 0.5
         data[0] = 0x00;
@@ -587,10 +616,70 @@ mod tests {
         data[16] = 0x03;
         data[17] = 0x00;
 
-        let status = parse_status(&data, 7).unwrap();
+        let status = parse_status(&data).unwrap();
+        assert_eq!(status.num_channels, 7);
         assert!((status.peaks[0] - 0.5).abs() < 0.001);
         assert_eq!(status.cpu0, 42);
         assert_eq!(status.cpu1, 15);
         assert_eq!(status.clip_flags, 3);
+    }
+
+    #[test]
+    fn test_parse_status_old_rp2350() {
+        // 11 channels: 22 bytes peaks + cpu×2 + clip u16 = 26 bytes
+        let mut data = vec![0u8; 26];
+        data[1] = 0x40;          // in L ≈ 0.5
+        data[2 * 2 + 1] = 0x20;  // out 1 (wire ch2) ≈ 0.25
+        data[22] = 9;
+        data[24] = 0x05;         // clip: in L + out 1
+
+        let status = parse_status(&data).unwrap();
+        assert_eq!(status.num_channels, 11);
+        assert!((status.peaks[0] - 0.5).abs() < 0.001);
+        assert!((status.peaks[2] - 0.25).abs() < 0.001);
+        assert_eq!(status.cpu0, 9);
+        assert_eq!(status.clip_flags, 0x05);
+    }
+
+    #[test]
+    fn test_parse_status_new_rp2350() {
+        // 17 wire channels (8 in + 9 out): 34 bytes peaks + cpu×2 +
+        // clip u32 + active u8 = 41 bytes. Outputs start at wire ch8.
+        let mut data = vec![0u8; 41];
+        data[1] = 0x40;          // in L ≈ 0.5
+        data[8 * 2 + 1] = 0x20;  // out 1 (wire ch8) ≈ 0.25
+        data[34] = 33;           // cpu0
+        data[35] = 7;            // cpu1
+        // clip u32: in L (bit 0) + out 1 (bit 8)
+        data[36] = 0x01;
+        data[37] = 0x01;
+        data[40] = 2;            // active input channels
+
+        let status = parse_status(&data).unwrap();
+        assert_eq!(status.num_channels, 11); // normalized: 2 in + 9 out
+        assert!((status.peaks[0] - 0.5).abs() < 0.001);
+        assert!((status.peaks[2] - 0.25).abs() < 0.001);
+        assert_eq!(status.cpu0, 33);
+        assert_eq!(status.cpu1, 7);
+        // remapped: in L -> bit 0, out 1 -> bit 2
+        assert_eq!(status.clip_flags, 0x05);
+    }
+
+    #[test]
+    fn test_parse_status_new_rp2040() {
+        // 7 wire channels (2 in + 5 out) + cpu×2 + clip u32 + active = 21 bytes
+        let mut data = vec![0u8; 21];
+        data[1] = 0x40;
+        data[14] = 12;
+        data[16] = 0x04; // clip out 1 (wire bit 2)
+        let status = parse_status(&data).unwrap();
+        assert_eq!(status.num_channels, 7);
+        assert!((status.peaks[0] - 0.5).abs() < 0.001);
+        assert_eq!(status.clip_flags, 0x04);
+    }
+
+    #[test]
+    fn test_parse_status_unknown_length() {
+        assert!(parse_status(&[0u8; 30]).is_none());
     }
 }
