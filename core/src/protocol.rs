@@ -126,6 +126,18 @@ pub const REQ_PRESET_GET_ACTIVE: u8 = 0x9A;
 pub const REQ_SET_CHANNEL_NAME: u8 = 0x9B;
 pub const REQ_GET_CHANNEL_NAME: u8 = 0x9C;
 
+// ── I2S Output Configuration (firmware ≥ 1.1) ──────────────────────
+
+pub const REQ_SET_OUTPUT_TYPE: u8 = 0xC0;
+pub const REQ_GET_OUTPUT_TYPE: u8 = 0xC1;
+pub const REQ_SET_I2S_BCK_PIN: u8 = 0xC2;
+pub const REQ_GET_I2S_BCK_PIN: u8 = 0xC3;
+
+// ── Output Type Identifiers ─────────────────────────────────────────
+
+pub const OUTPUT_TYPE_SPDIF: u8 = 0;
+pub const OUTPUT_TYPE_I2S: u8 = 1;
+
 // ── Bulk Parameter Transfer ─────────────────────────────────────────
 
 pub const REQ_GET_ALL_PARAMS: u8 = 0xA0;
@@ -444,6 +456,11 @@ pub fn matrix_route_wvalue(input: u8, output: u8) -> u16 {
 /// Encode pin config SET wValue: (new_pin << 8) | output_index
 pub fn pin_config_wvalue(pin: u8, output: u8) -> u16 {
     ((pin as u16) << 8) | (output as u16)
+}
+
+/// Encode output type SET wValue: (new_type << 8) | slot_index
+pub fn output_type_wvalue(output_type: u8, slot: u8) -> u16 {
+    ((output_type as u16) << 8) | (slot as u16)
 }
 
 /// Build a 16-byte set-filter packet (matches Commands.swift setFilter encoding).

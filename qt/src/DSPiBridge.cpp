@@ -269,6 +269,19 @@ int DSPiBridge::outputPin(int physOut) const {
     return state()->output_pins[physOut];
 }
 
+int DSPiBridge::outputType(int slot) const {
+    if (slot < 0 || slot >= MAX_SPDIF_SLOTS) return -1;
+    return state()->output_types[slot];
+}
+
+bool DSPiBridge::outputTypeSupported() const {
+    return state()->output_type_supported;
+}
+
+int DSPiBridge::i2sBckPin() const {
+    return state()->i2s_bck_pin;
+}
+
 QString DSPiBridge::presetName(int slot) const {
     if (slot < 0 || slot >= MAX_PRESETS) return "";
     return QString::fromUtf8(reinterpret_cast<const char*>(state()->preset_names[slot]));
@@ -439,6 +452,12 @@ void DSPiBridge::sendOutputDelayToDevice(int output, float ms) {
 
 int DSPiBridge::setOutputPin(int output, int pin) {
     return dspi_set_output_pin(m_core, output, pin);
+}
+
+int DSPiBridge::setOutputType(int slot, int type) {
+    int status = dspi_set_output_type(m_core, slot, type);
+    emit stateChanged();
+    return status;
 }
 
 void DSPiBridge::setChannelName(int ch, const QString &name) {

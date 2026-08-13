@@ -346,6 +346,30 @@ pub extern "C" fn dspi_fetch_output_pin(core: *mut FfiCore, output: u8) -> u8 {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// FFI — Output Type (S/PDIF vs I2S)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Set slot output type (0 = S/PDIF, 1 = I2S). Returns firmware status
+/// code (0 = success). 0xFF on communication error. Blocks until the
+/// firmware's deferred switch completes (up to ~3 s).
+#[no_mangle]
+pub extern "C" fn dspi_set_output_type(core: *mut FfiCore, slot: u8, output_type: u8) -> u8 {
+    with_core(core, |c| c.set_output_type(slot, output_type).unwrap_or(0xFF))
+}
+
+/// Returns slot output type (0 = S/PDIF, 1 = I2S). 0xFF on error.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_output_type(core: *mut FfiCore, slot: u8) -> u8 {
+    with_core(core, |c| c.fetch_output_type(slot).unwrap_or(0xFF))
+}
+
+/// Returns the I2S bit-clock GPIO (LRCLK is BCK + 1). 0xFF on error.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_i2s_bck_pin(core: *mut FfiCore) -> u8 {
+    with_core(core, |c| c.fetch_i2s_bck_pin().unwrap_or(0xFF))
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // FFI — Channel Names
 // ═══════════════════════════════════════════════════════════════════
 

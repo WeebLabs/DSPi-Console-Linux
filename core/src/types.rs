@@ -162,3 +162,5 @@ pub const MAX_PRESETS: usize = 10;
 pub const CHANNEL_NAME_LEN: usize = 32;
 /// Physical output count for pin config.
 pub const MAX_PHYSICAL_OUTPUTS: usize = 5;
+/// SPDIF/I2S-capable output slots (physical outputs minus PDM).
+pub const MAX_SPDIF_SLOTS: usize = 4;

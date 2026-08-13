@@ -225,30 +225,51 @@ Window {
                 id: hwCol
                 width: parent.width; spacing: 12
 
-                Text { text: "Pin Configuration"; font.pixelSize: 14; font.weight: Font.DemiBold; color: "white" }
+                // Bumped on stateChanged so slot rows re-read bridge state.
+                property int stateRevision: 0
+                Connections {
+                    target: bridge
+                    function onStateChanged() { hwCol.stateRevision++ }
+                }
+
+                Text { text: "Output Configuration"; font.pixelSize: 14; font.weight: Font.DemiBold; color: "white" }
 
                 Repeater {
-                    model: {
-                        var pins = []
-                        var numPhys = bridge.platformName === "RP2040" ? 3 : 5
-                        for (var i = 0; i < numPhys; i++) {
-                            var name = i < numPhys - 1 ? "SPDIF " + (i + 1) : "PDM"
-                            pins.push({ index: i, name: name })
-                        }
-                        return pins
-                    }
+                    model: bridge.platformName === "RP2040" ? 3 : 5
 
                     Row {
+                        id: slotRow
                         width: parent.width; spacing: 8; height: 30
+                        property int slotIndex: index
+                        property bool isPdm: index === (bridge.platformName === "RP2040" ? 2 : 4)
+                        property int slotType: hwCol.stateRevision >= 0 && !isPdm ? bridge.outputType(index) : -1
 
                         Text {
-                            text: modelData.name
+                            text: slotRow.isPdm ? "PDM" : "Slot " + (slotRow.slotIndex + 1)
                             font.pixelSize: 12; font.weight: Font.Medium
                             color: "white"; width: 130
                             anchors.verticalCenter: parent.verticalCenter
                         }
+                        BorderlessComboBox {
+                            visible: !slotRow.isPdm && bridge.outputTypeSupported()
+                            width: 90
+                            model: ["S/PDIF", "I2S"]
+                            currentIndex: slotRow.slotType === 1 ? 1 : 0
+                            onActivated: function(comboIndex) {
+                                if (comboIndex !== slotRow.slotType)
+                                    bridge.setOutputType(slotRow.slotIndex, comboIndex)
+                            }
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                         Text {
-                            text: "Pin " + bridge.outputPin(modelData.index)
+                            text: {
+                                hwCol.stateRevision
+                                if (slotRow.isPdm || slotRow.slotType !== 1)
+                                    return "Pin " + bridge.outputPin(slotRow.slotIndex)
+                                return "DATA " + bridge.outputPin(slotRow.slotIndex)
+                                     + " · BCK " + bridge.i2sBckPin()
+                                     + " · LRCK " + (bridge.i2sBckPin() + 1)
+                            }
                             font.pixelSize: 12; font.family: root.monoFont
                             color: Qt.rgba(1,1,1,0.7)
                             anchors.verticalCenter: parent.verticalCenter

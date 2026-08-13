@@ -40,6 +40,7 @@ impl DspiCore {
     pub fn fetch_all(&mut self) -> Result<()> {
         self.fetch_all_params()?;
         self.fetch_core1_mode_internal();
+        self.fetch_output_types_internal();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {
             self.fetch_preset_name_internal(slot);
@@ -391,6 +392,67 @@ impl DspiCore {
         let data = self.get_exact(REQ_GET_OUTPUT_PIN, output as u16, WINDEX_OUTPUT, 1, 1)?;
         self.state.output_pins[output as usize] = data[0];
         Ok(data[0])
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Output Type (S/PDIF vs I2S, firmware ≥ 1.1)
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Set an output slot's type (0 = S/PDIF, 1 = I2S). Returns firmware
+    /// status code. SET is an IN transfer: wValue = (new_type << 8) | slot.
+    ///
+    /// The firmware defers the actual switch to its main loop (it involves
+    /// heap allocation that can't run in ISR context), so on success this
+    /// polls GET_OUTPUT_TYPE until the switch lands before returning.
+    pub fn set_output_type(&mut self, slot: u8, output_type: u8) -> Result<u8> {
+        let wval = output_type_wvalue(output_type, slot);
+        let data = self.get_exact(REQ_SET_OUTPUT_TYPE, wval, WINDEX_OUTPUT, 1, 1)?;
+        let status = data[0];
+        if status == PIN_CONFIG_SUCCESS {
+            for _ in 0..20 {
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                match self.fetch_output_type(slot) {
+                    Ok(t) if t == output_type => break,
+                    // Transient timeouts are expected while the firmware
+                    // rebuilds the output pipeline with the control IRQ off.
+                    _ => continue,
+                }
+            }
+        }
+        Ok(status)
+    }
+
+    pub fn fetch_output_type(&mut self, slot: u8) -> Result<u8> {
+        let data = self.get_exact(REQ_GET_OUTPUT_TYPE, slot as u16, WINDEX_OUTPUT, 1, 1)?;
+        self.state.output_types[slot as usize] = data[0];
+        Ok(data[0])
+    }
+
+    pub fn fetch_i2s_bck_pin(&mut self) -> Result<u8> {
+        let data = self.get_exact(REQ_GET_I2S_BCK_PIN, 0, WINDEX_OUTPUT, 1, 1)?;
+        self.state.i2s_bck_pin = data[0];
+        Ok(data[0])
+    }
+
+    /// Internal version for fetch_all: a stall just means old firmware.
+    fn fetch_output_types_internal(&mut self) {
+        let slots = if self.state.platform_id == 1 { 4 } else { 2 };
+        match self.fetch_output_type(0) {
+            Ok(_) => {
+                self.state.output_type_supported = true;
+                for slot in 1..slots {
+                    if let Err(e) = self.fetch_output_type(slot) {
+                        warn!("Failed to fetch output type for slot {slot}: {e}");
+                    }
+                }
+                if let Err(e) = self.fetch_i2s_bck_pin() {
+                    warn!("Failed to fetch I2S BCK pin: {e}");
+                }
+            }
+            Err(_) => {
+                self.state.output_type_supported = false;
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════

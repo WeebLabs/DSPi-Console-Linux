@@ -63,6 +63,14 @@ pub struct DspState {
     pub preset_startup_mode: u8,
     pub preset_default_slot: u8,
     pub preset_include_pins: bool,
+
+    // ── I2S output configuration (firmware ≥ 1.1) ───────────────────
+    /// Per-slot output type: 0 = S/PDIF, 1 = I2S. Slots 0..MAX_SPDIF_SLOTS.
+    pub output_types: [u8; MAX_SPDIF_SLOTS],
+    /// I2S bit clock GPIO. LRCLK is always BCK + 1.
+    pub i2s_bck_pin: u8,
+    /// False when the firmware predates the output-type commands.
+    pub output_type_supported: bool,
 }
 
 impl Default for DspState {
@@ -99,6 +107,9 @@ impl Default for DspState {
             preset_startup_mode: 0,
             preset_default_slot: 0,
             preset_include_pins: false,
+            output_types: [0; MAX_SPDIF_SLOTS],
+            i2s_bck_pin: 14,
+            output_type_supported: false,
         }
     }
 }

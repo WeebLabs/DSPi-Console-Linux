@@ -115,6 +115,9 @@ public:
     Q_INVOKABLE float matrixGain(int input, int output) const;
     Q_INVOKABLE bool matrixInvert(int input, int output) const;
     Q_INVOKABLE int outputPin(int physOut) const;
+    Q_INVOKABLE int outputType(int slot) const;
+    Q_INVOKABLE bool outputTypeSupported() const;
+    Q_INVOKABLE int i2sBckPin() const;
 
     Q_INVOKABLE QString presetName(int slot) const;
     Q_INVOKABLE bool isPresetOccupied(int slot) const;
@@ -146,6 +149,7 @@ public:
     Q_INVOKABLE void setOutputDelay(int output, float ms);
     Q_INVOKABLE void sendOutputDelayToDevice(int output, float ms);
     Q_INVOKABLE int setOutputPin(int output, int pin);
+    Q_INVOKABLE int setOutputType(int slot, int type);
 
     Q_INVOKABLE void setChannelName(int ch, const QString &name);
 
