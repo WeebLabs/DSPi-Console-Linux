@@ -426,10 +426,11 @@ Rectangle {
                         onTriggered: { crossfeedWindow.visible = true; appMenu.close() }
                     }
                     MenuItem {
-                        text: "Test Signals"
+                        property bool supported: bridge.connected && bridge.siggenSupported()
+                        text: supported ? "Test Signals" : "Test Signals (needs fw ≥ 1.1.5)"
                         width: parent.width
-                        height: visible ? 30 : 0
-                        visible: bridge.connected && bridge.siggenSupported()
+                        height: 30
+                        enabled: supported
                         onTriggered: { testSignalsWindow.visible = true; appMenu.close() }
                     }
                     MenuItem {
