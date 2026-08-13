@@ -164,3 +164,66 @@ pub const CHANNEL_NAME_LEN: usize = 32;
 pub const MAX_PHYSICAL_OUTPUTS: usize = 5;
 /// SPDIF/I2S-capable output slots (physical outputs minus PDM).
 pub const MAX_SPDIF_SLOTS: usize = 4;
+
+// ═══════════════════════════════════════════════════════════════════
+// Test Signal Generator (firmware ≥ 1.1.5)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Test-signal generator configuration. Mirrors the firmware's packed
+/// 36-byte wire struct field-for-field (see test_signals_spec.md §3.1);
+/// serialization happens in protocol::siggen_config_to_bytes.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct SiggenConfig {
+    pub signal_type: u8,
+    /// Output-channel select, bit i = output i.
+    pub channel_mask: u16,
+    /// Polarity-inverted subset of channel_mask.
+    pub invert_mask: u16,
+    /// SIGGEN_FLAG_* bitmask.
+    pub flags: u8,
+    /// Peak level in dBFS, -120..0.
+    pub level_db: f32,
+    pub duration_ms: u32,
+    pub repeat: u16,
+    pub gap_ms: u16,
+    pub p1: f32,
+    pub p2: f32,
+    pub p3: f32,
+    pub p4: f32,
+}
+
+impl Default for SiggenConfig {
+    fn default() -> Self {
+        Self {
+            signal_type: 0, // sine
+            channel_mask: 0,
+            invert_mask: 0,
+            flags: 0,
+            level_db: -20.0,
+            duration_ms: 0,
+            repeat: 0,
+            gap_ms: 0,
+            p1: 0.0,
+            p2: 0.0,
+            p3: 0.0,
+            p4: 0.0,
+        }
+    }
+}
+
+/// Test-signal generator live status (wire struct §3.2).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SiggenStatus {
+    /// SiggenState: 0 idle, 1 fade-in, 2 run, 3 gap, 4 fade-out.
+    pub state: u8,
+    pub signal_type: u8,
+    /// Walk: current output channel; 0xFF when not walking.
+    pub active_channel: u8,
+    pub elapsed_ms: u32,
+    pub cycles_done: u16,
+    pub stop_reason: u8,
+    /// Instantaneous sweep frequency in Hz; 0 when not sweeping.
+    pub current_freq: f32,
+}

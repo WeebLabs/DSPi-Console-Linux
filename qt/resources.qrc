@@ -8,6 +8,7 @@
         <file>qml/ChannelSettingsView.qml</file>
         <file>qml/MatrixMixerWindow.qml</file>
         <file>qml/LoudnessWindow.qml</file>
+        <file>qml/TestSignalsWindow.qml</file>
         <file>qml/CrossfeedWindow.qml</file>
         <file>qml/StatsWindow.qml</file>
         <file>qml/SettingsWindow.qml</file>

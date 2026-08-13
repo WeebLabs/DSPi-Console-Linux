@@ -71,6 +71,14 @@ pub struct DspState {
     pub i2s_bck_pin: u8,
     /// False when the firmware predates the output-type commands.
     pub output_type_supported: bool,
+
+    // ── Test signal generator (firmware ≥ 1.1.5) ────────────────────
+    /// False when the firmware predates the signal generator.
+    pub siggen_supported: bool,
+    /// Bitmask of outputs the generator may target.
+    pub siggen_valid_channel_mask: u16,
+    /// Platform multitone ceiling (8 RP2040 / 16 RP2350).
+    pub siggen_multitone_max: u8,
 }
 
 impl Default for DspState {
@@ -110,6 +118,9 @@ impl Default for DspState {
             output_types: [0; MAX_SPDIF_SLOTS],
             i2s_bck_pin: 14,
             output_type_supported: false,
+            siggen_supported: false,
+            siggen_valid_channel_mask: 0,
+            siggen_multitone_max: 0,
         }
     }
 }

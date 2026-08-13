@@ -41,6 +41,7 @@ impl DspiCore {
         self.fetch_all_params()?;
         self.fetch_core1_mode_internal();
         self.fetch_output_types_internal();
+        self.fetch_siggen_caps_internal();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {
             self.fetch_preset_name_internal(slot);
@@ -430,6 +431,60 @@ impl DspiCore {
         let data = self.get_exact(REQ_GET_I2S_BCK_PIN, 0, WINDEX_OUTPUT, 1, 1)?;
         self.state.i2s_bck_pin = data[0];
         Ok(data[0])
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Test Signal Generator (firmware ≥ 1.1.5)
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Stage a generator config. Does not start playback.
+    pub fn siggen_set_config(&mut self, cfg: &SiggenConfig) -> Result<()> {
+        let bytes = siggen_config_to_bytes(cfg);
+        self.send(REQ_SIGGEN_SET_CONFIG, 0, WINDEX_OUTPUT, &bytes)
+    }
+
+    pub fn siggen_get_config(&mut self) -> Result<SiggenConfig> {
+        let data = self.get_exact(
+            REQ_SIGGEN_GET_CONFIG, 0, WINDEX_OUTPUT,
+            SIGGEN_CONFIG_SIZE as u16, SIGGEN_CONFIG_SIZE)?;
+        siggen_config_from_bytes(&data).ok_or(UsbError::ShortRead {
+            expected: SIGGEN_CONFIG_SIZE,
+            actual: data.len(),
+        })
+    }
+
+    /// Issue a control action (start/stop/stop-now). Write-as-read:
+    /// an IN transfer whose wValue carries the action.
+    pub fn siggen_control(&mut self, action: u16) -> Result<bool> {
+        let data = self.get_exact(REQ_SIGGEN_CONTROL, action, WINDEX_OUTPUT, 1, 1)?;
+        Ok(data[0] == 1)
+    }
+
+    pub fn siggen_get_status(&mut self) -> Result<SiggenStatus> {
+        let data = self.get_exact(
+            REQ_SIGGEN_GET_STATUS, 0, WINDEX_OUTPUT,
+            SIGGEN_STATUS_SIZE as u16, SIGGEN_STATUS_SIZE)?;
+        siggen_status_from_bytes(&data).ok_or(UsbError::ShortRead {
+            expected: SIGGEN_STATUS_SIZE,
+            actual: data.len(),
+        })
+    }
+
+    /// Probe generator support via the caps header (wValue = 0xFFFF).
+    /// A stall just means old firmware.
+    fn fetch_siggen_caps_internal(&mut self) {
+        match self.get_exact(REQ_SIGGEN_GET_CAPS, 0xFFFF, WINDEX_OUTPUT,
+                             SIGGEN_CAPS_SIZE as u16, SIGGEN_CAPS_SIZE) {
+            Ok(data) if data[0] == SIGGEN_CFG_VERSION => {
+                self.state.siggen_supported = true;
+                self.state.siggen_multitone_max = data[3];
+                self.state.siggen_valid_channel_mask =
+                    u16::from_le_bytes([data[4], data[5]]);
+            }
+            _ => {
+                self.state.siggen_supported = false;
+            }
+        }
     }
 
     /// Internal version for fetch_all: a stall just means old firmware.

@@ -119,6 +119,16 @@ public:
     Q_INVOKABLE bool outputTypeSupported() const;
     Q_INVOKABLE int i2sBckPin() const;
 
+    Q_INVOKABLE bool siggenSupported() const;
+    Q_INVOKABLE int siggenValidChannelMask() const;
+    Q_INVOKABLE int siggenMultitoneMax() const;
+    Q_INVOKABLE bool siggenStart(int type, float levelDb, int channelMask,
+                                 int invertMask, int flags, int durationMs,
+                                 int repeat, int gapMs,
+                                 float p1, float p2, float p3, float p4);
+    Q_INVOKABLE void siggenStop(bool immediate);
+    Q_INVOKABLE QVariantMap siggenStatus();
+
     Q_INVOKABLE QString presetName(int slot) const;
     Q_INVOKABLE bool isPresetOccupied(int slot) const;
 

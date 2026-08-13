@@ -282,6 +282,60 @@ int DSPiBridge::i2sBckPin() const {
     return state()->i2s_bck_pin;
 }
 
+bool DSPiBridge::siggenSupported() const {
+    return state()->siggen_supported;
+}
+
+int DSPiBridge::siggenValidChannelMask() const {
+    return state()->siggen_valid_channel_mask;
+}
+
+int DSPiBridge::siggenMultitoneMax() const {
+    return state()->siggen_multitone_max;
+}
+
+bool DSPiBridge::siggenStart(int type, float levelDb, int channelMask,
+                             int invertMask, int flags, int durationMs,
+                             int repeat, int gapMs,
+                             float p1, float p2, float p3, float p4) {
+    SiggenConfig cfg = {};
+    cfg.signal_type = static_cast<uint8_t>(type);
+    cfg.channel_mask = static_cast<uint16_t>(channelMask);
+    cfg.invert_mask = static_cast<uint16_t>(invertMask);
+    cfg.flags = static_cast<uint8_t>(flags);
+    cfg.level_db = levelDb;
+    cfg.duration_ms = static_cast<uint32_t>(durationMs);
+    cfg.repeat = static_cast<uint16_t>(repeat);
+    cfg.gap_ms = static_cast<uint16_t>(gapMs);
+    cfg.p1 = p1;
+    cfg.p2 = p2;
+    cfg.p3 = p3;
+    cfg.p4 = p4;
+    if (!dspi_siggen_set_config(m_core, &cfg)) return false;
+    return dspi_siggen_start(m_core);
+}
+
+void DSPiBridge::siggenStop(bool immediate) {
+    dspi_siggen_stop(m_core, immediate);
+}
+
+QVariantMap DSPiBridge::siggenStatus() {
+    QVariantMap map;
+    SiggenStatus st = {};
+    if (!dspi_siggen_get_status(m_core, &st)) {
+        map["ok"] = false;
+        return map;
+    }
+    map["ok"] = true;
+    map["state"] = st.state;
+    map["signalType"] = st.signal_type;
+    map["activeChannel"] = st.active_channel;
+    map["elapsedMs"] = st.elapsed_ms;
+    map["cyclesDone"] = st.cycles_done;
+    map["currentFreq"] = st.current_freq;
+    return map;
+}
+
 QString DSPiBridge::presetName(int slot) const {
     if (slot < 0 || slot >= MAX_PRESETS) return "";
     return QString::fromUtf8(reinterpret_cast<const char*>(state()->preset_names[slot]));

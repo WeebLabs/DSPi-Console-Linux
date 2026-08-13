@@ -126,6 +126,30 @@ pub const REQ_PRESET_GET_ACTIVE: u8 = 0x9A;
 pub const REQ_SET_CHANNEL_NAME: u8 = 0x9B;
 pub const REQ_GET_CHANNEL_NAME: u8 = 0x9C;
 
+// ── Test Signal Generator (firmware ≥ 1.1.5) ───────────────────────
+
+pub const REQ_SIGGEN_SET_CONFIG: u8 = 0xA4;
+pub const REQ_SIGGEN_GET_CONFIG: u8 = 0xA5;
+pub const REQ_SIGGEN_CONTROL: u8 = 0xA6;
+pub const REQ_SIGGEN_GET_STATUS: u8 = 0xA7;
+pub const REQ_SIGGEN_GET_CAPS: u8 = 0xA8;
+
+pub const SIGGEN_CFG_VERSION: u8 = 1;
+pub const SIGGEN_CONFIG_SIZE: usize = 36;
+pub const SIGGEN_STATUS_SIZE: usize = 16;
+pub const SIGGEN_CAPS_SIZE: usize = 8;
+
+pub const SIGGEN_CTL_STOP: u16 = 0;
+pub const SIGGEN_CTL_START: u16 = 1;
+pub const SIGGEN_CTL_STOP_NOW: u16 = 2;
+
+pub const SIGGEN_FLAG_RAW: u8 = 0x01;
+pub const SIGGEN_FLAG_DECORR: u8 = 0x02;
+pub const SIGGEN_FLAG_WALK: u8 = 0x04;
+
+/// Number of signal types the app knows how to configure.
+pub const SIGGEN_TYPE_COUNT: u8 = 15;
+
 // ── I2S Output Configuration (firmware ≥ 1.1) ──────────────────────
 
 pub const REQ_SET_OUTPUT_TYPE: u8 = 0xC0;
@@ -476,6 +500,63 @@ pub fn build_set_filter_packet(ch: u8, band: u8, params: &FilterParams) -> Vec<u
     packet
 }
 
+/// Serialize a SiggenConfig into the firmware's packed 36-byte wire form.
+pub fn siggen_config_to_bytes(cfg: &SiggenConfig) -> [u8; SIGGEN_CONFIG_SIZE] {
+    let mut b = [0u8; SIGGEN_CONFIG_SIZE];
+    b[0] = SIGGEN_CFG_VERSION;
+    b[1] = cfg.signal_type;
+    b[2..4].copy_from_slice(&cfg.channel_mask.to_le_bytes());
+    b[4..6].copy_from_slice(&cfg.invert_mask.to_le_bytes());
+    b[6] = cfg.flags;
+    // b[7] reserved0
+    write_f32_le(&mut b, 8, cfg.level_db);
+    write_u32_le(&mut b, 12, cfg.duration_ms);
+    b[16..18].copy_from_slice(&cfg.repeat.to_le_bytes());
+    b[18..20].copy_from_slice(&cfg.gap_ms.to_le_bytes());
+    write_f32_le(&mut b, 20, cfg.p1);
+    write_f32_le(&mut b, 24, cfg.p2);
+    write_f32_le(&mut b, 28, cfg.p3);
+    write_f32_le(&mut b, 32, cfg.p4);
+    b
+}
+
+/// Parse the firmware's 36-byte SiggenConfig wire form.
+pub fn siggen_config_from_bytes(data: &[u8]) -> Option<SiggenConfig> {
+    if data.len() < SIGGEN_CONFIG_SIZE || data[0] != SIGGEN_CFG_VERSION {
+        return None;
+    }
+    Some(SiggenConfig {
+        signal_type: data[1],
+        channel_mask: read_u16_le(data, 2),
+        invert_mask: read_u16_le(data, 4),
+        flags: data[6],
+        level_db: read_f32_le(data, 8),
+        duration_ms: read_u32_le(data, 12),
+        repeat: read_u16_le(data, 16),
+        gap_ms: read_u16_le(data, 18),
+        p1: read_f32_le(data, 20),
+        p2: read_f32_le(data, 24),
+        p3: read_f32_le(data, 28),
+        p4: read_f32_le(data, 32),
+    })
+}
+
+/// Parse the firmware's 16-byte SiggenStatus wire form.
+pub fn siggen_status_from_bytes(data: &[u8]) -> Option<SiggenStatus> {
+    if data.len() < SIGGEN_STATUS_SIZE || data[0] != SIGGEN_CFG_VERSION {
+        return None;
+    }
+    Some(SiggenStatus {
+        state: data[1],
+        signal_type: data[2],
+        active_channel: data[3],
+        elapsed_ms: read_u32_le(data, 4),
+        cycles_done: read_u16_le(data, 8),
+        stop_reason: data[10],
+        current_freq: read_f32_le(data, 12),
+    })
+}
+
 /// Build a 9-byte matrix route packet.
 pub fn build_matrix_route_packet(input: u8, output: u8, enabled: bool, gain: f32, invert: bool) -> Vec<u8> {
     let mut packet = vec![0u8; 9];
@@ -681,5 +762,58 @@ mod tests {
     #[test]
     fn test_parse_status_unknown_length() {
         assert!(parse_status(&[0u8; 30]).is_none());
+    }
+
+    #[test]
+    fn test_siggen_config_round_trip() {
+        let cfg = SiggenConfig {
+            signal_type: 4, // log sweep
+            channel_mask: 0b11,
+            invert_mask: 0b10,
+            flags: SIGGEN_FLAG_RAW,
+            level_db: -12.0,
+            duration_ms: 5000,
+            repeat: 3,
+            gap_ms: 500,
+            p1: 20.0,
+            p2: 20000.0,
+            p3: 0.0,
+            p4: 0.0,
+        };
+        let bytes = siggen_config_to_bytes(&cfg);
+        assert_eq!(bytes[0], SIGGEN_CFG_VERSION);
+        let back = siggen_config_from_bytes(&bytes).unwrap();
+        assert_eq!(back.signal_type, 4);
+        assert_eq!(back.channel_mask, 0b11);
+        assert_eq!(back.invert_mask, 0b10);
+        assert_eq!(back.flags, SIGGEN_FLAG_RAW);
+        assert_eq!(back.level_db, -12.0);
+        assert_eq!(back.duration_ms, 5000);
+        assert_eq!(back.repeat, 3);
+        assert_eq!(back.gap_ms, 500);
+        assert_eq!(back.p1, 20.0);
+        assert_eq!(back.p2, 20000.0);
+    }
+
+    #[test]
+    fn test_siggen_status_parse() {
+        let mut d = [0u8; SIGGEN_STATUS_SIZE];
+        d[0] = SIGGEN_CFG_VERSION;
+        d[1] = 2; // RUN
+        d[2] = 4; // log sweep
+        d[3] = 0xFF;
+        d[4..8].copy_from_slice(&2500u32.to_le_bytes());
+        d[8..10].copy_from_slice(&1u16.to_le_bytes());
+        d[12..16].copy_from_slice(&440.0f32.to_le_bytes());
+        let st = siggen_status_from_bytes(&d).unwrap();
+        assert_eq!(st.state, 2);
+        assert_eq!(st.signal_type, 4);
+        assert_eq!(st.active_channel, 0xFF);
+        assert_eq!(st.elapsed_ms, 2500);
+        assert_eq!(st.cycles_done, 1);
+        assert_eq!(st.current_freq, 440.0);
+        // Version mismatch rejected
+        d[0] = 9;
+        assert!(siggen_status_from_bytes(&d).is_none());
     }
 }

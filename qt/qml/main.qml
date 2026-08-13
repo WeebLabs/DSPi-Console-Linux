@@ -223,4 +223,5 @@ ApplicationWindow {
     CrossfeedWindow { id: crossfeedWindow }
     StatsWindow { id: statsWindow }
     SettingsWindow { id: settingsWindow }
+    TestSignalsWindow { id: testSignalsWindow }
 }

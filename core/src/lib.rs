@@ -19,6 +19,7 @@ use std::sync::Mutex;
 
 use crate::device::DeviceManager;
 use crate::dsp_math::MAGNITUDE_POINTS;
+use crate::protocol::{SIGGEN_CTL_START, SIGGEN_CTL_STOP, SIGGEN_CTL_STOP_NOW};
 use crate::state::DspState;
 use crate::types::*;
 
@@ -367,6 +368,48 @@ pub extern "C" fn dspi_fetch_output_type(core: *mut FfiCore, slot: u8) -> u8 {
 #[no_mangle]
 pub extern "C" fn dspi_fetch_i2s_bck_pin(core: *mut FfiCore) -> u8 {
     with_core(core, |c| c.fetch_i2s_bck_pin().unwrap_or(0xFF))
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Test Signal Generator
+// ═══════════════════════════════════════════════════════════════════
+
+/// Stage a generator config (does not start playback).
+#[no_mangle]
+pub extern "C" fn dspi_siggen_set_config(core: *mut FfiCore, config: *const SiggenConfig) -> bool {
+    if config.is_null() {
+        return false;
+    }
+    let cfg = unsafe { *config };
+    with_core(core, |c| c.siggen_set_config(&cfg).is_ok())
+}
+
+/// Start playback with the staged config.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_start(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.siggen_control(SIGGEN_CTL_START).unwrap_or(false))
+}
+
+/// Stop playback. `immediate` skips the fade-out.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_stop(core: *mut FfiCore, immediate: bool) -> bool {
+    let action = if immediate { SIGGEN_CTL_STOP_NOW } else { SIGGEN_CTL_STOP };
+    with_core(core, |c| c.siggen_control(action).unwrap_or(false))
+}
+
+/// Fetch live generator status into `out_status`.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_get_status(core: *mut FfiCore, out_status: *mut SiggenStatus) -> bool {
+    if out_status.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.siggen_get_status() {
+        Ok(st) => {
+            unsafe { *out_status = st };
+            true
+        }
+        Err(_) => false,
+    })
 }
 
 // ═══════════════════════════════════════════════════════════════════
