@@ -3,18 +3,16 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import "components"
 
-Window {
+AppWindow {
     id: loudnessWindow
     title: "Loudness Compensation"
     visible: false
     width: 380
-    height: 520
+    height: 520 + titlebarHeight
     minimumWidth: 380
-    minimumHeight: 520
+    minimumHeight: 520 + titlebarHeight
     maximumWidth: 380
-    maximumHeight: 520
-    color: "#1e1e1e"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    maximumHeight: 520 + titlebarHeight
 
     Flickable {
         anchors.fill: parent

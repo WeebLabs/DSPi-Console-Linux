@@ -1,19 +1,18 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
+import "components"
 
-Window {
+AppWindow {
     id: statsWindow
     title: "System Statistics"
     visible: false
     width: 320
-    height: 420
+    height: 420 + titlebarHeight
     minimumWidth: 320
-    minimumHeight: 420
+    minimumHeight: 420 + titlebarHeight
     maximumWidth: 320
-    maximumHeight: 420
-    color: "#1e1e1e"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    maximumHeight: 420 + titlebarHeight
 
     Column {
         anchors.fill: parent

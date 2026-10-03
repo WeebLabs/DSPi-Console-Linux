@@ -11,19 +11,29 @@ import "settings"
 // To add a page: write settings/pages/<Name>Page.qml (a SettingsPage built
 // from SettingsSection and the Settings*Row components) and add one entry
 // to `groups` below.
-Window {
+AppWindow {
     id: settingsWindow
     title: "Settings"
     visible: false
     width: 900
-    height: 640
+    height: 640 + titlebarHeight
     minimumWidth: 720
-    minimumHeight: 480
-    color: "#1e1e20"
-    flags: isMacOS ? Qt.Window : (Qt.Window | Qt.FramelessWindowHint)
+    minimumHeight: 480 + titlebarHeight
 
     readonly property int sidebarWidth: 232
-    readonly property int titlebarHeight: isMacOS ? 28 : 46
+
+    // Sidebar runs up under the shared titlebar and is blurred on KDE
+    contentUnderTitlebar: true
+    blurWidth: sidebarWidth
+    titleBar.titleText: currentPage ? currentPage.title : "Settings"
+    titleBar.showNav: true
+    titleBar.canGoBack: historyIndex > 0
+    titleBar.canGoForward: historyIndex < history.length - 1
+    Connections {
+        target: settingsWindow.titleBar
+        function onGoBack() { settingsWindow.goBack() }
+        function onGoForward() { settingsWindow.goForward() }
+    }
 
     // ── Page registry ──
     // id: stable key (history, deep links); icon: Icon name; tint: tile colour;
@@ -99,7 +109,6 @@ Window {
         onNavigateRequested: settingsWindow.navigate(pageId)
     }
 
-    Component.onCompleted: if (!isMacOS) windowEffects.decorate(settingsWindow, sidebarWidth, true)
 
     // ── Sidebar ──
     Rectangle {
@@ -289,34 +298,6 @@ Window {
         color: "#1e1e20"
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
     }
-    WindowTitleBar {
-        visible: !isMacOS
-        width: parent.width
-        height: settingsWindow.titlebarHeight
-        window: settingsWindow
-        sidebarWidth: settingsWindow.sidebarWidth
-        showMenuButton: false
-        showMinMax: false
-        titleText: settingsWindow.currentPage ? settingsWindow.currentPage.title : "Settings"
-        showNav: true
-        canGoBack: settingsWindow.historyIndex > 0
-        canGoForward: settingsWindow.historyIndex < settingsWindow.history.length - 1
-        onGoBack: settingsWindow.goBack()
-        onGoForward: settingsWindow.goForward()
-    }
-    WindowResizeEdges {
-        visible: !isMacOS
-        window: settingsWindow
-        z: 950
-    }
-    Rectangle {
-        visible: !isMacOS
-        anchors.fill: parent
-        z: 1000
-        color: "transparent"
-        border.color: Qt.rgba(1, 1, 1, 0.12)
-    }
-
     Shortcut { sequence: "Alt+Left"; onActivated: settingsWindow.goBack() }
     Shortcut { sequence: "Alt+Right"; onActivated: settingsWindow.goForward() }
     Shortcut { sequences: [StandardKey.Find]; onActivated: search.forceActiveFocus() }

@@ -27,7 +27,7 @@ Row {
         height: parent.height
         font.pixelSize: 12
         font.family: root.monoFont
-        color: activeFocus ? "#0078d4" : "white"
+        color: activeFocus ? "#0a7cff" : "white"
         horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
         selectByMouse: true
@@ -35,7 +35,7 @@ Row {
 
         background: Rectangle {
             color: "transparent"
-            border.color: textField.activeFocus ? "#0078d4" : "transparent"
+            border.color: textField.activeFocus ? "#0a7cff" : "transparent"
             border.width: 1
             radius: 3
         }

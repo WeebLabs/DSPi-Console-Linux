@@ -4,16 +4,14 @@ import QtQuick.Window 2.15
 import "components"
 
 // Volume Leveller: upward dynamic range compression.
-Window {
+AppWindow {
     id: win
     title: "Volume Leveller"
     visible: false
     width: 460
-    height: 660
+    height: 660 + titlebarHeight
     minimumWidth: 400
-    minimumHeight: 360
-    color: "#262628"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    minimumHeight: 360 + titlebarHeight
 
     readonly property int inputCount: Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels))
     readonly property var speedCaptions: [

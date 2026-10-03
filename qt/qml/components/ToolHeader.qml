@@ -30,7 +30,7 @@ Rectangle {
         Text { text: hdr.title; font.pixelSize: 18; font.weight: Font.DemiBold; color: "white" }
         Text { text: hdr.subtitle; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.6) }
     }
-    Switch {
+    ToggleSwitch {
         visible: hdr.showSwitch
         anchors.right: parent.right
         anchors.rightMargin: 16

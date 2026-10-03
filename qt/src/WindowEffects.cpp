@@ -83,7 +83,7 @@ void WindowEffects::attachShadow(QWindow *window)
     // Shadow tiles: a soft falloff, a little deeper below the window.
     static QImage img = [] {
         const int r = 32, offsetY = 5;
-        const double maxAlpha = 0.55;
+        const double maxAlpha = 0.38;   // soft: a hint of depth rather than a dark halo
         const int size = 2 * r + 1;
         QImage im(size, size, QImage::Format_ARGB32_Premultiplied);
         for (int y = 0; y < size; y++)

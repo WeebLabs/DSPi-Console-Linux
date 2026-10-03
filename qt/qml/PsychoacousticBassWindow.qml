@@ -4,16 +4,14 @@ import QtQuick.Window 2.15
 import "components"
 
 // Psychoacoustic Bass: phantom fundamental bass enhancement.
-Window {
+AppWindow {
     id: win
     title: "Psychoacoustic Bass"
     visible: false
     width: 900
-    height: 640
+    height: 640 + titlebarHeight
     minimumWidth: 760
-    minimumHeight: 420
-    color: "#262628"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    minimumHeight: 420 + titlebarHeight
 
     readonly property int numOut: bridge.numOutputChannels
     readonly property int pdm: numOut - 1

@@ -3,18 +3,16 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import "components"
 
-Window {
+AppWindow {
     id: crossfeedWindow
     title: "Crossfeed"
     visible: false
     width: 380
-    height: 560
+    height: 560 + titlebarHeight
     minimumWidth: 380
-    minimumHeight: 300
+    minimumHeight: 300 + titlebarHeight
     maximumWidth: 380
-    maximumHeight: 560
-    color: "#1e1e1e"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMaximizeButtonHint
+    maximumHeight: 560 + titlebarHeight
 
     readonly property var presets: [
         { name: "Default", desc: "700 Hz / 4.5 dB — Balanced, most popular", freq: 700, feed: 4.5 },

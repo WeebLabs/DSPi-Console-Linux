@@ -4,13 +4,19 @@ import QtQuick.Window 2.15
 import "components"
 
 // Matrix Mixer: inputs (rows) to outputs (columns), plus each output's
-// enable, gain, delay and mute. Laid out as on the macOS Console.
-Window {
+// enable, gain, delay and mute. Laid out as on the macOS Console, styled
+// like the Settings cards.
+AppWindow {
     id: matrixWindow
     title: "Matrix Mixer"
     visible: false
-    color: "#232325"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+
+    // ── App palette ──
+    readonly property color accent: "#0a7cff"
+    readonly property color warn: "#ff9f0a"
+    readonly property color danger: "#ff453a"
+    readonly property color hairline: Qt.rgba(1, 1, 1, 0.07)
+    readonly property color cardFill: Qt.rgba(1, 1, 1, 0.045)
 
     readonly property int colWidth: 80
     readonly property int labelWidth: 96
@@ -20,13 +26,14 @@ Window {
     readonly property int inputCount: Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels))
     readonly property bool multichannel: inputCount > 2
     readonly property int pdm: numOut - 1
+    readonly property int gridWidth: labelWidth + numOut * colWidth + 12
 
     property int rev: 0
     Connections { target: bridge; function onStateChanged() { matrixWindow.rev++ } }
 
     // Size to the content; with many inputs the window can be resized and scrolls
-    readonly property int contentW: card.implicitWidth + 32
-    readonly property int contentH: card.implicitHeight + 32
+    readonly property int contentW: body.implicitWidth + 48
+    readonly property int contentH: body.implicitHeight + 22 + titlebarHeight
     width: Math.min(contentW, Screen.desktopAvailableWidth - 40)
     height: Math.min(contentH, Screen.desktopAvailableHeight - 80)
     minimumWidth: Math.min(contentW, 480)
@@ -48,56 +55,93 @@ Window {
         pdmDialog.open()
     }
 
-    component SmallLabel: Text {
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        color: Qt.rgba(1, 1, 1, 0.5)
+    // Section title above a card (as in Settings)
+    component SectionTitle: Text {
+        leftPadding: 4
+        font.pixelSize: 13
+        font.weight: Font.DemiBold
+        color: Qt.rgba(1, 1, 1, 0.6)
     }
 
-    component SmallButton: Rectangle {
+    // Row label on the left of the Output card
+    component RowLabel: Text {
+        width: labelWidth - 14
+        horizontalAlignment: Text.AlignRight
+        font.pixelSize: 12
+        font.weight: Font.DemiBold
+        color: Qt.rgba(1, 1, 1, 0.55)
+    }
+
+    component CardButton: Rectangle {
         property alias label: lbl.text
         signal clicked()
-        width: lbl.implicitWidth + 18
-        height: 22
-        radius: 5
-        color: sbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.14)
-        Text { id: lbl; anchors.centerIn: parent; font.pixelSize: 12; color: "white" }
-        MouseArea { id: sbMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
+        width: lbl.implicitWidth + 22
+        height: 26
+        radius: 7
+        color: cbMouse.pressed ? Qt.rgba(1, 1, 1, 0.20) : cbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.09)
+        border.color: Qt.rgba(1, 1, 1, 0.10)
+        Text { id: lbl; anchors.centerIn: parent; font.pixelSize: 13; color: "white" }
+        MouseArea { id: cbMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
+    }
+
+    component Card: Rectangle {
+        default property alias rows: cardColumn.data
+        width: gridWidth
+        height: cardColumn.implicitHeight
+        radius: 10
+        color: cardFill
+        border.color: hairline
+        Column { id: cardColumn; width: parent.width }
+    }
+
+    component Hairline: Rectangle {
+        x: 14
+        width: gridWidth - 28
+        height: 1
+        color: hairline
     }
 
     Flickable {
         anchors.fill: parent
-        contentWidth: card.implicitWidth + 32
-        contentHeight: card.implicitHeight + 32
+        contentWidth: body.implicitWidth + 48
+        contentHeight: body.implicitHeight + 22
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
         ScrollBar.horizontal: ScrollBar {}
 
-        Rectangle {
-            id: card
-            x: 16; y: 16
-            implicitWidth: content.implicitWidth
-            implicitHeight: content.implicitHeight
-            width: implicitWidth
-            height: implicitHeight
-            radius: 10
-            color: Qt.rgba(1, 1, 1, 0.025)
-            border.color: Qt.rgba(1, 1, 1, 0.1)
+        Column {
+            id: body
+            x: 24
+            y: 2        // the titlebar already provides the top margin
+            spacing: 8
 
-            Column {
-                id: content
-
-                // ── Column headers ──
+            // ── Routing ──
+            Item {
+                width: gridWidth
+                height: 28
+                SectionTitle { text: "Routing"; anchors.verticalCenter: parent.verticalCenter }
                 Row {
-                    height: 56
+                    visible: multichannel
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    CardButton { label: "Direct 1:1"; onClicked: bridge.directRouting() }
+                    CardButton { label: "Clear"; onClicked: bridge.clearRouting() }
+                }
+            }
+
+            Card {
+                // Column headers
+                Row {
+                    height: 58
                     Item { width: labelWidth; height: 1 }
                     Repeater {
                         model: numOut
                         Item {
                             id: hdr
                             width: colWidth
-                            height: 56
+                            height: 58
                             property bool renaming: false
                             opacity: outEnabled(index) ? 1.0 : 0.4
                             Column {
@@ -111,7 +155,7 @@ Window {
                                     elide: Text.ElideRight
                                     text: { rev; return bridge.channelName(index + 2) }
                                     font.pixelSize: 13; font.weight: Font.DemiBold
-                                    color: Qt.rgba(1, 1, 1, 0.75)
+                                    color: "white"
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -156,25 +200,9 @@ Window {
                     }
                 }
 
-                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+                Hairline {}
 
-                // ── ROUTING ──
-                Rectangle {
-                    width: parent.width
-                    height: 34
-                    color: Qt.rgba(1, 1, 1, 0.03)
-                    SmallLabel { text: "ROUTING"; x: 16; anchors.verticalCenter: parent.verticalCenter }
-                    Row {
-                        visible: multichannel
-                        anchors.right: parent.right
-                        anchors.rightMargin: 14
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-                        SmallButton { label: "Direct 1:1"; onClicked: bridge.directRouting() }
-                        SmallButton { label: "Clear"; onClicked: bridge.clearRouting() }
-                    }
-                }
-
+                // Input rows
                 Repeater {
                     model: inputCount
                     Column {
@@ -231,8 +259,10 @@ Window {
                                         width: 22; height: 22; radius: 11
                                         color: parent.connected ? inColor(inputIndex) : "transparent"
                                         border.width: parent.connected ? 0 : 1.5
-                                        border.color: parent.conflictRing ? "#ff9f0a"
-                                                    : pointMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.22)
+                                        border.color: parent.conflictRing ? warn
+                                                    : pointMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.20)
+                                        scale: pointMouse.containsMouse ? 1.08 : 1.0
+                                        Behavior on scale { NumberAnimation { duration: 90 } }
                                         MouseArea {
                                             id: pointMouse
                                             anchors.fill: parent
@@ -250,7 +280,7 @@ Window {
                                         anchors.bottomMargin: 6
                                         text: "INV"
                                         font.pixelSize: 10; font.weight: Font.Bold
-                                        color: parent.inverted ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.35)
+                                        color: parent.inverted ? warn : Qt.rgba(1, 1, 1, 0.35)
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -4
@@ -263,42 +293,33 @@ Window {
                             }
                         }
                         // Divider after each stereo pair
-                        Rectangle {
-                            visible: inputIndex % 2 === 1 && inputIndex < inputCount - 1
-                            x: labelWidth
-                            width: numOut * colWidth
-                            height: 1
-                            color: Qt.rgba(1, 1, 1, 0.06)
-                        }
+                        Hairline { visible: inputIndex % 2 === 1 && inputIndex < inputCount - 1 }
                     }
                 }
+            }
 
-                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+            Item { width: 1; height: 14 }
 
-                // ── OUTPUT ──
-                Rectangle {
-                    width: parent.width
-                    height: 34
-                    color: Qt.rgba(1, 1, 1, 0.03)
-                    SmallLabel { text: "OUTPUT"; x: 16; anchors.verticalCenter: parent.verticalCenter }
-                }
+            // ── Output ──
+            SectionTitle { text: "Output" }
 
-                // ENABLE
+            Card {
+                // Enable
                 Row {
-                    height: 40
-                    SmallLabel { width: labelWidth - 12; horizontalAlignment: Text.AlignRight; text: "ENABLE"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 12; height: 1 }
+                    height: 44
+                    RowLabel { text: "Enable"; anchors.verticalCenter: parent.verticalCenter }
+                    Item { width: 14; height: 1 }
                     Repeater {
                         model: numOut
                         Item {
-                            width: colWidth; height: 40
+                            width: colWidth; height: 44
                             readonly property bool isOn: outEnabled(index)
                             readonly property bool wouldConflict: !isOn && conflicts(index).length > 0
                             Icon {
                                 anchors.centerIn: parent
                                 name: "power"
                                 size: 20
-                                color: parent.wouldConflict ? "#ff9f0a" : parent.isOn ? "#3a96dd" : Qt.rgba(1, 1, 1, 0.3)
+                                color: parent.wouldConflict ? warn : parent.isOn ? accent : Qt.rgba(1, 1, 1, 0.3)
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -308,16 +329,17 @@ Window {
                         }
                     }
                 }
+                Hairline {}
 
-                // GAIN
+                // Gain
                 Row {
-                    height: 36
-                    SmallLabel { width: labelWidth - 12; horizontalAlignment: Text.AlignRight; text: "GAIN"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 12; height: 1 }
+                    height: 40
+                    RowLabel { text: "Gain"; anchors.verticalCenter: parent.verticalCenter }
+                    Item { width: 14; height: 1 }
                     Repeater {
                         model: numOut
                         Item {
-                            width: colWidth; height: 36
+                            width: colWidth; height: 40
                             opacity: outEnabled(index) ? 1.0 : 0.4
                             ValueField {
                                 anchors.centerIn: parent
@@ -329,16 +351,17 @@ Window {
                         }
                     }
                 }
+                Hairline {}
 
-                // DELAY
+                // Delay
                 Row {
-                    height: 36
-                    SmallLabel { width: labelWidth - 12; horizontalAlignment: Text.AlignRight; text: "DELAY"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 12; height: 1 }
+                    height: 40
+                    RowLabel { text: "Delay"; anchors.verticalCenter: parent.verticalCenter }
+                    Item { width: 14; height: 1 }
                     Repeater {
                         model: numOut
                         Item {
-                            width: colWidth; height: 36
+                            width: colWidth; height: 40
                             opacity: outEnabled(index) ? 1.0 : 0.4
                             ValueField {
                                 anchors.centerIn: parent
@@ -350,23 +373,24 @@ Window {
                         }
                     }
                 }
+                Hairline {}
 
-                // MUTE
+                // Mute
                 Row {
-                    height: 40
-                    SmallLabel { width: labelWidth - 12; horizontalAlignment: Text.AlignRight; text: "MUTE"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 12; height: 1 }
+                    height: 44
+                    RowLabel { text: "Mute"; anchors.verticalCenter: parent.verticalCenter }
+                    Item { width: 14; height: 1 }
                     Repeater {
                         model: numOut
                         Item {
-                            width: colWidth; height: 40
+                            width: colWidth; height: 44
                             opacity: outEnabled(index) ? 1.0 : 0.4
                             readonly property bool muted: { rev; return bridge.outputMuted(index) }
                             Icon {
                                 anchors.centerIn: parent
                                 name: parent.muted ? "speaker-mute" : "speaker"
                                 size: 20
-                                color: parent.muted ? "#ff453a" : Qt.rgba(1, 1, 1, 0.5)
+                                color: parent.muted ? danger : Qt.rgba(1, 1, 1, 0.5)
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -376,7 +400,6 @@ Window {
                         }
                     }
                 }
-                Item { width: 1; height: 8 }
             }
         }
     }
