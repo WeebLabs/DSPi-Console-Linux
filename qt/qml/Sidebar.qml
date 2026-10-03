@@ -294,30 +294,46 @@ Rectangle {
                     width: parent.width
                     height: 24
 
-                    GlobalLabel {
+                    // Heading doubles as the User / Master selector
+                    Item {
                         id: volumeHeading
-                        text: (volumeSettings.showMaster ? "Master Volume" : "User Volume") + " ▾"
-                        color: volHeadMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.6)
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
+                        width: headingRow.width
+                        height: headingRow.height
+                        Row {
+                            id: headingRow
+                            spacing: 4
+                            GlobalLabel {
+                                text: volumeSettings.showMaster ? "Master Volume" : "User Volume"
+                                color: volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.6)
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Icon {
+                                name: "chev-down"
+                                size: 12
+                                color: volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
                         MouseArea {
                             id: volHeadMouse
                             anchors.fill: parent
+                            anchors.margins: -4
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: volumeMenu.popup(volumeHeading, 0, volumeHeading.height)
+                            onClicked: volumeMenu.toggleAt(volumeHeading)
                         }
-                        Menu {
-                            id: volumeMenu
-                            MenuItem {
-                                text: "User Volume"; checkable: true; checked: !volumeSettings.showMaster
-                                onTriggered: volumeSettings.showMaster = false
-                            }
-                            MenuItem {
-                                text: "Master Volume"; checkable: true; checked: volumeSettings.showMaster
-                                onTriggered: volumeSettings.showMaster = true
-                            }
-                        }
+                    }
+                    ChoiceMenu {
+                        id: volumeMenu
+                        parent: Overlay.overlay
+                        currentValue: volumeSettings.showMaster ? "master" : "user"
+                        options: [
+                            { value: "user", text: "User Volume", icon: "speaker" },
+                            { value: "master", text: "Master Volume", icon: "gauge" }
+                        ]
+                        onChosen: volumeSettings.showMaster = (value === "master")
                     }
                     ValueField {
                         fieldWidth: 64

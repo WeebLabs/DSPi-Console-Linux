@@ -67,6 +67,7 @@
         <file>qml/settings/pages/OutputsPage.qml</file>
         <file>qml/components/WindowResizeEdges.qml</file>
         <file>qml/components/AppWindow.qml</file>
+        <file>qml/components/ChoiceMenu.qml</file>
         <file>qml/components/ToggleSwitch.qml</file>
         <file>qml/components/StyledSlider.qml</file>
         <file>qml/components/StyledComboBox.qml</file>
