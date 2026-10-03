@@ -29,6 +29,9 @@ public:
     // it a shadow while it has focus. Re-applied each time the window is shown.
     Q_INVOKABLE void decorate(QWindow *window, int blurWidth, bool shadow = true);
 
+    // Change the width of a decorated window's blurred strip (resizable sidebar)
+    Q_INVOKABLE void setBlurWidth(QWindow *window, int blurWidth);
+
 signals:
     void blurAvailableChanged();
 
@@ -40,6 +43,7 @@ private:
 
     void pollForBlur();
     void applyBlur(QWindow *window, int blurWidth);
+    int blurWidthOf(QWindow *window) const;
     void attachShadow(QWindow *window);
 
     bool m_blurAvailable = false;

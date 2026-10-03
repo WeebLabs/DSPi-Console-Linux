@@ -19,7 +19,7 @@
 #include "MeterItem.h"
 #include "WindowEffects.h"
 
-static const int SIDEBAR_WIDTH = 260;
+static const int SIDEBAR_WIDTH = 270;   // default; macOS vibrancy frame (resizes with the view)
 
 static void setPlatformDarkMode()
 {
@@ -190,7 +190,8 @@ int main(int argc, char *argv[])
     auto *mainWindow = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
     setupPlatformEffects(mainWindow);
 #ifndef Q_OS_MACOS
-    windowEffects.decorate(mainWindow, SIDEBAR_WIDTH, true);
+    // The sidebar is resizable; QML updates the strip as it changes
+    windowEffects.decorate(mainWindow, mainWindow->property("sidebarWidth").toInt(), true);
 #endif
 
     return app.exec();

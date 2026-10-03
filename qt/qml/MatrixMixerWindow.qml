@@ -179,22 +179,31 @@ AppWindow {
                                 anchors.fill: parent
                                 enabled: !hdr.renaming
                                 acceptedButtons: Qt.RightButton
-                                onClicked: hdrMenu.popup()
+                                onClicked: {
+                                    hdrMenu.items = [
+                                        { key: "rename", text: "Rename", icon: "pencil" },
+                                        { separator: true },
+                                        { key: "copy", text: "Copy Parameters", icon: "copy" },
+                                        { key: "paste", text: "Paste Parameters", icon: "paste", enabled: bridge.canPaste() }
+                                    ]
+                                    hdrMenu.openAt(hdr, mouse.x, mouse.y)
+                                }
                             }
-                            Menu {
+                            ActionMenu {
                                 id: hdrMenu
-                                MenuItem {
-                                    text: "Rename"
-                                    onTriggered: {
+                                parent: Overlay.overlay
+                                onTriggered: {
+                                    if (key === "rename") {
                                         hdr.renaming = true
                                         renameField.text = bridge.channelName(index + 2)
                                         renameField.forceActiveFocus()
                                         renameField.selectAll()
+                                    } else if (key === "copy") {
+                                        bridge.copyChannel(index + 2)
+                                    } else if (key === "paste") {
+                                        bridge.pasteChannel(index + 2)
                                     }
                                 }
-                                MenuSeparator {}
-                                MenuItem { text: "Copy Parameters"; onTriggered: bridge.copyChannel(index + 2) }
-                                MenuItem { text: "Paste Parameters"; onTriggered: bridge.pasteChannel(index + 2) }
                             }
                         }
                     }

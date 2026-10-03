@@ -27,12 +27,13 @@ void WindowEffects::decorate(QWindow *window, int blurWidth, bool shadow)
         if (m_blurAvailable) applyBlur(window, blurWidth);
         else pollForBlur();
 
-        // A Wayland surface is recreated each time the window is shown
-        connect(window, &QWindow::visibleChanged, this, [this, window, blurWidth](bool visible) {
-            if (visible && m_blurAvailable) applyBlur(window, blurWidth);
+        // A Wayland surface is recreated each time the window is shown; the
+        // strip also follows the window's height and the sidebar's width.
+        connect(window, &QWindow::visibleChanged, this, [this, window](bool visible) {
+            if (visible && m_blurAvailable) applyBlur(window, blurWidthOf(window));
         });
-        connect(window, &QWindow::heightChanged, this, [this, window, blurWidth]() {
-            if (m_blurAvailable) applyBlur(window, blurWidth);
+        connect(window, &QWindow::heightChanged, this, [this, window]() {
+            if (m_blurAvailable) applyBlur(window, blurWidthOf(window));
         });
     }
     if (shadow) attachShadow(window);
@@ -40,6 +41,25 @@ void WindowEffects::decorate(QWindow *window, int blurWidth, bool shadow)
     Q_UNUSED(blurWidth);
     Q_UNUSED(shadow);
 #endif
+}
+
+void WindowEffects::setBlurWidth(QWindow *window, int blurWidth)
+{
+    for (Decorated &d : m_windows) {
+        if (d.window == window) {
+            if (d.blurWidth == blurWidth) return;
+            d.blurWidth = blurWidth;
+            if (m_blurAvailable) applyBlur(window, blurWidth);
+            return;
+        }
+    }
+}
+
+int WindowEffects::blurWidthOf(QWindow *window) const
+{
+    for (const Decorated &d : m_windows)
+        if (d.window == window) return d.blurWidth;
+    return 0;
 }
 
 void WindowEffects::pollForBlur()

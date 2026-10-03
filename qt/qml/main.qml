@@ -21,6 +21,17 @@ ApplicationWindow {
 
     // Titlebar inset: macOS integrated titlebar needs offset, Linux uses standard decorations
     property int titlebarHeight: isMacOS ? 28 : 30
+    // Sidebar width: drag its right edge (220-300 px), double-click to reset
+    readonly property int sidebarMinWidth: 220
+    readonly property int sidebarMaxWidth: 300
+    readonly property int sidebarDefaultWidth: 270
+    property int sidebarWidth: sidebarDefaultWidth
+    onSidebarWidthChanged: if (!isMacOS) windowEffects.setBlurWidth(root, sidebarWidth)
+
+    Settings {
+        category: "sidebar"
+        property alias width: root.sidebarWidth
+    }
 
     // Platform-aware monospace font
     readonly property string monoFont: isMacOS ? "Menlo" : "monospace"
@@ -205,13 +216,13 @@ ApplicationWindow {
         // Sidebar
         Sidebar {
             id: sidebar
-            width: 260
+            width: root.sidebarWidth
             height: parent.height
         }
 
         // Content area
         Rectangle {
-            width: parent.width - 260
+            width: parent.width - root.sidebarWidth
             height: parent.height
             color: isMacOS ? "transparent" : nativeWindowColor
 
@@ -311,6 +322,24 @@ ApplicationWindow {
                 channelId: root.selectedOutput >= 0 ? root.selectedOutput + 2 : root.selectedChannel
             }
         }
+    }
+
+    // Sidebar resize handle on its right edge
+    MouseArea {
+        id: sidebarSplitter
+        x: root.sidebarWidth - 3
+        y: root.titlebarHeight
+        width: 6
+        height: parent.height - root.titlebarHeight
+        z: 800
+        hoverEnabled: true
+        cursorShape: Qt.SplitHCursor
+        onPositionChanged: {
+            if (!pressed) return
+            var x = mapToItem(root.contentItem, mouse.x, 0).x
+            root.sidebarWidth = Math.round(Math.max(root.sidebarMinWidth, Math.min(root.sidebarMaxWidth, x)))
+        }
+        onDoubleClicked: root.sidebarWidth = root.sidebarDefaultWidth
     }
 
     // Linux: client-side titlebar, resize edges and window outline

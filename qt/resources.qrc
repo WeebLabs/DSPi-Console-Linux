@@ -69,6 +69,7 @@
         <file>qml/components/AppWindow.qml</file>
         <file>qml/components/ChoiceMenu.qml</file>
         <file>qml/components/MenuStyle.qml</file>
+        <file>qml/components/ActionMenu.qml</file>
         <file>qml/components/SidebarPicker.qml</file>
         <file>qml/components/ToggleSwitch.qml</file>
         <file>qml/components/StyledSlider.qml</file>

@@ -52,7 +52,7 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: {
-            if (mouse.button === Qt.RightButton) contextMenu.popup()
+            if (mouse.button === Qt.RightButton) rowRoot.openContextMenu(mouse.x, mouse.y)
             else if (mouse.modifiers & Qt.AltModifier) rowRoot.startRename()
             else rowRoot.clicked()
         }
@@ -102,13 +102,21 @@ Rectangle {
         barColor: channelColor
     }
 
+    TextMetrics {
+        id: widestPill
+        font.pixelSize: 10
+        font.weight: Font.Bold
+        text: "OUT9"
+    }
+
     // Pill: click shows or hides the curve; grey while hidden
     Rectangle {
         id: pill
         anchors.right: parent.right
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(40, pillText.implicitWidth + 18)
+        // Same width for every pill: sized to the widest label (OUT9)
+        width: Math.ceil(widestPill.advanceWidth) + 18
         height: 20
         radius: 10
         readonly property color tint: curveVisible ? parsedColor : Qt.rgba(0.6, 0.6, 0.6, 1)
@@ -131,14 +139,23 @@ Rectangle {
         }
     }
 
-    Menu {
+    function openContextMenu(px, py) {
+        contextMenu.items = [
+            { key: "rename", text: "Rename", icon: "pencil", shortcut: "Alt+Click" },
+            { separator: true },
+            { key: "copy", text: "Copy Parameters", icon: "copy" },
+            { key: "paste", text: "Paste Parameters", icon: "paste", enabled: bridge.canPaste() }
+        ]
+        contextMenu.openAt(rowRoot, px, py)
+    }
+
+    ActionMenu {
         id: contextMenu
-        MenuItem { text: "Rename"; onTriggered: rowRoot.startRename() }
-        MenuSeparator {}
-        MenuItem { text: "Copy Parameters"; onTriggered: bridge.copyChannel(rowRoot.channelIndex) }
-        MenuItem {
-            text: "Paste Parameters"
-            onTriggered: bridge.pasteChannel(rowRoot.channelIndex)
+        parent: Overlay.overlay
+        onTriggered: {
+            if (key === "rename") rowRoot.startRename()
+            else if (key === "copy") bridge.copyChannel(rowRoot.channelIndex)
+            else if (key === "paste") bridge.pasteChannel(rowRoot.channelIndex)
         }
     }
 }
