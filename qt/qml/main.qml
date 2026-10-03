@@ -219,7 +219,8 @@ ApplicationWindow {
                 anchors.fill: parent
                 anchors.margins: 0
                 anchors.topMargin: root.titlebarHeight
-                spacing: 20
+                // Graph's 8 px resize handle + 10 = 18 px, the same gap as between cards
+                spacing: 10
 
                 // Firmware compatibility banner
                 Rectangle {
@@ -254,8 +255,9 @@ ApplicationWindow {
                 Loader {
                     id: contentLoader
                     width: parent.width
-                    height: parent.height - filterResponse.height - root.titlebarHeight - 20
-                            - (compatBanner.visible ? compatBanner.height + 20 : 0)
+                    // The column already starts below the titlebar
+                    height: parent.height - filterResponse.height - 10
+                            - (compatBanner.visible ? compatBanner.height + 10 : 0)
 
                     sourceComponent: {
                         if (root.selection === "overview")
@@ -305,6 +307,7 @@ ApplicationWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
+                anchors.bottomMargin: 16      // same as the side margins
                 channelId: root.selectedOutput >= 0 ? root.selectedOutput + 2 : root.selectedChannel
             }
         }

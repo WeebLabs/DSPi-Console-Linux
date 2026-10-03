@@ -136,7 +136,4 @@ Column {
             }
         }
     }
-
-    // Bottom spacing (curve visibility is toggled from the sidebar pills)
-    Item { width: 1; height: 8 }
 }

@@ -12,7 +12,7 @@ Flickable {
         id: dashboardColumn
         width: parent.width
         spacing: 18
-        topPadding: 4
+        topPadding: 0
         leftPadding: 16
         rightPadding: 16
 

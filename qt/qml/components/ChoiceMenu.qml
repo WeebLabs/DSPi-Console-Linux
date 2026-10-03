@@ -3,7 +3,10 @@ import QtQuick.Controls 2.15
 
 // A pick-one menu in the app-menu style: a dark card of rows with an icon,
 // title, optional detail line and a check mark on the current choice.
-// options: [{ value, text, detail?, icon? }]. Keyboard: Up/Down, Enter, Esc.
+// options: [{ value, text, detail?, icon?, prefix?, enabled? }]; `prefix` is a
+// short dim label before the text (e.g. a slot number), and an option with
+// enabled: false is shown dimmed and can't be chosen. Keyboard: Up/Down,
+// Enter, Esc.
 Popup {
     id: menu
     property var options: []
@@ -12,7 +15,11 @@ Popup {
     signal chosen(var value)
 
     // Fits the longest option: icon + label + check mark
-    width: Math.max(140, widest.advanceWidth + 78)
+    readonly property bool hasPrefix: {
+        for (var i = 0; i < options.length; i++) if (options[i].prefix !== undefined) return true
+        return false
+    }
+    width: Math.max(140, widest.advanceWidth + 78 + (hasPrefix ? 18 : 0))
     padding: 4
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -35,9 +42,12 @@ Popup {
     property real closedAt: 0
     onClosed: closedAt = Date.now()
 
+    // Line the menu's right edge up with the anchor's (for right-aligned values)
+    property bool alignRight: false
+
     function openAt(anchorItem) {
         var p = anchorItem.mapToItem(parent, 0, anchorItem.height + 6)
-        x = Math.max(6, p.x - 4)
+        x = alignRight ? Math.max(6, p.x + anchorItem.width - width + 4) : Math.max(6, p.x - 4)
         y = p.y
         current = -1
         for (var i = 0; i < options.length; i++)
@@ -49,8 +59,9 @@ Popup {
         if (Date.now() - closedAt < 300) return
         openAt(anchorItem)
     }
+    function optionEnabled(i) { return options[i] && options[i].enabled !== false }
     function activate(i) {
-        if (i < 0 || i >= options.length) return
+        if (i < 0 || i >= options.length || !optionEnabled(i)) return
         close()
         chosen(options[i].value)
     }
@@ -110,7 +121,8 @@ Popup {
                 id: row
                 width: parent.width
                 height: modelData.detail ? 42 : 28
-                readonly property bool hot: menu.current === index
+                readonly property bool usable: modelData.enabled !== false
+                readonly property bool hot: menu.current === index && usable
                 readonly property bool selected: modelData.value === menu.currentValue
 
                 Rectangle {
@@ -130,9 +142,20 @@ Popup {
                     size: 15
                     color: row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
                 }
+                Text {
+                    id: rowPrefix
+                    visible: menu.hasPrefix
+                    x: rowIcon.visible ? rowIcon.x + rowIcon.width + 8 : 10
+                    width: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignRight
+                    text: modelData.prefix !== undefined ? modelData.prefix : ""
+                    font.pixelSize: 11
+                    color: row.hot ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.35)
+                }
                 Column {
-                    anchors.left: rowIcon.visible ? rowIcon.right : parent.left
-                    anchors.leftMargin: rowIcon.visible ? 8 : 10
+                    anchors.left: rowPrefix.visible ? rowPrefix.right : rowIcon.visible ? rowIcon.right : parent.left
+                    anchors.leftMargin: rowPrefix.visible ? 8 : rowIcon.visible ? 8 : 10
                     anchors.right: check.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
@@ -141,7 +164,7 @@ Popup {
                         text: modelData.text
                         font.pixelSize: 13
                         font.weight: row.selected ? Font.DemiBold : Font.Normal
-                        color: "white"
+                        color: row.usable ? "white" : Qt.rgba(1, 1, 1, 0.3)
                     }
                     Text {
                         visible: !!modelData.detail
@@ -165,7 +188,7 @@ Popup {
                 MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
+                    cursorShape: row.usable ? Qt.PointingHandCursor : Qt.ArrowCursor
                     onEntered: menu.current = index
                     onExited: if (menu.current === index) menu.current = -1
                     onClicked: menu.activate(index)

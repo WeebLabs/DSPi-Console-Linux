@@ -241,52 +241,41 @@ Rectangle {
                 bottomPadding: 12
                 spacing: 8
 
-                Item {
+                SidebarPicker {
                     width: parent.width
-                    height: 26
-                    GlobalLabel { text: "Preset"; anchors.verticalCenter: parent.verticalCenter }
-                    BorderlessComboBox {
-                        id: presetCombo
-                        width: 140
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.pixelSize: 13
-                        model: {
-                            bridge.presetOccupied
-                            var items = []
-                            for (var i = 0; i < 10; i++) {
-                                var name = bridge.presetName(i)
-                                items.push(bridge.isPresetOccupied(i) ? (name === "" ? "Preset " + (i + 1) : name) : "Empty")
-                            }
-                            return items
+                    label: "Preset"
+                    enabled: bridge.connected
+                    readonly property var slots: {
+                        bridge.presetOccupied; bridge.activePresetSlot
+                        var o = []
+                        for (var i = 0; i < 10; i++) {
+                            var name = bridge.presetName(i)
+                            var occupied = bridge.isPresetOccupied(i)
+                            o.push({ value: i, prefix: String(i + 1),
+                                     text: occupied ? (name === "" ? "Preset " + (i + 1) : name) : "Empty",
+                                     enabled: occupied })
                         }
-                        currentIndex: bridge.activePresetSlot
-                        enabled: bridge.connected
-                        onActivated: if (index !== bridge.activePresetSlot) bridge.loadPreset(index)
+                        return o
                     }
+                    options: slots
+                    currentValue: bridge.activePresetSlot
+                    valueText: bridge.connected && slots[bridge.activePresetSlot] ? slots[bridge.activePresetSlot].text : "—"
+                    onChosen: if (value !== bridge.activePresetSlot) bridge.loadPreset(value)
                 }
 
-                Item {
+                SidebarPicker {
                     width: parent.width
-                    height: 26
-                    GlobalLabel { text: "Source"; anchors.verticalCenter: parent.verticalCenter }
-                    BorderlessComboBox {
-                        id: sourceCombo
-                        width: 140
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.pixelSize: 13
-                        enabled: bridge.connected
-                        textRole: "name"
-                        model: bridge.inputSources
-                        currentIndex: {
-                            var list = bridge.inputSources
-                            for (var i = 0; i < list.length; i++)
-                                if (list[i].id === bridge.inputSource) return i
-                            return 0
-                        }
-                        onActivated: bridge.setInputSource(bridge.inputSources[index].id)
+                    label: "Source"
+                    enabled: bridge.connected
+                    readonly property var sources: bridge.inputSources.map(function (src) { return { value: src.id, text: src.name } })
+                    options: sources
+                    currentValue: bridge.inputSource
+                    valueText: {
+                        if (!bridge.connected) return "—"
+                        for (var i = 0; i < sources.length; i++) if (sources[i].value === bridge.inputSource) return sources[i].text
+                        return "USB"
                     }
+                    onChosen: bridge.setInputSource(value)
                 }
 
                 // Volume: the heading picks User or Master volume
