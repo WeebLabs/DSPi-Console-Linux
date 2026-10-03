@@ -63,9 +63,10 @@ Rectangle {
         id: nameText
         visible: !renaming
         text: channelName
-        width: 96
+        // Name column as on macOS (72 + 4 gap), so meters line up close to the names
+        width: 72
         elide: Text.ElideRight
-        font.pixelSize: 14
+        font.pixelSize: 13
         color: isMuted ? Qt.rgba(1, 1, 1, 0.35) : "white"
         anchors.left: parent.left
         anchors.leftMargin: 14
@@ -91,7 +92,7 @@ Rectangle {
         id: meter
         visible: !renaming
         anchors.left: nameText.right
-        anchors.leftMargin: 8
+        anchors.leftMargin: 6
         anchors.right: pill.left
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
