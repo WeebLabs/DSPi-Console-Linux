@@ -1,13 +1,21 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
+import Qt.labs.settings 1.0
 import "components"
 
+// Sidebar, laid out as on the macOS Console: channel list, quick-access
+// icons, preset / source / volume, CPU meters.
 Rectangle {
     id: sidebarRoot
-    color: hasBlurBehind ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#2a2a2a"
+    color: hasBlurBehind ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#262628"
 
-    // Right edge separator (matches native macOS sidebar)
+    Settings {
+        id: volumeSettings
+        category: "sidebar"
+        property bool showMaster: false
+    }
+
+    // Right edge separator
     Rectangle {
         width: 1
         height: parent.height
@@ -16,104 +24,123 @@ Rectangle {
         z: 1
     }
 
+    component SectionHeader: Text {
+        font.pixelSize: 12
+        font.weight: Font.DemiBold
+        color: Qt.rgba(1, 1, 1, 0.45)
+        leftPadding: 16
+        topPadding: 10
+        bottomPadding: 4
+    }
+
+    component QuickButton: Item {
+        id: qb
+        property string icon: ""
+        property string tip: ""
+        property bool lit: false
+        property color litColor: "#3a96dd"
+        signal clicked()
+        signal rightClicked()
+        width: 24
+        height: 28
+        Rectangle {
+            anchors.fill: parent
+            radius: 5
+            color: qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+        }
+        Icon {
+            anchors.centerIn: parent
+            name: qb.icon
+            size: 18
+            color: qb.lit ? qb.litColor : (qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.5))
+        }
+        MouseArea {
+            id: qbMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouse.button === Qt.RightButton ? qb.rightClicked() : qb.clicked()
+            ToolTip.visible: containsMouse && qb.tip !== ""
+            ToolTip.delay: 600
+            ToolTip.text: qb.tip
+        }
+    }
+
+    component GlobalLabel: Text {
+        font.pixelSize: 12
+        font.weight: Font.Medium
+        color: Qt.rgba(1, 1, 1, 0.6)
+    }
+
     Column {
         anchors.fill: parent
 
-        // Titlebar spacer for integrated window frame
-        Item {
-            width: parent.width
-            height: root.titlebarHeight + 10
-        }
+        Item { width: parent.width; height: root.titlebarHeight + 4 }
 
-        // Scrollable channel list
+        // ── Channel list ───────────────────────────────────────────
         Flickable {
             id: channelList
             width: parent.width
-            height: parent.height - root.titlebarHeight - 10 - globalSection.height - cpuSection.height - 40
+            height: parent.height - root.titlebarHeight - 4 - bottomPanel.height
             clip: true
-            contentHeight: channelColumn.height
+            contentHeight: channelColumn.height + 8
             boundsBehavior: Flickable.StopAtBounds
 
             Column {
                 id: channelColumn
-                width: parent.width
+                x: 8
+                width: parent.width - 16
+                spacing: 2
 
-                // INPUTS section header
-                Rectangle {
-                    width: parent.width
-                    height: 24
-                    color: Qt.rgba(0, 0, 0, 0.02)
-                    Text {
-                        text: "INPUTS"
-                        font.pixelSize: 10
-                        font.weight: Font.Bold
-                        color: Qt.rgba(1, 1, 1, 0.3)
-                        anchors.left: parent.left
-                        anchors.leftMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
+                SectionHeader { text: "INPUTS"; leftPadding: 8 }
 
-                // Master L/R
+                // Inputs carrying audio right now (at least the stereo pair)
                 Repeater {
-                    model: 2
+                    model: bridge.connected ? Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels)) : 0
+
                     ChannelRow {
                         id: inputRow
+                        readonly property int appId: bridge.inputAppId(index)
                         width: channelColumn.width
-                        channelIndex: index
-                        channelName: bridge.channelName(index)
-                        channelColor: bridge.channelColor(index)
-                        descriptor: bridge.channelDescriptor(index)
-                        meterLevel: bridge.peakLevel(index)
-                        isClipping: bridge.isClipping(index)
-                        isSelected: root.selection === "channel:" + index
+                        channelIndex: appId
+                        channelName: bridge.channelName(appId)
+                        channelColor: bridge.channelColor(appId)
+                        descriptor: bridge.channelDescriptor(appId)
+                        isSelected: root.selection === "channel:" + appId
+                        // Both rows of a linked pair highlight together
+                        isLinkedHighlight: root.selectedChannel >= 0 && bridge.linkedPartner(root.selectedChannel) === appId
 
-                        onClicked: root.selectChannel(index)
+                        onClicked: root.selectChannel(appId)
 
                         Connections {
                             target: bridge
                             function onStatusChanged() {
-                                inputRow.meterLevel = bridge.peakLevel(index)
-                                inputRow.isClipping = bridge.isClipping(index)
+                                inputRow.meterLevel = bridge.peakLevel(inputRow.appId)
+                                inputRow.isClipping = bridge.isClipping(inputRow.appId)
+                            }
+                            function onStateChanged() {
+                                inputRow.channelName = bridge.channelName(inputRow.appId)
                             }
                         }
                     }
                 }
 
-                // Section gap
-                Item { width: 1; height: 10 }
+                SectionHeader { text: "OUTPUTS"; leftPadding: 8; topPadding: 14 }
 
-                // OUTPUTS section header
-                Rectangle {
-                    width: parent.width
-                    height: 24
-                    color: Qt.rgba(0, 0, 0, 0.02)
-                    Text {
-                        text: "OUTPUTS"
-                        font.pixelSize: 10
-                        font.weight: Font.Bold
-                        color: Qt.rgba(1, 1, 1, 0.3)
-                        anchors.left: parent.left
-                        anchors.leftMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                // Output channels (only enabled ones)
+                // Enabled outputs only (outputs are enabled in the Matrix Mixer)
                 Repeater {
-                    id: outputRepeater
-                    model: bridge.numOutputChannels
+                    model: bridge.connected ? bridge.numOutputChannels : 0
 
                     ChannelRow {
                         id: outputRow
                         width: channelColumn.width
                         visible: bridge.outputEnabled(index)
+                        height: visible ? 30 : 0
                         channelIndex: index + 2
                         channelName: bridge.channelName(index + 2)
                         channelColor: bridge.channelColor(index + 2)
                         descriptor: bridge.channelDescriptor(index + 2)
-                        meterLevel: bridge.peakLevel(index + 2)
-                        isClipping: bridge.isClipping(index + 2)
                         isMuted: bridge.outputMuted(index)
                         isSelected: root.selection === "output:" + index
 
@@ -125,323 +152,250 @@ Rectangle {
                                 outputRow.meterLevel = bridge.peakLevel(index + 2)
                                 outputRow.isClipping = bridge.isClipping(index + 2)
                             }
+                            function onStateChanged() {
+                                outputRow.visible = bridge.outputEnabled(index)
+                                outputRow.isMuted = bridge.outputMuted(index)
+                                outputRow.channelName = bridge.channelName(index + 2)
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Divider
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
-
-        // GLOBAL section
-        Rectangle {
-            id: globalSection
+        // ── Bottom panel ───────────────────────────────────────────
+        Column {
+            id: bottomPanel
             width: parent.width
-            height: globalContent.height + 32
-            color: Qt.rgba(0, 0, 0, 0.02)
 
-            Column {
-                id: globalContent
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: 16
-                spacing: 12
+            // Quick-access buttons, spread evenly across the sidebar
+            Row {
+                id: quickRow
+                x: 14
+                width: parent.width - 28
+                height: 40
+                spacing: (width - children.length * 24) / Math.max(1, children.length - 1)
 
-                Text {
-                    text: "GLOBAL"
-                    font.pixelSize: 10
-                    font.weight: Font.Bold
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "sliders"; tip: "Matrix Mixer"
+                    lit: matrixWindow.visible
+                    onClicked: matrixWindow.visible = !matrixWindow.visible
                 }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "headphones"; tip: "Headphone Crossfeed (right-click for settings)"
+                    lit: bridge.crossfeedEnabled
+                    onClicked: bridge.setCrossfeed(!bridge.crossfeedEnabled)
+                    onRightClicked: crossfeedWindow.visible = true
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "loudness"; tip: "Loudness Compensation (right-click for settings)"
+                    lit: bridge.loudnessEnabled
+                    onClicked: bridge.setLoudness(!bridge.loudnessEnabled)
+                    onRightClicked: loudnessWindow.visible = true
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "waveform"; tip: "Volume Leveller (right-click for settings)"
+                    lit: bridge.levellerEnabled
+                    onClicked: bridge.setLevellerEnabled(!bridge.levellerEnabled)
+                    onRightClicked: levellerWindow.visible = true
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "bassclef"; tip: "Psychoacoustic Bass (right-click for settings)"
+                    lit: bridge.psybassEnabled
+                    onClicked: bridge.setPsybassEnabled(!bridge.psybassEnabled)
+                    onRightClicked: psybassWindow.visible = true
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "info"; tip: "Stats for Nerds"
+                    lit: statsWindow.visible
+                    onClicked: statsWindow.visible = !statsWindow.visible
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "gear"; tip: "Settings"
+                    lit: settingsWindow.visible
+                    onClicked: settingsWindow.visible = !settingsWindow.visible
+                }
+                QuickButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "xmark"; tip: "Bypass Master EQ"
+                    lit: bridge.bypass
+                    litColor: "#ff9f0a"
+                    onClicked: bridge.setBypass(!bridge.bypass)
+                }
+            }
 
-                // Preset picker
-                Row {
+            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
+
+            // Preset / Source / Volume
+            Column {
+                x: 16
+                width: parent.width - 32
+                topPadding: 12
+                bottomPadding: 12
+                spacing: 8
+
+                Item {
                     width: parent.width
-                    spacing: 8
-
-                    Text {
-                        text: "Preset"
-                        font.pixelSize: 9
-                        color: Qt.rgba(1, 1, 1, 0.5)
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Item { width: 1; height: 1 }
-
+                    height: 26
+                    GlobalLabel { text: "Preset"; anchors.verticalCenter: parent.verticalCenter }
                     BorderlessComboBox {
                         id: presetCombo
                         width: 140
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.pixelSize: 13
                         model: {
+                            bridge.presetOccupied
                             var items = []
                             for (var i = 0; i < 10; i++) {
                                 var name = bridge.presetName(i)
-                                items.push(name === "" ? "Empty" : name)
+                                items.push(bridge.isPresetOccupied(i) ? (name === "" ? "Preset " + (i + 1) : name) : "Empty")
                             }
                             return items
                         }
                         currentIndex: bridge.activePresetSlot
                         enabled: bridge.connected
-                        onActivated: {
-                            if (index !== bridge.activePresetSlot) {
-                                bridge.loadPreset(index)
-                            }
-                        }
+                        onActivated: if (index !== bridge.activePresetSlot) bridge.loadPreset(index)
                     }
                 }
 
-                // Preamp label + value
+                Item {
+                    width: parent.width
+                    height: 26
+                    GlobalLabel { text: "Source"; anchors.verticalCenter: parent.verticalCenter }
+                    BorderlessComboBox {
+                        id: sourceCombo
+                        width: 140
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.pixelSize: 13
+                        enabled: bridge.connected
+                        textRole: "name"
+                        model: bridge.inputSources
+                        currentIndex: {
+                            var list = bridge.inputSources
+                            for (var i = 0; i < list.length; i++)
+                                if (list[i].id === bridge.inputSource) return i
+                            return 0
+                        }
+                        onActivated: bridge.setInputSource(bridge.inputSources[index].id)
+                    }
+                }
+
+                // Volume: the heading picks User or Master volume
                 Item {
                     width: parent.width
                     height: 24
 
-                    Text {
-                        id: preampLabel
-                        text: "Preamp"
-                        font.pixelSize: 9
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                    GlobalLabel {
+                        id: volumeHeading
+                        text: (volumeSettings.showMaster ? "Master Volume" : "User Volume") + " ▾"
+                        color: volHeadMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.6)
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
+                        MouseArea {
+                            id: volHeadMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: volumeMenu.popup(volumeHeading, 0, volumeHeading.height)
+                        }
+                        Menu {
+                            id: volumeMenu
+                            MenuItem {
+                                text: "User Volume"; checkable: true; checked: !volumeSettings.showMaster
+                                onTriggered: volumeSettings.showMaster = false
+                            }
+                            MenuItem {
+                                text: "Master Volume"; checkable: true; checked: volumeSettings.showMaster
+                                onTriggered: volumeSettings.showMaster = true
+                            }
+                        }
                     }
                     ValueField {
-                        id: preampField
-                        fieldWidth: 60
-                        value: bridge.preampDB
+                        fieldWidth: 64
+                        value: volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                         suffix: "dB"
                         decimals: 1
-                        minValue: -60
-                        maxValue: 10
+                        minValue: volumeSettings.showMaster ? -128 : -60
+                        maxValue: 0
+                        infinityAt: volumeSettings.showMaster ? -128 : -1e9   // master mute sentinel
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        onValueEdited: bridge.setPreamp(newValue)
+                        onValueEdited: {
+                            if (volumeSettings.showMaster) bridge.setMasterVolume(newValue)
+                            else bridge.setUserVolume(newValue)
+                        }
                     }
                 }
 
-                // Preamp slider
+                // Volume slider (master volume is red); right-click resets to 0 dB
                 Slider {
-                    id: preampSlider
+                    id: volumeSlider
                     width: parent.width
                     height: 20
                     topPadding: 0
                     bottomPadding: 0
-                    from: -60
-                    to: 10
-                    value: bridge.preampDB
-                    onMoved: bridge.sendPreampToDevice(value)
+                    from: volumeSettings.showMaster ? -128 : -60
+                    to: 0
+                    stepSize: 0.5
+                    enabled: bridge.connected
+                    value: volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                     onPressedChanged: {
-                        if (!pressed) bridge.setPreamp(value)
+                        if (pressed) return
+                        if (volumeSettings.showMaster) bridge.setMasterVolume(value)
+                        else bridge.setUserVolume(value)
                     }
-                    Connections {
-                        target: bridge
-                        function onStateChanged() {
-                            if (!preampSlider.pressed)
-                                preampSlider.value = bridge.preampDB
-                        }
+                    function refresh() {
+                        if (!pressed) value = volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
+                    }
+                    Connections { target: bridge; function onStateChanged() { volumeSlider.refresh() } }
+                    Connections { target: volumeSettings; function onShowMasterChanged() { volumeSlider.refresh() } }
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        onClicked: volumeSettings.showMaster ? bridge.setMasterVolume(0) : bridge.setUserVolume(0)
                     }
 
                     background: Rectangle {
-                        x: preampSlider.leftPadding
-                        y: (preampSlider.height - height) / 2
-                        width: preampSlider.availableWidth
+                        x: volumeSlider.leftPadding
+                        y: (volumeSlider.height - height) / 2
+                        width: volumeSlider.availableWidth
                         height: 4
                         radius: 2
-                        color: Qt.rgba(1, 1, 1, 0.08)
-
+                        color: Qt.rgba(1, 1, 1, 0.12)
                         Rectangle {
-                            width: preampSlider.visualPosition * parent.width
+                            width: volumeSlider.visualPosition * parent.width
                             height: parent.height
                             radius: 2
-                            color: "#3A79DE"
+                            color: volumeSettings.showMaster ? "#E04848" : "#3A79DE"
                         }
                     }
-
                     handle: Rectangle {
-                        x: preampSlider.leftPadding + preampSlider.visualPosition * (preampSlider.availableWidth - width)
-                        y: (preampSlider.height - height) / 2
-                        implicitWidth: 14
-                        implicitHeight: 14
-                        width: 14
-                        height: 14
-                        radius: 7
-                        color: "white"
-                    }
-                }
-
-                // Bypass button
-                Rectangle {
-                    width: parent.width
-                    height: 30
-                    radius: 5
-                    color: bridge.bypass ? Qt.rgba(0.4, 0.12, 0.12, 1.0) : Qt.rgba(1, 1, 1, 0.08)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Bypass Master EQ"
-                        font.pixelSize: 10
-                        font.weight: Font.Medium
-                        color: bridge.bypass ? "white" : Qt.rgba(1, 1, 1, 0.5)
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: bridge.setBypass(!bridge.bypass)
+                        x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                        y: (volumeSlider.height - height) / 2
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: "#d8d8d8"
+                        border.color: Qt.rgba(0, 0, 0, 0.3)
                     }
                 }
             }
-        }
 
-        // Divider
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
-
-        // CPU section
-        Rectangle {
-            width: parent.width
-            height: cpuSection.height
-            color: Qt.rgba(0, 0, 0, 0.02)
+            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
 
             CpuSection {
-                id: cpuSection
                 width: parent.width
                 cpu0: bridge.cpu0
                 cpu1: bridge.cpu1
-            }
-        }
-
-        // Divider
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
-
-        // Menu button
-        Rectangle {
-            width: parent.width
-            height: 36
-            color: menuArea.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
-
-            Row {
-                anchors.centerIn: parent
-                spacing: 6
-
-                Text {
-                    text: "\u2630"
-                    font.pixelSize: 14
-                    color: Qt.rgba(1, 1, 1, 0.5)
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Text {
-                    text: "Menu"
-                    font.pixelSize: 10
-                    font.weight: Font.Medium
-                    color: Qt.rgba(1, 1, 1, 0.5)
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: menuArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: appMenu.open()
-            }
-
-            Popup {
-                id: appMenu
-                x: 0
-                y: -appMenu.height
-                width: 220
-                padding: 4
-
-                background: Rectangle {
-                    color: isMacOS ? "#353535" : nativeAltBaseColor
-                    border.color: Qt.rgba(1, 1, 1, 0.15)
-                    radius: 8
-                }
-
-                Column {
-                    width: parent.width
-                    spacing: 0
-
-                    // Section: File
-                    Text {
-                        text: "FILE"
-                        font.pixelSize: 9
-                        font.weight: Font.Bold
-                        color: Qt.rgba(1, 1, 1, 0.3)
-                        leftPadding: 12
-                        topPadding: 8
-                        bottomPadding: 4
-                    }
-
-                    MenuItem {
-                        text: "Commit Parameters"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { bridge.saveParams(); appMenu.close() }
-                    }
-                    MenuItem {
-                        text: "Revert to Saved"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { bridge.loadParams(); appMenu.close() }
-                    }
-                    MenuItem {
-                        text: "Factory Reset"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { bridge.factoryReset(); appMenu.close() }
-                    }
-
-                    // Separator
-                    Rectangle { width: parent.width - 16; height: 1; color: Qt.rgba(1, 1, 1, 0.1); anchors.horizontalCenter: parent.horizontalCenter }
-
-                    // Section: Tools
-                    Text {
-                        text: "TOOLS"
-                        font.pixelSize: 9
-                        font.weight: Font.Bold
-                        color: Qt.rgba(1, 1, 1, 0.3)
-                        leftPadding: 12
-                        topPadding: 8
-                        bottomPadding: 4
-                    }
-
-                    MenuItem {
-                        text: "Matrix Mixer"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { matrixWindow.visible = true; appMenu.close() }
-                    }
-                    MenuItem {
-                        text: "Loudness Compensation"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { loudnessWindow.visible = true; appMenu.close() }
-                    }
-                    MenuItem {
-                        text: "Headphone Crossfeed"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { crossfeedWindow.visible = true; appMenu.close() }
-                    }
-                    MenuItem {
-                        text: "Stats"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { statsWindow.visible = true; appMenu.close() }
-                    }
-
-                    // Separator
-                    Rectangle { width: parent.width - 16; height: 1; color: Qt.rgba(1, 1, 1, 0.1); anchors.horizontalCenter: parent.horizontalCenter }
-
-                    MenuItem {
-                        text: "Settings"
-                        width: parent.width
-                        height: 30
-                        onTriggered: { settingsWindow.visible = true; appMenu.close() }
-                    }
-                }
             }
         }
     }

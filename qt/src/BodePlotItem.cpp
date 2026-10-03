@@ -52,17 +52,15 @@ void BodePlotItem::refresh() {
 
     // Build new target curves
     m_targetCurves.clear();
-    int numCh = m_bridge->numChannels();
-
-    for (int eqCh = 0; eqCh < numCh; eqCh++) {
-        if (!m_bridge->channelVisible(eqCh)) continue;
+    for (int eqCh = 0; eqCh < kAppChannelCount; eqCh++) {
+        if (!m_bridge->channelExists(eqCh) || !m_bridge->channelVisible(eqCh)) continue;
 
         ChannelCurve curve;
         curve.color = QColor(m_bridge->channelColor(eqCh));
         curve.visible = true;
 
-        // Get gain offset for output channels
-        if (eqCh >= 2) {
+        // Output curves include the output gain (app ids 2..10 are outputs)
+        if (!m_bridge->isInputChannel(eqCh)) {
             curve.gainOffset = m_bridge->outputGainDB(eqCh - 2);
         }
 

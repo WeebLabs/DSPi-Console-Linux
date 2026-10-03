@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use log::{info, warn};
 use rusb::{Device, GlobalContext};
 
-use crate::protocol::{PRODUCT_ID, VENDOR_ID};
+use crate::protocol::{LEGACY_VENDOR_ID, PRODUCT_ID, VENDOR_ID};
 use crate::types::DeviceInfo;
 use crate::usb::{UsbConnection, UsbError};
 
@@ -17,6 +17,13 @@ pub struct DeviceManager {
     selected_serial: Option<String>,
     /// Active USB connection.
     connection: Option<UsbConnection>,
+    /// Vendor ID of the connected device (current or legacy firmware).
+    connected_vid: Option<u16>,
+}
+
+/// True for a DSPi running current or pre-May-2026 firmware.
+fn is_dspi(vid: u16, pid: u16) -> bool {
+    pid == PRODUCT_ID && (vid == VENDOR_ID || vid == LEGACY_VENDOR_ID)
 }
 
 impl DeviceManager {
@@ -25,6 +32,7 @@ impl DeviceManager {
             devices: HashMap::new(),
             selected_serial: None,
             connection: None,
+            connected_vid: None,
         }
     }
 
@@ -50,7 +58,7 @@ impl DeviceManager {
     /// Probe a single USB device to check if it's a DSPi device.
     fn probe_device(device: &Device<GlobalContext>) -> Option<DeviceInfo> {
         let desc = device.device_descriptor().ok()?;
-        if desc.vendor_id() != VENDOR_ID || desc.product_id() != PRODUCT_ID {
+        if !is_dspi(desc.vendor_id(), desc.product_id()) {
             return None;
         }
 
@@ -86,7 +94,7 @@ impl DeviceManager {
                 Ok(d) => d,
                 Err(_) => continue,
             };
-            if desc.vendor_id() != VENDOR_ID || desc.product_id() != PRODUCT_ID {
+            if !is_dspi(desc.vendor_id(), desc.product_id()) {
                 continue;
             }
             let handle = match device.open() {
@@ -98,8 +106,9 @@ impl DeviceManager {
                 Err(_) => continue,
             };
             if dev_serial == serial {
-                let _ = handle.claim_interface(2);
+                let _ = handle.claim_interface(crate::protocol::VENDOR_INTERFACE);
                 self.connection = Some(UsbConnection::new(handle));
+                self.connected_vid = Some(desc.vendor_id());
                 self.selected_serial = Some(serial.to_owned());
                 info!("Connected to DSPi device: {serial}");
                 return Ok(());
@@ -115,7 +124,13 @@ impl DeviceManager {
             info!("Disconnected from DSPi device: {serial}");
         }
         self.connection = None;
+        self.connected_vid = None;
         // Retain selected_serial for auto-reconnect
+    }
+
+    /// Vendor ID of the connected device, if any.
+    pub fn connected_vendor_id(&self) -> Option<u16> {
+        self.connected_vid
     }
 
     /// Check if currently connected to a device.
@@ -183,6 +198,7 @@ impl DeviceManager {
             if Some(dep.as_str()) == self.selected_serial.as_deref() && self.connection.is_some() {
                 info!("Selected device departed: {dep}");
                 self.connection = None;
+                self.connected_vid = None;
             }
         }
 

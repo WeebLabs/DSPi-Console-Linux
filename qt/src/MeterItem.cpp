@@ -13,19 +13,18 @@ void MeterItem::paint(QPainter *painter) {
     qreal h = height();
     qreal radius = 2.0;
 
-    // Track background
-    QPainterPath trackPath;
-    trackPath.addRoundedRect(QRectF(0, 0, w, h), radius, radius);
-    painter->fillPath(trackPath, Qt::transparent);
+    // Level fill in the channel colour; at silence it shrinks to a dot so
+    // every channel still shows its colour (as on the macOS Console).
+    qreal fillWidth = qMax(h, w * qBound(0.0f, m_level, 1.0f));
+    QPainterPath fillPath;
+    fillPath.addRoundedRect(QRectF(0, 0, fillWidth, h), radius, radius);
+    painter->fillPath(fillPath, m_barColor);
 
-    // Active fill
-    if (m_level > 0.001f) {
-        qreal fillWidth = w * qBound(0.0f, m_level, 1.0f);
-        QPainterPath fillPath;
-        fillPath.addRoundedRect(QRectF(0, 0, fillWidth, h), radius, radius);
-
-        QColor fillColor = m_clipping ? QColor(255, 80, 80) : m_barColor;
-        painter->fillPath(fillPath, fillColor);
+    // Clip marker at the right end of the meter
+    if (m_clipping) {
+        QPainterPath clipPath;
+        clipPath.addRoundedRect(QRectF(w - h * 1.5, 0, h * 1.5, h), radius, radius);
+        painter->fillPath(clipPath, QColor(255, 69, 58));
     }
 }
 

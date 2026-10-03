@@ -33,6 +33,7 @@ Window {
             spacing: 4
 
             StatInfoRow { title: "Platform"; value: bridge.platformName }
+            StatInfoRow { title: "Firmware"; value: bridge.firmwareVersion }
             StatInfoRow { title: "Channels"; value: bridge.numChannels.toString() }
             StatInfoRow { title: "Outputs"; value: bridge.numOutputChannels.toString() }
             StatInfoRow { title: "Serial"; value: bridge.selectedSerial || "—" }
@@ -86,7 +87,7 @@ Window {
                 value: bridge.presetStartupMode === 0 ? "Specified Default" : "Last Used"
             }
             StatInfoRow { title: "Default Slot"; value: (bridge.presetDefaultSlot + 1).toString() }
-            StatInfoRow { title: "Include Pins"; value: bridge.presetIncludePins ? "Yes" : "No" }
+            StatInfoRow { title: "Output Config"; value: bridge.outputConfigMode === 1 ? "Saved with Presets" : "Independent" }
         }
 
         // Footer

@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import Qt.labs.platform 1.1 as Platform
 import DSPi 1.0
+import "components"
 
 ApplicationWindow {
     id: root
@@ -14,9 +15,11 @@ ApplicationWindow {
     minimumHeight: 600
     title: "DSPi Console"
     color: isMacOS ? "transparent" : "#303030"
+    // Linux draws its own titlebar (with the menu button in it)
+    flags: isMacOS ? Qt.Window : (Qt.Window | Qt.FramelessWindowHint)
 
     // Titlebar inset: macOS integrated titlebar needs offset, Linux uses standard decorations
-    property int titlebarHeight: isMacOS ? 28 : 0
+    property int titlebarHeight: isMacOS ? 28 : 38
 
     // Platform-aware monospace font
     readonly property string monoFont: isMacOS ? "Menlo" : "monospace"
@@ -38,10 +41,26 @@ ApplicationWindow {
     property int selectedChannel: -1
     property int selectedOutput: -1
 
+    // Curve visibility on the dashboard, restored when a channel page closes
+    property var dashboardVisibility: null
+
+    function showOnlyCurves(ids) {
+        if (dashboardVisibility === null) {
+            var saved = []
+            for (var i = 0; i < 17; i++) saved.push(bridge.channelVisible(i))
+            dashboardVisibility = saved
+        }
+        for (var c = 0; c < 17; c++) bridge.setChannelVisible(c, ids.indexOf(c) >= 0)
+    }
+
     function selectOverview() {
         selection = "overview"
         selectedChannel = -1
         selectedOutput = -1
+        if (dashboardVisibility !== null) {
+            for (var c = 0; c < 17; c++) bridge.setChannelVisible(c, dashboardVisibility[c])
+            dashboardVisibility = null
+        }
     }
 
     function selectChannel(ch) {
@@ -51,6 +70,9 @@ ApplicationWindow {
             selection = "channel:" + ch
             selectedChannel = ch
             selectedOutput = -1
+            // Only this channel's curve, and its linked partner's
+            var partner = bridge.linkedPartner(ch)
+            showOnlyCurves(partner >= 0 ? [ch, partner] : [ch])
         }
     }
 
@@ -61,71 +83,102 @@ ApplicationWindow {
             selection = "output:" + idx
             selectedOutput = idx
             selectedChannel = -1
+            showOnlyCurves([idx + 2])
         }
     }
 
-    // Native menu bar (Qt.labs.platform — uses macOS native menus with QApplication)
-    Platform.MenuBar {
-        Platform.Menu {
-            title: "File"
-            Platform.MenuItem {
-                text: "Commit Parameters..."
-                shortcut: StandardKey.Save
-                onTriggered: {
-                    var status = bridge.saveParams()
-                    if (status !== 0) {
-                        console.warn("Save params failed:", status)
+    readonly property bool textFocused: activeFocusItem !== null && activeFocusItem.selectedText !== undefined
+
+    // App id of the open channel page, or -1 on the dashboard
+    readonly property int openChannelId: selectedOutput >= 0 ? selectedOutput + 2 : selectedChannel
+
+    // Copy / Paste Parameters for the open channel page (skipped while a
+    // text field has focus, so ordinary text copy/paste still works)
+    Shortcut {
+        sequences: [StandardKey.Copy]
+        enabled: root.openChannelId >= 0 && !root.textFocused
+        onActivated: bridge.copyChannel(root.openChannelId)
+    }
+    Shortcut {
+        sequences: [StandardKey.Paste]
+        enabled: root.openChannelId >= 0 && !root.textFocused
+        onActivated: bridge.pasteChannel(root.openChannelId)
+    }
+
+    // Leave the channel page when the device goes away
+    Connections {
+        target: bridge
+        function onStatusChanged() { if (!bridge.connected && root.selection !== "overview") root.selectOverview() }
+    }
+
+    // Native menu bar: macOS only (Linux uses the titlebar menu and the
+    // Shortcuts below, which would clash with a second set)
+    Loader {
+        active: isMacOS
+        sourceComponent: Component {
+            Platform.MenuBar {
+            Platform.Menu {
+                title: "File"
+                Platform.MenuItem {
+                    text: "Commit Parameters..."
+                    shortcut: StandardKey.Save
+                    onTriggered: {
+                        var status = bridge.saveParams()
+                        if (status !== 0) {
+                            console.warn("Save params failed:", status)
+                        }
+                    }
+                }
+                Platform.MenuItem {
+                    text: "Revert to Saved..."
+                    onTriggered: {
+                        var status = bridge.loadParams()
+                        if (status !== 0) {
+                            console.warn("Load params failed:", status)
+                        }
+                    }
+                }
+                Platform.MenuSeparator {}
+                Platform.MenuItem {
+                    text: "Factory Reset..."
+                    onTriggered: {
+                        var status = bridge.factoryReset()
+                        if (status !== 0) {
+                            console.warn("Factory reset failed:", status)
+                        }
                     }
                 }
             }
-            Platform.MenuItem {
-                text: "Revert to Saved..."
-                onTriggered: {
-                    var status = bridge.loadParams()
-                    if (status !== 0) {
-                        console.warn("Load params failed:", status)
-                    }
+            Platform.Menu {
+                title: "Tools"
+                Platform.MenuItem {
+                    text: "Matrix Mixer..."
+                    shortcut: "Ctrl+Shift+M"
+                    onTriggered: matrixWindow.visible = true
                 }
-            }
-            Platform.MenuSeparator {}
-            Platform.MenuItem {
-                text: "Factory Reset..."
-                onTriggered: {
-                    var status = bridge.factoryReset()
-                    if (status !== 0) {
-                        console.warn("Factory reset failed:", status)
-                    }
+                Platform.MenuItem {
+                    text: "Loudness Compensation..."
+                    shortcut: "Ctrl+Shift+L"
+                    onTriggered: loudnessWindow.visible = true
+                }
+                Platform.MenuItem {
+                    text: "Headphone Crossfeed..."
+                    shortcut: "Ctrl+Shift+X"
+                    onTriggered: crossfeedWindow.visible = true
+                }
+                Platform.MenuItem {
+                    text: "Stats..."
+                    shortcut: "Ctrl+Shift+T"
+                    onTriggered: statsWindow.visible = true
+                }
+                Platform.MenuSeparator {}
+                Platform.MenuItem {
+                    text: "Settings..."
+                    shortcut: "Ctrl+,"
+                    onTriggered: settingsWindow.visible = true
                 }
             }
         }
-        Platform.Menu {
-            title: "Tools"
-            Platform.MenuItem {
-                text: "Matrix Mixer..."
-                shortcut: "Ctrl+Shift+M"
-                onTriggered: matrixWindow.visible = true
-            }
-            Platform.MenuItem {
-                text: "Loudness Compensation..."
-                shortcut: "Ctrl+Shift+L"
-                onTriggered: loudnessWindow.visible = true
-            }
-            Platform.MenuItem {
-                text: "Headphone Crossfeed..."
-                shortcut: "Ctrl+Shift+X"
-                onTriggered: crossfeedWindow.visible = true
-            }
-            Platform.MenuItem {
-                text: "Stats..."
-                shortcut: "Ctrl+Shift+T"
-                onTriggered: statsWindow.visible = true
-            }
-            Platform.MenuSeparator {}
-            Platform.MenuItem {
-                text: "Settings..."
-                shortcut: "Ctrl+,"
-                onTriggered: settingsWindow.visible = true
-            }
         }
     }
 
@@ -152,6 +205,29 @@ ApplicationWindow {
                 anchors.topMargin: root.titlebarHeight
                 spacing: 20
 
+                // Firmware compatibility banner
+                Rectangle {
+                    id: compatBanner
+                    visible: bridge.compat >= 2
+                    width: parent.width - 32
+                    x: 16
+                    height: visible ? compatText.implicitHeight + 20 : 0
+                    radius: 8
+                    color: Qt.rgba(0.95, 0.6, 0.2, 0.15)
+                    border.color: Qt.rgba(0.95, 0.6, 0.2, 0.5)
+
+                    Text {
+                        id: compatText
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        wrapMode: Text.WordWrap
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 12
+                        color: "white"
+                        text: bridge.compatMessage
+                    }
+                }
+
                 // Graph section
                 FilterResponseView {
                     id: filterResponse
@@ -163,6 +239,7 @@ ApplicationWindow {
                     id: contentLoader
                     width: parent.width
                     height: parent.height - filterResponse.height - root.titlebarHeight - 20
+                            - (compatBanner.visible ? compatBanner.height + 20 : 0)
 
                     sourceComponent: {
                         if (root.selection === "overview")
@@ -195,9 +272,20 @@ ApplicationWindow {
                 anchors.rightMargin: 16
                 outputIndex: root.selectedOutput >= 0 ? root.selectedOutput : 0
             }
+            InputHeaderCard {
+                id: inputHeader
+                visible: root.selectedChannel >= 0
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                channelId: root.selectedChannel >= 0 ? root.selectedChannel : 0
+            }
             FilterListView {
-                anchors.top: root.selectedOutput >= 0 ? outputSettings.bottom : parent.top
-                anchors.topMargin: root.selectedOutput >= 0 ? 16 : 0
+                anchors.top: root.selectedOutput >= 0 ? outputSettings.bottom
+                           : root.selectedChannel >= 0 ? inputHeader.bottom : parent.top
+                anchors.topMargin: 16
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
@@ -206,7 +294,58 @@ ApplicationWindow {
         }
     }
 
-    // Native-style window border highlight (macOS only — Linux uses WM decorations)
+    // Linux: client-side titlebar, resize edges and window outline
+    WindowTitleBar {
+        visible: !isMacOS
+        z: 900
+        width: parent.width
+        height: root.titlebarHeight
+        window: root
+        sidebarWidth: sidebar.width
+        onMenuRequested: appMenu.toggleAt(anchorItem)
+    }
+
+    Item {
+        id: resizeEdges
+        anchors.fill: parent
+        z: 950
+        visible: !isMacOS && root.visibility !== Window.Maximized
+        readonly property int grip: 6
+
+        component Edge: MouseArea {
+            property int edges: 0
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton
+            onPressed: root.startSystemResize(edges)
+        }
+        Edge { edges: Qt.LeftEdge; cursorShape: Qt.SizeHorCursor
+               x: 0; y: resizeEdges.grip; width: resizeEdges.grip; height: parent.height - 2 * resizeEdges.grip }
+        Edge { edges: Qt.RightEdge; cursorShape: Qt.SizeHorCursor
+               x: parent.width - resizeEdges.grip; y: resizeEdges.grip; width: resizeEdges.grip; height: parent.height - 2 * resizeEdges.grip }
+        Edge { edges: Qt.TopEdge; cursorShape: Qt.SizeVerCursor
+               x: resizeEdges.grip; y: 0; width: parent.width - 2 * resizeEdges.grip; height: resizeEdges.grip }
+        Edge { edges: Qt.BottomEdge; cursorShape: Qt.SizeVerCursor
+               x: resizeEdges.grip; y: parent.height - resizeEdges.grip; width: parent.width - 2 * resizeEdges.grip; height: resizeEdges.grip }
+        Edge { edges: Qt.TopEdge | Qt.LeftEdge; cursorShape: Qt.SizeFDiagCursor
+               x: 0; y: 0; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
+        Edge { edges: Qt.TopEdge | Qt.RightEdge; cursorShape: Qt.SizeBDiagCursor
+               x: parent.width - resizeEdges.grip * 2; y: 0; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
+        Edge { edges: Qt.BottomEdge | Qt.LeftEdge; cursorShape: Qt.SizeBDiagCursor
+               x: 0; y: parent.height - resizeEdges.grip * 2; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
+        Edge { edges: Qt.BottomEdge | Qt.RightEdge; cursorShape: Qt.SizeFDiagCursor
+               x: parent.width - resizeEdges.grip * 2; y: parent.height - resizeEdges.grip * 2; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
+    }
+
+    Rectangle {
+        visible: !isMacOS && root.visibility !== Window.Maximized
+        anchors.fill: parent
+        z: 1000
+        color: "transparent"
+        border.color: Qt.rgba(1, 1, 1, 0.12)
+        border.width: 1
+    }
+
+    // Native-style window border highlight (macOS only)
     Rectangle {
         visible: isMacOS
         anchors.fill: parent
@@ -221,6 +360,51 @@ ApplicationWindow {
     MatrixMixerWindow { id: matrixWindow }
     LoudnessWindow { id: loudnessWindow }
     CrossfeedWindow { id: crossfeedWindow }
+    VolumeLevellerWindow { id: levellerWindow }
+    PsychoacousticBassWindow { id: psybassWindow }
+
+    function openToolWindow(name) {
+        var w = { matrix: matrixWindow, loudness: loudnessWindow, crossfeed: crossfeedWindow,
+                  leveller: levellerWindow, psybass: psybassWindow, stats: statsWindow,
+                  settings: settingsWindow }[name]
+        if (w) { w.visible = true; w.raise(); w.requestActivate() }
+    }
+
+    // App menu (titlebar menu button)
+    AppMenu {
+        id: appMenu
+        parent: Overlay.overlay
+        onCommitRequested: bridge.saveParams()
+        onRevertRequested: bridge.loadParams()
+        onFactoryResetRequested: factoryResetDialog.open()
+        onOpenWindow: root.openToolWindow(name)
+    }
+
+    Dialog {
+        id: factoryResetDialog
+        title: "Factory Reset?"
+        modal: true
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 360
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        Label {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Every parameter on the device returns to its factory default. This cannot be undone."
+        }
+        onAccepted: bridge.factoryReset()
+    }
+
+    // Shortcuts (Linux has no native menu bar to carry them)
+    Shortcut { sequence: "Ctrl+S"; enabled: bridge.connected; onActivated: bridge.saveParams() }
+    Shortcut { sequence: "Ctrl+Shift+M"; onActivated: matrixWindow.visible = !matrixWindow.visible }
+    Shortcut { sequence: "Ctrl+Shift+L"; onActivated: root.openToolWindow("loudness") }
+    Shortcut { sequence: "Ctrl+Shift+X"; onActivated: root.openToolWindow("crossfeed") }
+    Shortcut { sequence: "Ctrl+Shift+V"; onActivated: root.openToolWindow("leveller") }
+    Shortcut { sequence: "Ctrl+Shift+P"; onActivated: root.openToolWindow("psybass") }
+    Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
+    Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }
     SettingsWindow { id: settingsWindow }
 }

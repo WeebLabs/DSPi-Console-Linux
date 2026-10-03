@@ -1,12 +1,16 @@
-//! High-level command functions — mirrors Commands.swift.
+//! High-level command functions (mirrors the macOS Console's Commands.swift).
 //!
-//! Each function combines USB transfers with state updates.
+//! Each function combines USB transfers with state updates. Channel
+//! arguments are wire channel indices; output arguments are output indices.
+
+use std::thread;
+use std::time::Duration;
 
 use log::warn;
 
-use crate::dsp_math::quantize_gain;
-use crate::dsp_math::quantize_delay;
+use crate::dsp_math::{quantize_delay, quantize_gain};
 use crate::protocol::*;
+use crate::state::*;
 use crate::types::*;
 use crate::usb::{Result, UsbError};
 use crate::DspiCore;
@@ -32,93 +36,227 @@ impl DspiCore {
         self.conn()?.get_control_exact(request, value, index, length, min)
     }
 
+    fn get_u8(&self, request: u8, value: u16, index: u16) -> Result<u8> {
+        Ok(self.get_exact(request, value, index, 1, 1)?[0])
+    }
+
+    /// Longest delay the firmware's delay line holds (2048 samples on RP2350,
+    /// 1024 on RP2040, at 48 kHz).
+    pub fn max_delay_ms(&self) -> f32 {
+        if self.state.platform_id == 1 {
+            42.0
+        } else {
+            21.0
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
-    // Bulk Operations
+    // Connect-time sync
     // ═══════════════════════════════════════════════════════════════
 
-    /// Fetch all parameters via GET_ALL_PARAMS and update state.
+    /// Identify the firmware and, if it is compatible, read every parameter.
+    /// Returns Ok even for incompatible firmware (check `state.compat`); an
+    /// Err means the device could not be talked to at all.
     pub fn fetch_all(&mut self) -> Result<()> {
-        self.fetch_all_params()?;
+        if self.device_manager.connected_vendor_id() == Some(LEGACY_VENDOR_ID) {
+            // Pre-May-2026 firmware: wire format far older than V32.
+            self.fetch_platform().ok();
+            self.state.compat = COMPAT_FIRMWARE_TOO_OLD;
+            return Ok(());
+        }
+
+        self.fetch_platform()?;
+        match self.fetch_all_params() {
+            Ok(()) => self.state.compat = COMPAT_OK,
+            Err(FetchError::Usb(e)) => return Err(e),
+            Err(FetchError::Bulk(BulkError::UnsupportedVersion(v))) => {
+                self.state.format_version = v;
+                self.state.compat = if v > WIRE_FORMAT_VERSION {
+                    COMPAT_FIRMWARE_TOO_NEW
+                } else {
+                    COMPAT_FIRMWARE_TOO_OLD
+                };
+                return Ok(());
+            }
+            Err(FetchError::Bulk(BulkError::TooShort)) => {
+                self.state.compat = COMPAT_FIRMWARE_TOO_OLD;
+                return Ok(());
+            }
+        }
+
         self.fetch_core1_mode_internal();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {
             self.fetch_preset_name_internal(slot);
         }
-        self.fetch_preset_active_internal();
         Ok(())
     }
 
-    /// Fetch and parse bulk parameters. Returns false on failure.
-    fn fetch_all_params(&mut self) -> Result<()> {
-        let data = self.get_exact(REQ_GET_ALL_PARAMS, 0, WINDEX_OUTPUT, BULK_PARAMS_SIZE, BULK_PARAMS_SIZE as usize)?;
-        let bp = BulkParams::from_bytes(&data)
-            .map_err(|_| UsbError::ShortRead { expected: BULK_PARAMS_SIZE as usize, actual: data.len() })?;
-        self.state.apply_bulk_params(&bp);
+    /// Read platform and firmware version (REQ_GET_PLATFORM).
+    pub fn fetch_platform(&mut self) -> Result<PlatformInfo> {
+        let data = self.get_exact(REQ_GET_PLATFORM, 0, WINDEX_GLOBAL, 7, 4)?;
+        let info = parse_platform(&data).ok_or(UsbError::ShortRead { expected: 4, actual: data.len() })?;
+        let s = &mut self.state;
+        s.platform_id = info.platform_id;
+        s.num_output_channels = info.num_output_channels.min(MAX_OUTPUTS as u8);
+        s.fw_major = info.fw_major;
+        s.fw_minor = info.fw_minor;
+        s.fw_patch = info.fw_patch;
+        s.fw_beta = info.fw_beta;
+        Ok(info)
+    }
+
+    /// Read the whole bulk image in chunks and decode it into state.
+    fn fetch_all_params(&mut self) -> std::result::Result<(), FetchError> {
+        let data = self.read_bulk_chunked().map_err(FetchError::Usb)?;
+        decode_bulk(&data, &mut self.state).map_err(FetchError::Bulk)
+    }
+
+    /// Re-read every parameter after the device changed state on its own
+    /// (preset load, factory reset).
+    pub fn refresh_params(&mut self) -> Result<()> {
+        match self.fetch_all_params() {
+            Ok(()) => Ok(()),
+            Err(FetchError::Usb(e)) => Err(e),
+            Err(FetchError::Bulk(_)) => Err(UsbError::ShortRead { expected: BULK_PARAMS_SIZE, actual: 0 }),
+        }
+    }
+
+    /// REQ_GET_ALL_PARAMS_CHUNK: offset 0 snapshots the struct on the device,
+    /// later offsets read the snapshot out.
+    fn read_bulk_chunked(&self) -> Result<Vec<u8>> {
+        let mut out = Vec::with_capacity(BULK_PARAMS_SIZE);
+        while out.len() < BULK_PARAMS_SIZE {
+            let off = out.len();
+            let n = BULK_CHUNK_SIZE.min(BULK_PARAMS_SIZE - off);
+            let chunk = self.get(REQ_GET_ALL_PARAMS_CHUNK, off as u16, WINDEX_OUTPUT, n as u16)?;
+            if chunk.is_empty() {
+                return Err(UsbError::ShortRead { expected: BULK_PARAMS_SIZE, actual: off });
+            }
+            out.extend_from_slice(&chunk);
+        }
+        Ok(out)
+    }
+
+    /// Write the whole state to the device (REQ_SET_ALL_PARAMS_CHUNK). The
+    /// device applies it in its main loop once the last byte lands.
+    pub fn apply_all_params(&mut self) -> Result<()> {
+        if !self.state.bulk_valid {
+            return Err(UsbError::NotConnected);
+        }
+        let data = encode_bulk(&self.state);
+        for (i, chunk) in data.chunks(BULK_CHUNK_SIZE).enumerate() {
+            self.send(REQ_SET_ALL_PARAMS_CHUNK, (i * BULK_CHUNK_SIZE) as u16, WINDEX_OUTPUT, chunk)?;
+        }
         Ok(())
     }
 
     /// Fetch device status (peaks, CPU, clips).
     pub fn fetch_status(&mut self) -> Result<SystemStatus> {
         let num_ch = self.state.num_channels as usize;
-        let response_size = (num_ch * 2 + 4) as u16;
-        let data = self.get_exact(REQ_GET_STATUS, 9, WINDEX_GLOBAL, response_size, response_size as usize)?;
-        parse_status(&data, num_ch).ok_or(UsbError::ShortRead {
-            expected: response_size as usize,
-            actual: data.len(),
-        })
+        let len = (num_ch * 2 + 7) as u16;
+        let data = self.get_exact(REQ_GET_STATUS, 9, WINDEX_GLOBAL, len, num_ch * 2 + 6)?;
+        parse_status(&data, num_ch).ok_or(UsbError::ShortRead { expected: len as usize, actual: data.len() })
     }
 
     // ═══════════════════════════════════════════════════════════════
     // EQ
     // ═══════════════════════════════════════════════════════════════
 
-    /// Set a filter band's parameters.
+    /// Set a PEQ band (band 0..9) of wire channel `ch`.
     pub fn set_filter(&mut self, ch: u8, band: u8, mut params: FilterParams) -> Result<()> {
-        params.gain = quantize_gain(params.gain);
+        if ch as usize >= MAX_CHANNELS || band as usize >= BANDS_PER_CHANNEL {
+            return Err(UsbError::InvalidArgument);
+        }
+        if params.filter_type != FILTER_LINKWITZ_TRANSFORM {
+            params.gain = quantize_gain(params.gain);
+        }
         self.state.filters[ch as usize][band as usize] = params;
-        let packet = build_set_filter_packet(ch, band, &params);
+        self.send(REQ_SET_EQ_PARAM, 0, WINDEX_GLOBAL, &build_set_filter_packet(ch, band, &params))
+    }
+
+    /// Set crossover band `xband` (0..3) of an output's wire channel `ch`.
+    pub fn set_crossover(&mut self, ch: u8, xband: u8, params: FilterParams) -> Result<()> {
+        if self.state.output_of_channel(ch).is_none() || xband as usize >= MAX_XOVER_BANDS {
+            return Err(UsbError::InvalidArgument);
+        }
+        if params.filter_type != FILTER_FLAT && !filter_is_crossover(params.filter_type) {
+            return Err(UsbError::InvalidArgument);
+        }
+        self.state.xover[ch as usize][xband as usize] = params;
+        let packet = build_set_filter_packet(ch, XOVER_BAND_BASE + xband, &params);
         self.send(REQ_SET_EQ_PARAM, 0, WINDEX_GLOBAL, &packet)
     }
 
-    /// Fetch a single filter band's parameters.
+    /// Bypass or re-enable one band, keeping its settings. `band` is a PEQ
+    /// band (0..9) or a crossover band (20..23).
+    pub fn set_band_bypass(&mut self, ch: u8, band: u8, bypass: bool) -> Result<()> {
+        let c = ch as usize;
+        if c >= MAX_CHANNELS {
+            return Err(UsbError::InvalidArgument);
+        }
+        if (band as usize) < BANDS_PER_CHANNEL {
+            self.state.filters[c][band as usize].bypass = bypass;
+        } else if (XOVER_BAND_BASE..XOVER_BAND_BASE + MAX_XOVER_BANDS as u8).contains(&band) {
+            self.state.xover[c][(band - XOVER_BAND_BASE) as usize].bypass = bypass;
+        } else {
+            return Err(UsbError::InvalidArgument);
+        }
+        self.send(REQ_SET_BAND_BYPASS, channel_band_wvalue(ch, band), WINDEX_GLOBAL, &[bypass as u8])
+    }
+
+    /// Read one band back from the device. `band` is a PEQ band or 20..23.
     pub fn fetch_filter(&mut self, ch: u8, band: u8) -> Result<FilterParams> {
-        // Param 0 = type (u32), 1 = freq (f32), 2 = q (f32), 3 = gain (f32)
-        let get_f32 = |param: u8| -> Result<f32> {
-            let wval = eq_param_wvalue(ch, band, param);
-            let data = self.get_exact(REQ_GET_EQ_PARAM, wval, WINDEX_GLOBAL, 4, 4)?;
-            Ok(f32::from_le_bytes([data[0], data[1], data[2], data[3]]))
+        let get = |param: u8| -> Result<[u8; 4]> {
+            let d = self.get_exact(REQ_GET_EQ_PARAM, eq_param_wvalue(ch, band, param), WINDEX_GLOBAL, 4, 4)?;
+            Ok([d[0], d[1], d[2], d[3]])
         };
-
-        let type_wval = eq_param_wvalue(ch, band, 0);
-        let type_data = self.get_exact(REQ_GET_EQ_PARAM, type_wval, WINDEX_GLOBAL, 4, 4)?;
-        let type_raw = u32::from_le_bytes([type_data[0], type_data[1], type_data[2], type_data[3]]);
-
-        let params = FilterParams {
-            filter_type: FilterType::from_u32(type_raw),
-            freq: get_f32(1)?,
-            q: get_f32(2)?,
-            gain: get_f32(3)?,
+        let filter_type = u32::from_le_bytes(get(0)?) as u8;
+        let mut params = FilterParams {
+            filter_type,
+            freq: f32::from_le_bytes(get(1)?),
+            q: f32::from_le_bytes(get(2)?),
+            gain: f32::from_le_bytes(get(3)?),
+            bypass: u32::from_le_bytes(get(4)?) == 1,
+            qp: DEFAULT_Q,
         };
-
-        self.state.filters[ch as usize][band as usize] = params;
+        if filter_type == FILTER_LINKWITZ_TRANSFORM {
+            params.qp = FilterParams::decode_qp(u32::from_le_bytes(get(5)?) as u16);
+        }
+        let c = ch as usize;
+        if (band as usize) < BANDS_PER_CHANNEL && c < MAX_CHANNELS {
+            self.state.filters[c][band as usize] = params;
+        } else if band >= XOVER_BAND_BASE && c < MAX_CHANNELS {
+            if let Some(slot) = self.state.xover[c].get_mut((band - XOVER_BAND_BASE) as usize) {
+                *slot = params;
+            }
+        }
         Ok(params)
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Global (Preamp / Bypass)
+    // Preamp / Bypass
     // ═══════════════════════════════════════════════════════════════
 
+    /// Legacy preamp: sets every input channel to the same value.
     pub fn set_preamp(&mut self, db: f32) -> Result<()> {
         let val = quantize_gain(db);
         self.state.preamp_db = val;
+        self.state.input_preamp_db = [val; MAX_INPUTS];
         self.send(REQ_SET_PREAMP, 0, WINDEX_GLOBAL, &val.to_le_bytes())
     }
 
-    pub fn fetch_preamp(&mut self) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_PREAMP, 0, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.preamp_db = val;
-        Ok(val)
+    /// Per-input preamp (input index 0..num_input_channels-1).
+    pub fn set_input_preamp(&mut self, input: u8, db: f32) -> Result<()> {
+        if input as usize >= MAX_INPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
+        let val = quantize_gain(db);
+        self.state.input_preamp_db[input as usize] = val;
+        if input == 0 {
+            self.state.preamp_db = val;
+        }
+        self.send(REQ_SET_PREAMP_CH, input as u16, WINDEX_GLOBAL, &val.to_le_bytes())
     }
 
     pub fn set_bypass(&mut self, enabled: bool) -> Result<()> {
@@ -126,28 +264,60 @@ impl DspiCore {
         self.send(REQ_SET_BYPASS, 0, WINDEX_GLOBAL, &[enabled as u8])
     }
 
-    pub fn fetch_bypass(&mut self) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_BYPASS, 0, WINDEX_GLOBAL, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.bypass = val;
-        Ok(val)
+    // ═══════════════════════════════════════════════════════════════
+    // Volume
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Device master volume: −128 mutes, otherwise −127..0 dB in 0.5 dB steps.
+    pub fn set_master_volume(&mut self, db: f32) -> Result<()> {
+        let val = if db <= MASTER_VOL_MUTE_DB {
+            MASTER_VOL_MUTE_DB
+        } else {
+            ((db * 2.0).round() / 2.0).clamp(-127.0, 0.0)
+        };
+        self.state.master_volume_db = val;
+        self.send(REQ_SET_MASTER_VOLUME, 0, WINDEX_GLOBAL, &val.to_le_bytes())
+    }
+
+    /// 0 = master volume independent of presets, 1 = saved with presets.
+    pub fn set_master_volume_mode(&mut self, mode: u8) -> Result<()> {
+        self.state.master_volume_mode = mode;
+        self.send(REQ_SET_MASTER_VOLUME_MODE, 0, WINDEX_GLOBAL, &[mode])
+    }
+
+    /// Persist the live master volume for independent mode.
+    pub fn save_master_volume(&mut self) -> Result<u8> {
+        self.get_u8(REQ_SAVE_MASTER_VOLUME, 0, WINDEX_GLOBAL)
+    }
+
+    /// User volume (the value the host's volume slider drives), −60..0 dB.
+    pub fn set_user_volume(&mut self, db: f32) -> Result<()> {
+        let val = db.clamp(-60.0, 0.0);
+        self.state.user_volume_db = val;
+        self.send(REQ_SET_USER_VOLUME, 0, WINDEX_GLOBAL, &val.to_le_bytes())
+    }
+
+    pub fn set_user_mute(&mut self, muted: bool) -> Result<()> {
+        self.state.user_mute = muted;
+        self.send(REQ_SET_USER_MUTE, 0, WINDEX_GLOBAL, &[muted as u8])
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Delay
     // ═══════════════════════════════════════════════════════════════
 
+    /// Channel delay by wire channel. For an output channel this is the same
+    /// value as its output delay, so it goes through the output command.
     pub fn set_delay(&mut self, ch: u8, ms: f32) -> Result<()> {
-        let val = quantize_delay(ms);
+        if let Some(out) = self.state.output_of_channel(ch) {
+            return self.set_output_delay(out, ms);
+        }
+        if ch as usize >= MAX_CHANNELS {
+            return Err(UsbError::InvalidArgument);
+        }
+        let val = quantize_delay(ms).clamp(0.0, self.max_delay_ms());
         self.state.channel_delays[ch as usize] = val;
         self.send(REQ_SET_DELAY, ch as u16, WINDEX_GLOBAL, &val.to_le_bytes())
-    }
-
-    pub fn fetch_delay(&mut self, ch: u8) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_DELAY, ch as u16, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.channel_delays[ch as usize] = val;
-        Ok(val)
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -159,23 +329,9 @@ impl DspiCore {
         self.send(REQ_SET_LOUDNESS, 0, WINDEX_GLOBAL, &[enabled as u8])
     }
 
-    pub fn fetch_loudness(&mut self) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_LOUDNESS, 0, WINDEX_GLOBAL, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.loudness_enabled = val;
-        Ok(val)
-    }
-
     pub fn set_loudness_ref(&mut self, spl: f32) -> Result<()> {
         self.state.loudness_ref_spl = spl;
         self.send(REQ_SET_LOUDNESS_REF, 0, WINDEX_GLOBAL, &spl.to_le_bytes())
-    }
-
-    pub fn fetch_loudness_ref(&mut self) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_LOUDNESS_REF, 0, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.loudness_ref_spl = val;
-        Ok(val)
     }
 
     pub fn set_loudness_intensity(&mut self, pct: f32) -> Result<()> {
@@ -183,11 +339,10 @@ impl DspiCore {
         self.send(REQ_SET_LOUDNESS_INTENSITY, 0, WINDEX_GLOBAL, &pct.to_le_bytes())
     }
 
-    pub fn fetch_loudness_intensity(&mut self) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_LOUDNESS_INTENSITY, 0, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.loudness_intensity = val;
-        Ok(val)
+    /// Bit k: loudness compensates output k.
+    pub fn set_loudness_mask(&mut self, mask: u16) -> Result<()> {
+        self.state.loudness_output_mask = mask;
+        self.send(REQ_SET_LOUDNESS_MASK, 0, WINDEX_GLOBAL, &mask.to_le_bytes())
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -199,33 +354,16 @@ impl DspiCore {
         self.send(REQ_SET_CROSSFEED, 0, WINDEX_GLOBAL, &[enabled as u8])
     }
 
-    pub fn fetch_crossfeed(&mut self) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_CROSSFEED, 0, WINDEX_GLOBAL, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.crossfeed_enabled = val;
-        Ok(val)
-    }
-
     pub fn set_crossfeed_preset(&mut self, preset: u8) -> Result<()> {
         self.state.crossfeed_preset = preset;
         self.send(REQ_SET_CROSSFEED_PRESET, 0, WINDEX_GLOBAL, &[preset])?;
-        // Apply known preset values locally (matches Swift behavior)
-        static PRESET_VALUES: [(f32, f32); 3] = [
-            (700.0, 4.5),   // Default
-            (700.0, 6.0),   // Chu Moy
-            (650.0, 9.5),   // Jan Meier
-        ];
-        if (preset as usize) < PRESET_VALUES.len() {
-            self.state.crossfeed_freq = PRESET_VALUES[preset as usize].0;
-            self.state.crossfeed_feed = PRESET_VALUES[preset as usize].1;
+        // Known preset values, applied locally (matches the macOS Console).
+        const PRESET_VALUES: [(f32, f32); 3] = [(700.0, 4.5), (700.0, 6.0), (650.0, 9.5)];
+        if let Some(&(freq, feed)) = PRESET_VALUES.get(preset as usize) {
+            self.state.crossfeed_freq = freq;
+            self.state.crossfeed_feed = feed;
         }
         Ok(())
-    }
-
-    pub fn fetch_crossfeed_preset(&mut self) -> Result<u8> {
-        let data = self.get_exact(REQ_GET_CROSSFEED_PRESET, 0, WINDEX_GLOBAL, 1, 1)?;
-        self.state.crossfeed_preset = data[0];
-        Ok(data[0])
     }
 
     pub fn set_crossfeed_freq(&mut self, freq: f32) -> Result<()> {
@@ -233,23 +371,9 @@ impl DspiCore {
         self.send(REQ_SET_CROSSFEED_FREQ, 0, WINDEX_GLOBAL, &freq.to_le_bytes())
     }
 
-    pub fn fetch_crossfeed_freq(&mut self) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_CROSSFEED_FREQ, 0, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.crossfeed_freq = val;
-        Ok(val)
-    }
-
     pub fn set_crossfeed_feed(&mut self, feed: f32) -> Result<()> {
         self.state.crossfeed_feed = feed;
         self.send(REQ_SET_CROSSFEED_FEED, 0, WINDEX_GLOBAL, &feed.to_le_bytes())
-    }
-
-    pub fn fetch_crossfeed_feed(&mut self) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_CROSSFEED_FEED, 0, WINDEX_GLOBAL, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.crossfeed_feed = val;
-        Ok(val)
     }
 
     pub fn set_crossfeed_itd(&mut self, enabled: bool) -> Result<()> {
@@ -257,96 +381,206 @@ impl DspiCore {
         self.send(REQ_SET_CROSSFEED_ITD, 0, WINDEX_GLOBAL, &[enabled as u8])
     }
 
-    pub fn fetch_crossfeed_itd(&mut self) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_CROSSFEED_ITD, 0, WINDEX_GLOBAL, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.crossfeed_itd = val;
-        Ok(val)
+    /// Bit p: crossfeed runs on output pair p.
+    pub fn set_crossfeed_outputs(&mut self, pair_mask: u8) -> Result<()> {
+        self.state.crossfeed_output_pair_mask = pair_mask;
+        self.send(REQ_SET_CROSSFEED_OUTPUTS, 0, WINDEX_GLOBAL, &[pair_mask])
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Volume Leveller
+    // ═══════════════════════════════════════════════════════════════
+
+    pub fn set_leveller_enabled(&mut self, enabled: bool) -> Result<()> {
+        self.state.leveller_enabled = enabled;
+        self.send(REQ_SET_LEVELLER_ENABLE, 0, WINDEX_GLOBAL, &[enabled as u8])
+    }
+
+    pub fn set_leveller_amount(&mut self, pct: f32) -> Result<()> {
+        self.state.leveller_amount = pct;
+        self.send(REQ_SET_LEVELLER_AMOUNT, 0, WINDEX_GLOBAL, &pct.to_le_bytes())
+    }
+
+    pub fn set_leveller_speed(&mut self, speed: u8) -> Result<()> {
+        self.state.leveller_speed = speed;
+        self.send(REQ_SET_LEVELLER_SPEED, 0, WINDEX_GLOBAL, &[speed])
+    }
+
+    pub fn set_leveller_max_gain(&mut self, db: f32) -> Result<()> {
+        self.state.leveller_max_gain_db = db;
+        self.send(REQ_SET_LEVELLER_MAX_GAIN, 0, WINDEX_GLOBAL, &db.to_le_bytes())
+    }
+
+    pub fn set_leveller_lookahead(&mut self, enabled: bool) -> Result<()> {
+        self.state.leveller_lookahead = enabled;
+        self.send(REQ_SET_LEVELLER_LOOKAHEAD, 0, WINDEX_GLOBAL, &[enabled as u8])
+    }
+
+    pub fn set_leveller_gate(&mut self, db: f32) -> Result<()> {
+        self.state.leveller_gate_db = db;
+        self.send(REQ_SET_LEVELLER_GATE, 0, WINDEX_GLOBAL, &db.to_le_bytes())
+    }
+
+    pub fn set_leveller_masks(&mut self, detector: u8, apply: u8) -> Result<()> {
+        self.state.leveller_detector_mask = detector;
+        self.state.leveller_apply_mask = apply;
+        self.send(REQ_SET_LEVELLER_MASKS, 0, WINDEX_GLOBAL, &[detector, apply])
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Input source / Psychoacoustic bass
+    // ═══════════════════════════════════════════════════════════════
+
+    /// 0 = USB, 1 = S/PDIF, 2 = I2S, ... (firmware InputSource).
+    pub fn set_input_source(&mut self, source: u8) -> Result<()> {
+        self.send(REQ_SET_INPUT_SOURCE, 0, WINDEX_GLOBAL, &[source])?;
+        self.state.input_source = source;
+        Ok(())
+    }
+
+    pub fn set_psybass_enabled(&mut self, enabled: bool) -> Result<()> {
+        self.state.psybass_enabled = enabled;
+        self.send(REQ_SET_PSYBASS, 0, WINDEX_GLOBAL, &[enabled as u8])
+    }
+
+    /// Set one psybass parameter (`PSYBASS_PARAM_*`), clamped to its range.
+    pub fn set_psybass_param(&mut self, param: u8, value: f32) -> Result<()> {
+        let (req, v) = match param {
+            PSYBASS_PARAM_CUTOFF => (REQ_SET_PSYBASS_CUTOFF, value.clamp(30.0, 300.0)),
+            PSYBASS_PARAM_HARMONICS => (REQ_SET_PSYBASS_HARMONICS, value.clamp(-24.0, 12.0)),
+            PSYBASS_PARAM_DRIVE => (REQ_SET_PSYBASS_DRIVE, value.clamp(0.0, 18.0)),
+            PSYBASS_PARAM_CHARACTER => (REQ_SET_PSYBASS_CHARACTER, value.clamp(0.0, 100.0)),
+            PSYBASS_PARAM_ORIGINAL => (REQ_SET_PSYBASS_ORIGINAL, value.clamp(-60.0, 0.0)),
+            _ => return Err(UsbError::InvalidArgument),
+        };
+        let s = &mut self.state;
+        match param {
+            PSYBASS_PARAM_CUTOFF => s.psybass_cutoff_hz = v,
+            PSYBASS_PARAM_HARMONICS => s.psybass_harmonics_db = v,
+            PSYBASS_PARAM_DRIVE => s.psybass_drive_db = v,
+            PSYBASS_PARAM_CHARACTER => s.psybass_character_pct = v,
+            _ => s.psybass_original_db = v,
+        }
+        self.send(req, 0, WINDEX_GLOBAL, &v.to_le_bytes())
+    }
+
+    /// Bit k: psybass processes output k.
+    pub fn set_psybass_mask(&mut self, mask: u16) -> Result<()> {
+        self.state.psybass_output_mask = mask;
+        self.send(REQ_SET_PSYBASS_MASK, 0, WINDEX_GLOBAL, &mask.to_le_bytes())
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Matrix Mixer
     // ═══════════════════════════════════════════════════════════════
 
-    pub fn set_matrix_route(
-        &mut self,
-        input: u8,
-        output: u8,
-        enabled: bool,
-        gain: f32,
-        invert: bool,
-    ) -> Result<()> {
-        self.state.matrix_routing[input as usize][output as usize] = enabled;
-        self.state.matrix_gain[input as usize][output as usize] = gain;
-        self.state.matrix_invert[input as usize][output as usize] = invert;
+    pub fn set_matrix_route(&mut self, input: u8, output: u8, enabled: bool, gain: f32, invert: bool) -> Result<()> {
+        let (i, o) = (input as usize, output as usize);
+        if i >= MAX_INPUTS || o >= MAX_OUTPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
+        let gain = quantize_gain(gain);
+        self.state.matrix_routing[i][o] = enabled;
+        self.state.matrix_gain[i][o] = gain;
+        self.state.matrix_invert[i][o] = invert;
         let packet = build_matrix_route_packet(input, output, enabled, gain, invert);
         self.send(REQ_SET_MATRIX_ROUTE, 0, WINDEX_OUTPUT, &packet)
     }
 
-    pub fn fetch_matrix_route(&mut self, input: u8, output: u8) -> Result<(bool, f32, bool)> {
-        let wval = matrix_route_wvalue(input, output);
-        let data = self.get_exact(REQ_GET_MATRIX_ROUTE, wval, WINDEX_OUTPUT, 9, 9)?;
-        let enabled = data[2] != 0;
-        let invert = data[3] != 0;
-        let gain = f32::from_le_bytes([data[4], data[5], data[6], data[7]]);
-        self.state.matrix_routing[input as usize][output as usize] = enabled;
-        self.state.matrix_gain[input as usize][output as usize] = gain;
-        self.state.matrix_invert[input as usize][output as usize] = invert;
-        Ok((enabled, gain, invert))
-    }
-
     // ═══════════════════════════════════════════════════════════════
-    // Output Controls
+    // Outputs
     // ═══════════════════════════════════════════════════════════════
 
-    pub fn set_output_enable(&mut self, output: u8, enabled: bool) -> Result<()> {
-        self.state.output_enabled[output as usize] = enabled;
-        self.send(REQ_SET_OUTPUT_ENABLE, output as u16, WINDEX_OUTPUT, &[enabled as u8])
-    }
-
-    pub fn fetch_output_enable(&mut self, output: u8) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_OUTPUT_ENABLE, output as u16, WINDEX_OUTPUT, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.output_enabled[output as usize] = val;
-        Ok(val)
+    /// Enable/disable an output. The firmware refuses to enable PDM while a
+    /// Core 1 EQ-worker output is on (and vice versa), so the result is read
+    /// back rather than assumed.
+    pub fn set_output_enable(&mut self, output: u8, enabled: bool) -> Result<bool> {
+        if output as usize >= MAX_OUTPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
+        self.send(REQ_SET_OUTPUT_ENABLE, output as u16, WINDEX_OUTPUT, &[enabled as u8])?;
+        let actual = match self.get_u8(REQ_GET_OUTPUT_ENABLE, output as u16, WINDEX_OUTPUT) {
+            Ok(v) => v != 0,
+            Err(_) => enabled,
+        };
+        self.state.output_enabled[output as usize] = actual;
+        self.fetch_core1_mode_internal();
+        Ok(actual)
     }
 
     pub fn set_output_gain(&mut self, output: u8, db: f32) -> Result<()> {
+        if output as usize >= MAX_OUTPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
         let val = quantize_gain(db);
         self.state.output_gain_db[output as usize] = val;
         self.send(REQ_SET_OUTPUT_GAIN, output as u16, WINDEX_OUTPUT, &val.to_le_bytes())
     }
 
-    pub fn fetch_output_gain(&mut self, output: u8) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_OUTPUT_GAIN, output as u16, WINDEX_OUTPUT, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.output_gain_db[output as usize] = val;
-        Ok(val)
-    }
-
     pub fn set_output_mute(&mut self, output: u8, muted: bool) -> Result<()> {
+        if output as usize >= MAX_OUTPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
         self.state.output_muted[output as usize] = muted;
         self.send(REQ_SET_OUTPUT_MUTE, output as u16, WINDEX_OUTPUT, &[muted as u8])
     }
 
-    pub fn fetch_output_mute(&mut self, output: u8) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_OUTPUT_MUTE, output as u16, WINDEX_OUTPUT, 1, 1)?;
-        let val = data[0] != 0;
-        self.state.output_muted[output as usize] = val;
-        Ok(val)
-    }
-
     pub fn set_output_delay(&mut self, output: u8, ms: f32) -> Result<()> {
-        let val = quantize_delay(ms);
+        if output as usize >= MAX_OUTPUTS {
+            return Err(UsbError::InvalidArgument);
+        }
+        let val = quantize_delay(ms).clamp(0.0, self.max_delay_ms());
         self.state.output_delay_ms[output as usize] = val;
+        let ch = self.state.output_channel(output) as usize;
+        if ch < MAX_CHANNELS {
+            self.state.channel_delays[ch] = val;
+        }
         self.send(REQ_SET_OUTPUT_DELAY, output as u16, WINDEX_OUTPUT, &val.to_le_bytes())
     }
 
-    pub fn fetch_output_delay(&mut self, output: u8) -> Result<f32> {
-        let data = self.get_exact(REQ_GET_OUTPUT_DELAY, output as u16, WINDEX_OUTPUT, 4, 4)?;
-        let val = f32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        self.state.output_delay_ms[output as usize] = val;
-        Ok(val)
+    // ═══════════════════════════════════════════════════════════════
+    // Output Limiter
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Set one limiter parameter (`LIMITER_PARAM_*`) of `output`, or of every
+    /// output when `output` is `LIMITER_ALL_OUTPUTS`. Values are clamped the
+    /// way the firmware clamps them.
+    pub fn set_limiter_param(&mut self, output: u8, param: u8, value: f32) -> Result<()> {
+        let value = match param {
+            LIMITER_PARAM_ENABLED => (value != 0.0) as u8 as f32,
+            LIMITER_PARAM_THRESHOLD_DB => value.clamp(-30.0, 0.0),
+            LIMITER_PARAM_RELEASE_MS => value.clamp(10.0, 1000.0),
+            LIMITER_PARAM_LINK_GROUP => value.round().clamp(0.0, 4.0),
+            _ => return Err(UsbError::InvalidArgument),
+        };
+        let outputs: Vec<usize> = if output == LIMITER_ALL_OUTPUTS {
+            (0..self.state.num_output_channels as usize).collect()
+        } else if (output as usize) < MAX_OUTPUTS {
+            vec![output as usize]
+        } else {
+            return Err(UsbError::InvalidArgument);
+        };
+        for o in outputs {
+            match param {
+                LIMITER_PARAM_ENABLED => self.state.limiter_enabled[o] = value != 0.0,
+                LIMITER_PARAM_THRESHOLD_DB => self.state.limiter_threshold_db[o] = value,
+                LIMITER_PARAM_RELEASE_MS => self.state.limiter_release_ms[o] = value,
+                _ => self.state.limiter_link_group[o] = value as u8,
+            }
+        }
+        let wvalue = ((output as u16) << 8) | param as u16;
+        self.send(REQ_LIMITER, wvalue, WINDEX_GLOBAL, &value.to_le_bytes())
+    }
+
+    /// Current gain reduction per output in dB (positive = reducing).
+    pub fn fetch_limiter_meter(&mut self) -> Result<[f32; MAX_OUTPUTS]> {
+        let n = self.state.num_output_channels as usize;
+        let data = self.get_exact(REQ_LIMITER, LIMITER_GET_METER as u16, WINDEX_GLOBAL, (n * 2) as u16, n * 2)?;
+        let mut gr = [0.0f32; MAX_OUTPUTS];
+        for (k, v) in gr.iter_mut().enumerate().take(n) {
+            *v = u16::from_le_bytes([data[2 * k], data[2 * k + 1]]) as f32 / 100.0;
+        }
+        Ok(gr)
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -354,97 +588,129 @@ impl DspiCore {
     // ═══════════════════════════════════════════════════════════════
 
     pub fn fetch_core1_mode(&mut self) -> Result<u8> {
-        let data = self.get_exact(REQ_GET_CORE1_MODE, 0, WINDEX_GLOBAL, 1, 1)?;
-        self.state.core1_mode = data[0];
-        Ok(data[0])
+        let v = self.get_u8(REQ_GET_CORE1_MODE, 0, WINDEX_GLOBAL)?;
+        self.state.core1_mode = v;
+        Ok(v)
     }
 
-    /// Internal version that doesn't propagate errors.
-    fn fetch_core1_mode_internal(&mut self) {
+    pub(crate) fn fetch_core1_mode_internal(&mut self) {
         if let Err(e) = self.fetch_core1_mode() {
             warn!("Failed to fetch core1 mode: {e}");
         }
     }
 
     pub fn check_core1_conflict(&mut self, output: u8) -> Result<bool> {
-        let data = self.get_exact(REQ_GET_CORE1_CONFLICT, output as u16, WINDEX_GLOBAL, 1, 1)?;
-        Ok(data[0] != 0)
+        Ok(self.get_u8(REQ_GET_CORE1_CONFLICT, output as u16, WINDEX_GLOBAL)? != 0)
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Pin Configuration
+    // Pins
     // ═══════════════════════════════════════════════════════════════
 
-    /// Set GPIO pin for a physical output. Returns firmware status code.
-    /// SET is an IN transfer: wValue = (new_pin << 8) | output_index
-    pub fn set_output_pin(&mut self, output: u8, pin: u8) -> Result<u8> {
-        let wval = pin_config_wvalue(pin, output);
-        let data = self.get_exact(REQ_SET_OUTPUT_PIN, wval, WINDEX_OUTPUT, 1, 1)?;
-        let status = data[0];
+    /// Set the GPIO of a physical output slot. Returns the firmware status
+    /// code. SET is an IN transfer: wValue = (new_pin << 8) | slot.
+    pub fn set_output_pin(&mut self, slot: u8, pin: u8) -> Result<u8> {
+        let status = self.get_u8(REQ_SET_OUTPUT_PIN, pin_config_wvalue(pin, slot), WINDEX_OUTPUT)?;
         if status == PIN_CONFIG_SUCCESS {
-            self.state.output_pins[output as usize] = pin;
+            if let Some(p) = self.state.output_pins.get_mut(slot as usize) {
+                *p = pin;
+            }
         }
         Ok(status)
     }
 
-    pub fn fetch_output_pin(&mut self, output: u8) -> Result<u8> {
-        let data = self.get_exact(REQ_GET_OUTPUT_PIN, output as u16, WINDEX_OUTPUT, 1, 1)?;
-        self.state.output_pins[output as usize] = data[0];
-        Ok(data[0])
+    pub fn fetch_output_pin(&mut self, slot: u8) -> Result<u8> {
+        let v = self.get_u8(REQ_GET_OUTPUT_PIN, slot as u16, WINDEX_OUTPUT)?;
+        if let Some(p) = self.state.output_pins.get_mut(slot as usize) {
+            *p = v;
+        }
+        Ok(v)
+    }
+
+    /// 0 = output config stored independently, 1 = saved with presets.
+    pub fn set_output_config_mode(&mut self, mode: u8) -> Result<()> {
+        self.state.output_config_mode = mode;
+        self.send(REQ_SET_OUTPUT_CONFIG_MODE, 0, WINDEX_OUTPUT, &[mode])
+    }
+
+    /// Persist the live output config (independent mode).
+    pub fn save_output_config(&mut self) -> Result<u8> {
+        self.get_u8(REQ_SAVE_OUTPUT_CONFIG, 0, WINDEX_GLOBAL)
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Channel Names
     // ═══════════════════════════════════════════════════════════════
 
-    pub fn set_channel_name(&mut self, channel: u8, name: &str) -> Result<()> {
+    pub fn set_channel_name(&mut self, ch: u8, name: &str) -> Result<()> {
+        if ch as usize >= MAX_CHANNELS {
+            return Err(UsbError::InvalidArgument);
+        }
         let buf = name_to_bytes(name);
-        self.state.channel_names[channel as usize] = buf;
-        self.send(REQ_SET_CHANNEL_NAME, channel as u16, WINDEX_OUTPUT, &buf)
+        self.state.channel_names[ch as usize] = buf;
+        self.send(REQ_SET_CHANNEL_NAME, ch as u16, WINDEX_OUTPUT, &buf)
     }
 
-    pub fn fetch_channel_name(&mut self, channel: u8) -> Result<String> {
-        let data = self.get_exact(REQ_GET_CHANNEL_NAME, channel as u16, WINDEX_OUTPUT, 32, 1)?;
+    pub fn fetch_channel_name(&mut self, ch: u8) -> Result<String> {
+        if ch as usize >= MAX_CHANNELS {
+            return Err(UsbError::InvalidArgument);
+        }
+        let data = self.get_exact(REQ_GET_CHANNEL_NAME, ch as u16, WINDEX_OUTPUT, 32, 1)?;
         let mut buf = [0u8; CHANNEL_NAME_LEN];
-        let len = data.len().min(CHANNEL_NAME_LEN);
+        let len = data.len().min(CHANNEL_NAME_LEN - 1);
         buf[..len].copy_from_slice(&data[..len]);
-        self.state.channel_names[channel as usize] = buf;
+        self.state.channel_names[ch as usize] = buf;
         Ok(name_from_bytes(&buf))
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Flash Storage
+    // Flash / System
     // ═══════════════════════════════════════════════════════════════
 
+    /// Legacy "save params" (saves to the active preset slot; deferred).
     pub fn save_params(&mut self) -> Result<u8> {
-        let data = self.get_exact(REQ_SAVE_PARAMS, 0, WINDEX_GLOBAL, 1, 1)?;
-        Ok(data[0])
+        self.get_u8(REQ_SAVE_PARAMS, 0, WINDEX_GLOBAL)
     }
 
+    /// Revert to saved: reload the active preset through the deferred,
+    /// S/PDIF-safe preset load. Returns a FLASH_* code.
     pub fn load_params(&mut self) -> Result<u8> {
-        let data = self.get_exact(REQ_LOAD_PARAMS, 0, WINDEX_GLOBAL, 1, 1)?;
-        let status = data[0];
-        if status == FLASH_OK {
-            self.fetch_all()?;
-        }
-        Ok(status)
+        let slot = self.state.active_preset_slot;
+        Ok(match self.load_preset(slot)? {
+            PRESET_OK => FLASH_OK,
+            PRESET_ERR_CRC => FLASH_ERR_CRC,
+            _ => FLASH_ERR_WRITE,
+        })
     }
 
+    /// Factory reset (deferred on the device), then re-read everything.
     pub fn factory_reset(&mut self) -> Result<u8> {
-        let data = self.get_exact(REQ_FACTORY_RESET, 0, WINDEX_GLOBAL, 1, 1)?;
-        let status = data[0];
+        let status = self.get_u8(REQ_FACTORY_RESET, 0, WINDEX_GLOBAL)?;
         if status == FLASH_OK {
+            thread::sleep(Duration::from_millis(250));
             self.fetch_all()?;
         }
         Ok(status)
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Clip Detection
-    // ═══════════════════════════════════════════════════════════════
-
-    pub fn clear_clips(&mut self) -> Result<()> {
-        let _ = self.get(REQ_CLEAR_CLIPS, 0, WINDEX_GLOBAL, 2)?;
+    /// Restart the device into its USB bootloader (for firmware updates).
+    /// The device drops off the bus, so the transfer may report an error.
+    pub fn enter_bootloader(&mut self) -> Result<()> {
+        let _ = self.get(REQ_ENTER_BOOTLOADER, 0, WINDEX_GLOBAL, 1);
         Ok(())
     }
+
+    /// Read-then-clear the device's sticky clip flags. Returns the flags.
+    pub fn clear_clips(&mut self) -> Result<u32> {
+        let data = self.get(REQ_CLEAR_CLIPS, 0, WINDEX_GLOBAL, 4)?;
+        let mut b = [0u8; 4];
+        b[..data.len().min(4)].copy_from_slice(&data[..data.len().min(4)]);
+        Ok(u32::from_le_bytes(b))
+    }
+}
+
+/// Failure while reading the bulk image.
+enum FetchError {
+    Usb(UsbError),
+    Bulk(BulkError),
 }

@@ -230,7 +230,7 @@ Window {
                 Repeater {
                     model: {
                         var pins = []
-                        var numPhys = bridge.platformName === "RP2040" ? 3 : 5
+                        var numPhys = bridge.numPinOutputs()
                         for (var i = 0; i < numPhys; i++) {
                             var name = i < numPhys - 1 ? "SPDIF " + (i + 1) : "PDM"
                             pins.push({ index: i, name: name })
@@ -260,12 +260,27 @@ Window {
 
                 Row {
                     width: parent.width; spacing: 8
-                    Text { text: "Include Pin Config in Presets"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "Save Output Config with Presets"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
                     Item { width: 1; height: 1 }
                     Switch {
-                        checked: bridge.presetIncludePins
-                        onToggled: bridge.setPresetIncludePins(checked)
+                        checked: bridge.outputConfigMode === 1
+                        onToggled: bridge.setOutputConfigMode(checked ? 1 : 0)
                     }
+                }
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11; color: Qt.rgba(1,1,1,0.4)
+                    text: bridge.outputConfigMode === 1
+                        ? "Output pins, types and limiter settings are stored in each preset."
+                        : "Output pins, types and limiter settings are stored once for the device, independent of presets."
+                }
+
+                Button {
+                    visible: bridge.outputConfigMode === 0
+                    text: "Save Output Config"
+                    onClicked: bridge.saveOutputConfig()
                 }
             }
         }

@@ -12,6 +12,12 @@ Row {
     property real minValue: -999
     property real maxValue: 999
     property int fieldWidth: 60
+    // Ctrl+scroll steps the value by this much; plain scrolling scrolls the page
+    // Values at or below this read as -∞ (e.g. the master volume mute sentinel)
+    property real infinityAt: -1e9
+    // Compact fields (Matrix Mixer) adjust on plain scrolling
+    property bool plainWheel: false
+    property real wheelStep: Math.pow(10, -decimals)
 
     signal valueEdited(real newValue)
 
@@ -37,7 +43,7 @@ Row {
         text: formatValue(value)
 
         function formatValue(v) {
-            return v.toFixed(decimals)
+            return v <= infinityAt ? "-\u221E" : v.toFixed(decimals)
         }
 
         onEditingFinished: {
@@ -71,7 +77,8 @@ Row {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: {
-                var delta = wheel.angleDelta.y > 0 ? 0.1 : -0.1
+                if (!plainWheel && !(wheel.modifiers & Qt.ControlModifier)) { wheel.accepted = false; return }
+                var delta = wheel.angleDelta.y > 0 ? wheelStep : -wheelStep
                 var newVal = Math.max(minValue, Math.min(maxValue, value + delta))
                 valueFieldRoot.valueEdited(newVal)
             }

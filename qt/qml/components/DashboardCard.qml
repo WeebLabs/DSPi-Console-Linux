@@ -19,7 +19,7 @@ Item {
     property int bandCount: 10
     height: 32 + 1 + (bandCount * 24)
 
-    readonly property var typeShort: ["OFF", "PK", "LS", "HS", "LP", "HP"]
+    readonly property var typeShort: ["OFF", "PK", "LS", "HS", "HC", "LC", "NO", "AP", "AP1", "LS1", "HS1", "LT", "HC1", "LC1"]
 
     // Gradient border (left color → right color for stereo, single color for mono)
     Rectangle {

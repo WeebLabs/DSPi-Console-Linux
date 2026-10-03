@@ -1,47 +1,106 @@
 //! Shared types with C-compatible representations for FFI.
+//!
+//! Channel indices everywhere in the core are firmware *wire* indices
+//! (unified channel model, wire format V16+):
+//! `[ inputs 0..num_input_channels-1 ][ outputs num_input_channels.. ]`.
+//! RP2040 has 2 inputs + 5 outputs (7 channels), RP2350 8 inputs + 9 outputs
+//! (17 channels). Output-relative commands (matrix, output gain/mute/delay,
+//! limiter) take an output index 0..num_output_channels-1 instead.
 
-/// Filter type matching the firmware's enum values.
-#[repr(C)]
+// ── Filter types (firmware config.h `enum FilterType`) ─────────────────
+//
+// Value space: 0..13 PEQ types, 14..31 reserved, 32..63 crossover types
+// (only valid in crossover bands), 64+ reserved.
+
+pub const FILTER_FLAT: u8 = 0;
+pub const FILTER_PEAKING: u8 = 1;
+pub const FILTER_LOWSHELF: u8 = 2;
+pub const FILTER_HIGHSHELF: u8 = 3;
+pub const FILTER_LOWPASS: u8 = 4;
+pub const FILTER_HIGHPASS: u8 = 5;
+pub const FILTER_NOTCH: u8 = 6;
+/// Second-order (RBJ) all-pass.
+pub const FILTER_ALLPASS: u8 = 7;
+/// First-order all-pass: frequency only.
+pub const FILTER_ALLPASS1: u8 = 8;
+/// First-order low shelf: frequency + gain, no Q.
+pub const FILTER_LOWSHELF1: u8 = 9;
+/// First-order high shelf: frequency + gain, no Q.
+pub const FILTER_HIGHSHELF1: u8 = 10;
+/// Linkwitz Transform: freq = f0, q = Q0, gain carries fp in Hz, qp = target Q.
+pub const FILTER_LINKWITZ_TRANSFORM: u8 = 11;
+/// First-order low pass (6 dB/oct): frequency only.
+pub const FILTER_LOWPASS1: u8 = 12;
+/// First-order high pass (6 dB/oct): frequency only.
+pub const FILTER_HIGHPASS1: u8 = 13;
+
+/// First crossover type (LR2 LP). Crossover types run 32..=63:
+/// LR2/4/6/8 = 32..39, Butterworth 1..8 = 40..55, Bessel 2/4/6/8 = 56..63,
+/// each pair LP = even, HP = odd.
+pub const FILTER_XOVER_FIRST: u8 = 32;
+pub const FILTER_XOVER_LAST: u8 = 63;
+
+/// True for a PEQ filter type (anything below the crossover block).
+pub fn filter_is_peq(t: u8) -> bool {
+    t < FILTER_XOVER_FIRST
+}
+
+/// True for a crossover filter type (32..=63).
+pub fn filter_is_crossover(t: u8) -> bool {
+    (FILTER_XOVER_FIRST..=FILTER_XOVER_LAST).contains(&t)
+}
+
+/// Crossover family, matching firmware `XoverFamily`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FilterType {
-    Flat = 0,
-    Peaking = 1,
-    LowShelf = 2,
-    HighShelf = 3,
-    LowPass = 4,
-    HighPass = 5,
+pub enum XoverFamily {
+    LinkwitzRiley,
+    Butterworth,
+    Bessel,
 }
 
-impl FilterType {
-    pub fn from_u32(v: u32) -> Self {
-        match v {
-            1 => Self::Peaking,
-            2 => Self::LowShelf,
-            3 => Self::HighShelf,
-            4 => Self::LowPass,
-            5 => Self::HighPass,
-            _ => Self::Flat,
-        }
+/// Decode a crossover type into (family, order, is_high_pass).
+pub fn crossover_meta(t: u8) -> Option<(XoverFamily, u8, bool)> {
+    if !filter_is_crossover(t) {
+        return None;
     }
+    let rel = t - FILTER_XOVER_FIRST;
+    let hp = rel & 1 == 1;
+    let pair = rel / 2;
+    Some(match pair {
+        0..=3 => (XoverFamily::LinkwitzRiley, (pair + 1) * 2, hp),
+        4..=11 => (XoverFamily::Butterworth, pair - 3, hp),
+        _ => (XoverFamily::Bessel, (pair - 11) * 2, hp),
+    })
 }
 
-/// Parameters for a single biquad filter band.
+/// Default Q (Butterworth), also the Linkwitz Transform target-Q default.
+pub const DEFAULT_Q: f32 = 0.707;
+
+/// Parameters for a single filter band (PEQ or crossover).
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct FilterParams {
-    pub filter_type: FilterType,
+    /// Firmware filter type (`FILTER_*`).
+    pub filter_type: u8,
+    /// User bypass: the band keeps its settings but is not processed.
+    pub bypass: bool,
     pub freq: f32,
     pub q: f32,
+    /// Gain in dB; for the Linkwitz Transform, the target frequency fp in Hz.
     pub gain: f32,
+    /// Linkwitz Transform target Q (ignored by every other type).
+    pub qp: f32,
 }
 
 impl Default for FilterParams {
     fn default() -> Self {
         Self {
-            filter_type: FilterType::Flat,
+            filter_type: FILTER_FLAT,
+            bypass: false,
             freq: 1000.0,
-            q: 0.707,
+            q: DEFAULT_Q,
             gain: 0.0,
+            qp: DEFAULT_Q,
         }
     }
 }
@@ -49,31 +108,58 @@ impl Default for FilterParams {
 impl PartialEq for FilterParams {
     fn eq(&self, other: &Self) -> bool {
         self.filter_type == other.filter_type
+            && self.bypass == other.bypass
             && self.freq == other.freq
             && self.q == other.q
             && self.gain == other.gain
+            && (self.filter_type != FILTER_LINKWITZ_TRANSFORM || self.qp == other.qp)
     }
 }
 
-/// System status from the device (peaks, CPU, clips).
+impl FilterParams {
+    /// Wire encoding of the LT target Q: round(qp × 512), 0 for every other type.
+    pub fn qp_x512(&self) -> u16 {
+        if self.filter_type == FILTER_LINKWITZ_TRANSFORM {
+            (self.qp.clamp(0.1, 20.0) * 512.0).round() as u16
+        } else {
+            0
+        }
+    }
+
+    /// Decode a wire `qp_x512`; 0 selects the 0.707 default.
+    pub fn decode_qp(raw: u16) -> f32 {
+        if raw == 0 {
+            DEFAULT_Q
+        } else {
+            raw as f32 / 512.0
+        }
+    }
+}
+
+/// System status from the device (REQ_GET_STATUS wValue = 9).
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SystemStatus {
-    pub peaks: [f32; 11],
+    /// Peak level per wire channel, 0.0..1.0.
+    pub peaks: [f32; MAX_CHANNELS],
     pub cpu0: u8,
     pub cpu1: u8,
-    pub clip_flags: u16,
+    /// Sticky clip flags, one bit per wire channel.
+    pub clip_flags: u32,
+    /// Live active input channel count (source-aware).
+    pub active_input_channels: u8,
     pub num_channels: u8,
 }
 
 impl Default for SystemStatus {
     fn default() -> Self {
         Self {
-            peaks: [0.0; 11],
+            peaks: [0.0; MAX_CHANNELS],
             cpu0: 0,
             cpu1: 0,
             clip_flags: 0,
-            num_channels: 7,
+            active_input_channels: 0,
+            num_channels: 0,
         }
     }
 }
@@ -95,70 +181,73 @@ impl DeviceInfo {
     }
 }
 
-/// Platform identification from the device.
+/// Platform and firmware identification (REQ_GET_PLATFORM, 7-byte reply).
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct PlatformInfo {
-    /// 0 = RP2040, 1 = RP2350
+    /// 0 = RP2040, 1 = RP2350.
     pub platform_id: u8,
-    /// Total channels (7 or 11)
-    pub num_channels: u8,
-    /// Output channels (5 or 9)
     pub num_output_channels: u8,
-    /// Firmware version byte
-    pub firmware_version: u8,
+    pub fw_major: u8,
+    pub fw_minor: u8,
+    pub fw_patch: u8,
+    /// Pre-release ordinal: 0 = final release, N = beta N.
+    pub fw_beta: u8,
 }
 
-impl Default for PlatformInfo {
-    fn default() -> Self {
-        Self {
-            platform_id: 0,
-            num_channels: 7,
-            num_output_channels: 5,
-            firmware_version: 0,
-        }
-    }
-}
-
-/// Preset directory information from the device.
+/// Preset directory (REQ_PRESET_GET_DIR, 7-byte reply).
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct PresetDirectory {
     /// Bitmask of occupied preset slots (10 slots).
     pub occupied_mask: u16,
-    /// 0 = specified default, 1 = last active.
+    /// 0 = load the specified default slot, 1 = load the last active slot.
     pub startup_mode: u8,
-    /// Default preset slot index.
     pub default_slot: u8,
-    /// Last active preset slot.
     pub last_active: u8,
-    /// Whether pin config is included in presets.
-    pub include_pins: bool,
+    /// 0 = output config is stored independently, 1 = it travels with presets.
+    pub output_config_mode: u8,
+    /// 0 = master volume is stored independently, 1 = it travels with presets.
+    pub master_volume_mode: u8,
 }
 
-impl Default for PresetDirectory {
-    fn default() -> Self {
-        Self {
-            occupied_mask: 0,
-            startup_mode: 0,
-            default_slot: 0,
-            last_active: 0,
-            include_pins: false,
-        }
-    }
-}
-
-/// Maximum channels supported by the protocol.
-pub const MAX_CHANNELS: usize = 11;
-/// Maximum output channels.
+/// Maximum channels in the wire format (inputs + outputs, RP2350).
+pub const MAX_CHANNELS: usize = 17;
+/// Maximum input channels (RP2350).
+pub const MAX_INPUTS: usize = 8;
+/// Maximum output channels (RP2350).
 pub const MAX_OUTPUTS: usize = 9;
-/// Number of EQ bands per channel used by the app.
+/// PEQ bands per channel that the firmware processes.
 pub const BANDS_PER_CHANNEL: usize = 10;
-/// Number of EQ bands per channel in firmware layout.
+/// PEQ band storage per channel in the wire layout.
 pub const FIRMWARE_BANDS_PER_CHANNEL: usize = 12;
+/// Crossover bands per output channel.
+pub const MAX_XOVER_BANDS: usize = 4;
+/// Wire band index of crossover band 0 (crossover bands are 20..23).
+pub const XOVER_BAND_BASE: u8 = 20;
 /// Maximum preset slots.
 pub const MAX_PRESETS: usize = 10;
-/// Channel name buffer size.
+/// Channel / preset name buffer size.
 pub const CHANNEL_NAME_LEN: usize = 32;
-/// Physical output count for pin config.
+/// Physical output pin slots (4 S/PDIF + 1 PDM on RP2350).
 pub const MAX_PHYSICAL_OUTPUTS: usize = 5;
+
+/// Master volume mute sentinel (true −∞).
+pub const MASTER_VOL_MUTE_DB: f32 = -128.0;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crossover_meta_decodes_table() {
+        assert_eq!(crossover_meta(32), Some((XoverFamily::LinkwitzRiley, 2, false)));
+        assert_eq!(crossover_meta(39), Some((XoverFamily::LinkwitzRiley, 8, true)));
+        assert_eq!(crossover_meta(40), Some((XoverFamily::Butterworth, 1, false)));
+        assert_eq!(crossover_meta(55), Some((XoverFamily::Butterworth, 8, true)));
+        assert_eq!(crossover_meta(56), Some((XoverFamily::Bessel, 2, false)));
+        assert_eq!(crossover_meta(63), Some((XoverFamily::Bessel, 8, true)));
+        assert_eq!(crossover_meta(13), None);
+        assert_eq!(crossover_meta(64), None);
+    }
+}

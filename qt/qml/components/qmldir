@@ -9,3 +9,14 @@ CpuSection 1.0 CpuSection.qml
 MatrixPoint 1.0 MatrixPoint.qml
 DashboardCard 1.0 DashboardCard.qml
 BorderlessComboBox 1.0 BorderlessComboBox.qml
+InputHeaderCard 1.0 InputHeaderCard.qml
+LimiterButton 1.0 LimiterButton.qml
+CrossoverRow 1.0 CrossoverRow.qml
+BypassDot 1.0 BypassDot.qml
+LinkwitzEditor 1.0 LinkwitzEditor.qml
+Icon 1.0 Icon.qml
+WindowTitleBar 1.0 WindowTitleBar.qml
+ToolHeader 1.0 ToolHeader.qml
+ParamRow 1.0 ParamRow.qml
+ChannelChips 1.0 ChannelChips.qml
+AppMenu 1.0 AppMenu.qml

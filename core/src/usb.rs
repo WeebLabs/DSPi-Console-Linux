@@ -18,6 +18,8 @@ pub enum UsbError {
     NotConnected,
     #[error("Short read: expected {expected}, got {actual}")]
     ShortRead { expected: usize, actual: usize },
+    #[error("Invalid argument")]
+    InvalidArgument,
 }
 
 pub type Result<T> = std::result::Result<T, UsbError>;

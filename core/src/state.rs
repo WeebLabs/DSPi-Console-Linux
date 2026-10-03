@@ -1,22 +1,59 @@
-//! DSP state model — holds all device parameters.
+//! DSP state model: every device parameter the core tracks.
 //!
-//! Mirrors the @Published properties from DSPViewModel.swift.
+//! Channel-indexed arrays use wire channel indices (see `types.rs`);
+//! output-indexed arrays use output indices 0..num_output_channels-1.
 
-use crate::protocol::BulkParams;
+use crate::protocol::BULK_PARAMS_SIZE;
 use crate::types::*;
 
+/// Firmware compatibility of the connected device, as judged at connect time.
+pub const COMPAT_UNKNOWN: u8 = 0;
+/// Wire format and firmware match this core.
+pub const COMPAT_OK: u8 = 1;
+/// Firmware is too old (pre-V32 wire format, or the old USB vendor ID).
+pub const COMPAT_FIRMWARE_TOO_OLD: u8 = 2;
+/// Firmware is newer than this core understands.
+pub const COMPAT_FIRMWARE_TOO_NEW: u8 = 3;
+
 /// Complete DSP parameter state for the connected device.
-/// Owned by DspiCore; the GUI reads via FFI.
+/// Owned by DspiCore; the GUI reads it through `dspi_get_state`.
 #[repr(C)]
 pub struct DspState {
+    // ── Device / firmware ───────────────────────────────────────────
+    pub platform_id: u8,
+    pub num_channels: u8,
+    pub num_input_channels: u8,
+    pub num_output_channels: u8,
+    pub format_version: u8,
+    pub fw_major: u8,
+    pub fw_minor: u8,
+    pub fw_patch: u8,
+    pub fw_beta: u8,
+    /// `COMPAT_*`.
+    pub compat: u8,
+
     // ── Global ──────────────────────────────────────────────────────
+    /// Legacy global preamp (mirrors input 0's preamp on current firmware).
     pub preamp_db: f32,
     pub bypass: bool,
+
+    // ── Per-input preamp ────────────────────────────────────────────
+    pub input_preamp_db: [f32; MAX_INPUTS],
+
+    // ── Volume ──────────────────────────────────────────────────────
+    /// Device master volume: −128 = mute sentinel, −127..0 dB.
+    pub master_volume_db: f32,
+    /// 0 = independent of presets, 1 = saved with presets.
+    pub master_volume_mode: u8,
+    pub user_volume_db: f32,
+    pub user_mute: bool,
 
     // ── Loudness ────────────────────────────────────────────────────
     pub loudness_enabled: bool,
     pub loudness_ref_spl: f32,
     pub loudness_intensity: f32,
+    /// Bit k: loudness processes output k.
+    pub loudness_output_mask: u16,
 
     // ── Crossfeed ───────────────────────────────────────────────────
     pub crossfeed_enabled: bool,
@@ -24,120 +61,172 @@ pub struct DspState {
     pub crossfeed_freq: f32,
     pub crossfeed_feed: f32,
     pub crossfeed_itd: bool,
+    /// Bit p: crossfeed runs on output pair p.
+    pub crossfeed_output_pair_mask: u8,
 
-    // ── Per-channel delays ──────────────────────────────────────────
+    // ── Per-channel delays (wire channel index) ─────────────────────
     pub channel_delays: [f32; MAX_CHANNELS],
 
-    // ── Matrix mixer (2 inputs × 9 outputs) ────────────────────────
-    pub matrix_routing: [[bool; MAX_OUTPUTS]; 2],
-    pub matrix_gain: [[f32; MAX_OUTPUTS]; 2],
-    pub matrix_invert: [[bool; MAX_OUTPUTS]; 2],
+    // ── Matrix mixer [input][output] ────────────────────────────────
+    pub matrix_routing: [[bool; MAX_OUTPUTS]; MAX_INPUTS],
+    pub matrix_gain: [[f32; MAX_OUTPUTS]; MAX_INPUTS],
+    pub matrix_invert: [[bool; MAX_OUTPUTS]; MAX_INPUTS],
 
-    // ── Output settings ─────────────────────────────────────────────
+    // ── Outputs ─────────────────────────────────────────────────────
     pub output_enabled: [bool; MAX_OUTPUTS],
     pub output_muted: [bool; MAX_OUTPUTS],
     pub output_gain_db: [f32; MAX_OUTPUTS],
     pub output_delay_ms: [f32; MAX_OUTPUTS],
 
+    // ── Output limiter (per output) ─────────────────────────────────
+    pub limiter_enabled: [bool; MAX_OUTPUTS],
+    /// 0 = unlinked, 1..4 = link group.
+    pub limiter_link_group: [u8; MAX_OUTPUTS],
+    pub limiter_threshold_db: [f32; MAX_OUTPUTS],
+    pub limiter_release_ms: [f32; MAX_OUTPUTS],
+
     // ── Pin configuration ───────────────────────────────────────────
+    pub num_pin_outputs: u8,
     pub output_pins: [u8; MAX_PHYSICAL_OUTPUTS],
+    /// 0 = output config stored independently, 1 = saved with presets.
+    pub output_config_mode: u8,
 
-    // ── EQ bands ────────────────────────────────────────────────────
+    // ── EQ (wire channel index) ─────────────────────────────────────
     pub filters: [[FilterParams; BANDS_PER_CHANNEL]; MAX_CHANNELS],
+    /// Crossover bands; input rows are unused (crossovers are output-only).
+    pub xover: [[FilterParams; MAX_XOVER_BANDS]; MAX_CHANNELS],
 
-    // ── Channel names ───────────────────────────────────────────────
+    // ── Channel names (wire channel index) ──────────────────────────
     pub channel_names: [[u8; CHANNEL_NAME_LEN]; MAX_CHANNELS],
 
-    // ── Platform info ───────────────────────────────────────────────
-    pub platform_id: u8,
-    pub num_channels: u8,
-    pub num_output_channels: u8,
+    // ── Volume leveller ─────────────────────────────────────────────
+    pub leveller_enabled: bool,
+    /// 0 = slow, 1 = medium, 2 = fast.
+    pub leveller_speed: u8,
+    pub leveller_lookahead: bool,
+    pub leveller_amount: f32,
+    pub leveller_max_gain_db: f32,
+    pub leveller_gate_db: f32,
+    /// Bit k: input k feeds the detector.
+    pub leveller_detector_mask: u8,
+    /// Bit k: gain applied to input k.
+    pub leveller_apply_mask: u8,
+
+    // ── Input / misc ────────────────────────────────────────────────
+    /// 0 = USB, 1 = S/PDIF, 2 = I2S, ...
+    pub input_source: u8,
+    pub lg_sound_sync_enabled: bool,
+    /// Bit k: S/PDIF input k+1 is enabled (input 1 is always on).
+    pub spdif_inputs_enabled: u8,
+    pub adat_input_enabled: bool,
+
+    // ── Psychoacoustic bass ─────────────────────────────────────────
+    pub psybass_enabled: bool,
+    /// Bit k: psybass processes output k.
+    pub psybass_output_mask: u16,
+    pub psybass_cutoff_hz: f32,
+    pub psybass_harmonics_db: f32,
+    pub psybass_drive_db: f32,
+    pub psybass_character_pct: f32,
+    pub psybass_original_db: f32,
 
     // ── Core 1 mode ─────────────────────────────────────────────────
     pub core1_mode: u8,
 
-    // ── Preset state ────────────────────────────────────────────────
+    // ── Presets ─────────────────────────────────────────────────────
     pub preset_occupied: u16,
     pub preset_names: [[u8; CHANNEL_NAME_LEN]; MAX_PRESETS],
     pub active_preset_slot: u8,
     pub preset_startup_mode: u8,
     pub preset_default_slot: u8,
-    pub preset_include_pins: bool,
+
+    // ── Raw bulk image ──────────────────────────────────────────────
+    /// True once a bulk image has been read from the device.
+    pub bulk_valid: bool,
+    /// The last bulk image read, kept so unmodeled sections round-trip.
+    pub bulk_raw: [u8; BULK_PARAMS_SIZE],
 }
 
 impl Default for DspState {
     fn default() -> Self {
         Self {
+            platform_id: 0,
+            num_channels: 7,
+            num_input_channels: 2,
+            num_output_channels: 5,
+            format_version: 0,
+            fw_major: 0,
+            fw_minor: 0,
+            fw_patch: 0,
+            fw_beta: 0,
+            compat: COMPAT_UNKNOWN,
             preamp_db: 0.0,
             bypass: false,
+            input_preamp_db: [0.0; MAX_INPUTS],
+            master_volume_db: -20.0,
+            master_volume_mode: 0,
+            user_volume_db: 0.0,
+            user_mute: false,
             loudness_enabled: false,
             loudness_ref_spl: 83.0,
             loudness_intensity: 100.0,
+            loudness_output_mask: 0,
             crossfeed_enabled: false,
             crossfeed_preset: 0,
             crossfeed_freq: 700.0,
             crossfeed_feed: 4.5,
             crossfeed_itd: true,
+            crossfeed_output_pair_mask: 0,
             channel_delays: [0.0; MAX_CHANNELS],
-            matrix_routing: [[false; MAX_OUTPUTS]; 2],
-            matrix_gain: [[0.0; MAX_OUTPUTS]; 2],
-            matrix_invert: [[false; MAX_OUTPUTS]; 2],
+            matrix_routing: [[false; MAX_OUTPUTS]; MAX_INPUTS],
+            matrix_gain: [[0.0; MAX_OUTPUTS]; MAX_INPUTS],
+            matrix_invert: [[false; MAX_OUTPUTS]; MAX_INPUTS],
             output_enabled: [false; MAX_OUTPUTS],
             output_muted: [false; MAX_OUTPUTS],
             output_gain_db: [0.0; MAX_OUTPUTS],
             output_delay_ms: [0.0; MAX_OUTPUTS],
-            output_pins: [6, 7, 8, 9, 10],
+            limiter_enabled: [false; MAX_OUTPUTS],
+            limiter_link_group: [0; MAX_OUTPUTS],
+            limiter_threshold_db: [0.0; MAX_OUTPUTS],
+            limiter_release_ms: [100.0; MAX_OUTPUTS],
+            num_pin_outputs: 3,
+            output_pins: [6, 7, 10, 0, 0],
+            output_config_mode: 1,
             filters: [[FilterParams::default(); BANDS_PER_CHANNEL]; MAX_CHANNELS],
+            xover: [[FilterParams::default(); MAX_XOVER_BANDS]; MAX_CHANNELS],
             channel_names: [[0u8; CHANNEL_NAME_LEN]; MAX_CHANNELS],
-            platform_id: 0,
-            num_channels: 7,
-            num_output_channels: 5,
+            leveller_enabled: false,
+            leveller_speed: 1,
+            leveller_lookahead: false,
+            leveller_amount: 50.0,
+            leveller_max_gain_db: 12.0,
+            leveller_gate_db: -60.0,
+            leveller_detector_mask: 0x03,
+            leveller_apply_mask: 0x03,
+            input_source: 0,
+            lg_sound_sync_enabled: false,
+            spdif_inputs_enabled: 0x01,
+            adat_input_enabled: false,
+            psybass_enabled: false,
+            psybass_output_mask: 0,
+            psybass_cutoff_hz: 80.0,
+            psybass_harmonics_db: 0.0,
+            psybass_drive_db: 6.0,
+            psybass_character_pct: 50.0,
+            psybass_original_db: 0.0,
             core1_mode: 0,
             preset_occupied: 0,
             preset_names: [[0u8; CHANNEL_NAME_LEN]; MAX_PRESETS],
             active_preset_slot: 0,
             preset_startup_mode: 0,
             preset_default_slot: 0,
-            preset_include_pins: false,
+            bulk_valid: false,
+            bulk_raw: [0u8; BULK_PARAMS_SIZE],
         }
     }
 }
 
 impl DspState {
-    /// Apply bulk params to state (after fetchAllParams).
-    pub fn apply_bulk_params(&mut self, bp: &BulkParams) {
-        self.platform_id = bp.platform_id;
-        self.num_channels = bp.num_channels;
-        self.num_output_channels = bp.num_output_channels;
-
-        self.preamp_db = bp.preamp_db;
-        self.bypass = bp.bypass;
-        self.loudness_enabled = bp.loudness_enabled;
-        self.loudness_ref_spl = bp.loudness_ref_spl;
-        self.loudness_intensity = bp.loudness_intensity;
-
-        self.crossfeed_enabled = bp.crossfeed_enabled;
-        self.crossfeed_preset = bp.crossfeed_preset;
-        self.crossfeed_itd = bp.crossfeed_itd;
-        self.crossfeed_freq = bp.crossfeed_freq;
-        self.crossfeed_feed = bp.crossfeed_feed;
-
-        self.channel_delays = bp.delays;
-
-        self.matrix_routing = bp.matrix_routing;
-        self.matrix_gain = bp.matrix_gain;
-        self.matrix_invert = bp.matrix_invert;
-
-        self.output_enabled = bp.output_enabled;
-        self.output_muted = bp.output_muted;
-        self.output_gain_db = bp.output_gain_db;
-        self.output_delay_ms = bp.output_delay_ms;
-
-        self.output_pins = bp.output_pins;
-        self.filters = bp.filters;
-        self.channel_names = bp.channel_names;
-    }
-
     /// Platform name string.
     pub fn platform_name(&self) -> &str {
         if self.platform_id == 1 {
@@ -147,8 +236,22 @@ impl DspState {
         }
     }
 
-    /// PDM output index for this platform.
+    /// Wire channel index of output `output` (0-based).
+    pub fn output_channel(&self, output: u8) -> u8 {
+        self.num_input_channels + output
+    }
+
+    /// Output index of wire channel `ch`, if it is an output.
+    pub fn output_of_channel(&self, ch: u8) -> Option<u8> {
+        if ch >= self.num_input_channels && ch < self.num_channels {
+            Some(ch - self.num_input_channels)
+        } else {
+            None
+        }
+    }
+
+    /// PDM output index (the last output).
     pub fn pdm_output_index(&self) -> u8 {
-        if self.platform_id == 1 { 8 } else { 4 }
+        self.num_output_channels.saturating_sub(1)
     }
 }

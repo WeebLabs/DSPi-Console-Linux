@@ -1,7 +1,11 @@
-//! DSPi Console Unified — Shared Rust Core Library
+//! DSPi Console — Shared Rust Core Library
 //!
-//! Cross-platform USB communication and DSP math for DSPi firmware.
-//! Exposes a C ABI for FFI consumption by Swift (macOS) and Qt/C++ (Windows/Linux).
+//! USB communication, state model and DSP math for DSPi firmware 1.1.6
+//! (wire format V32). Exposes a C ABI for the Qt front end.
+//!
+//! Channel arguments are firmware wire channel indices
+//! (`[ inputs ][ outputs ]`, see `types.rs`); output arguments are output
+//! indices 0..num_output_channels-1.
 
 #![allow(private_interfaces)] // FfiCore is intentionally opaque via raw pointers
 
@@ -27,7 +31,6 @@ use crate::types::*;
 // ═══════════════════════════════════════════════════════════════════
 
 /// Main library instance. Holds device manager and DSP state.
-/// All FFI functions operate on this through an opaque pointer.
 pub struct DspiCore {
     pub(crate) device_manager: DeviceManager,
     pub(crate) state: DspState,
@@ -72,8 +75,6 @@ struct FfiCore {
 /// serial: NUL-terminated ASCII device serial.
 pub type DeviceEventCallback = extern "C" fn(event: u8, serial: *const c_char, user_data: *mut c_void);
 
-// ── Helper: lock the mutex and run a closure ────────────────────────
-
 fn with_core<F, R>(ptr: *mut FfiCore, f: F) -> R
 where
     F: FnOnce(&mut DspiCore) -> R,
@@ -94,28 +95,43 @@ where
     f(&guard)
 }
 
+/// Borrow a NUL-terminated UTF-8 C string.
+fn c_str<'a>(p: *const c_char) -> Option<&'a str> {
+    if p.is_null() {
+        return None;
+    }
+    unsafe { CStr::from_ptr(p) }.to_str().ok()
+}
+
+/// Copy `s` into a caller buffer as a NUL-terminated string.
+fn copy_out(s: &str, out_buf: *mut c_char, buf_len: u32) -> bool {
+    if out_buf.is_null() || buf_len == 0 {
+        return false;
+    }
+    let bytes = s.as_bytes();
+    let n = bytes.len().min((buf_len - 1) as usize);
+    let out = unsafe { std::slice::from_raw_parts_mut(out_buf as *mut u8, buf_len as usize) };
+    out[..n].copy_from_slice(&bytes[..n]);
+    out[n] = 0;
+    true
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // FFI — Lifecycle
 // ═══════════════════════════════════════════════════════════════════
 
-/// Create a new DspiCore instance. Returns opaque handle.
-/// The caller must eventually call `dspi_core_free` to release it.
+/// Create a new DspiCore instance. Free it with `dspi_core_free`.
 #[no_mangle]
 pub extern "C" fn dspi_core_new() -> *mut FfiCore {
     let _ = env_logger::try_init();
-    let core = FfiCore {
-        inner: Mutex::new(DspiCore::new()),
-    };
-    Box::into_raw(Box::new(core))
+    Box::into_raw(Box::new(FfiCore { inner: Mutex::new(DspiCore::new()) }))
 }
 
 /// Destroy a DspiCore instance.
 #[no_mangle]
 pub extern "C" fn dspi_core_free(core: *mut FfiCore) {
     if !core.is_null() {
-        unsafe {
-            drop(Box::from_raw(core));
-        }
+        unsafe { drop(Box::from_raw(core)) };
     }
 }
 
@@ -123,106 +139,129 @@ pub extern "C" fn dspi_core_free(core: *mut FfiCore) {
 // FFI — Device Management
 // ═══════════════════════════════════════════════════════════════════
 
-/// Scan for connected DSPi devices. Writes up to `max_devices` DeviceInfo
-/// structs to `out_devices`. Returns the number of devices found.
+/// Scan for connected DSPi devices. Writes up to `max_devices` entries to
+/// `out_devices` and returns the number found.
 #[no_mangle]
-pub extern "C" fn dspi_scan_devices(
-    core: *mut FfiCore,
-    out_devices: *mut DeviceInfo,
-    max_devices: u32,
-) -> u32 {
+pub extern "C" fn dspi_scan_devices(core: *mut FfiCore, out_devices: *mut DeviceInfo, max_devices: u32) -> u32 {
     with_core(core, |c| {
         let devices = c.device_manager.scan();
         let count = devices.len().min(max_devices as usize);
         if !out_devices.is_null() && count > 0 {
             let slice = unsafe { std::slice::from_raw_parts_mut(out_devices, count) };
-            for (i, dev) in devices.iter().take(count).enumerate() {
-                slice[i] = dev.clone();
-            }
+            slice.clone_from_slice(&devices[..count]);
         }
         count as u32
     })
 }
 
-/// Select and open a device by serial number (NUL-terminated C string).
-/// Returns true on success.
+/// Select and open a device by serial number. Returns true on success.
 #[no_mangle]
 pub extern "C" fn dspi_select_device(core: *mut FfiCore, serial: *const c_char) -> bool {
-    if serial.is_null() {
-        return false;
-    }
-    let serial_str = unsafe { CStr::from_ptr(serial) };
-    let Ok(serial_str) = serial_str.to_str() else {
-        return false;
-    };
-    with_core(core, |c| c.device_manager.select_device(serial_str).is_ok())
+    let Some(serial) = c_str(serial) else { return false };
+    with_core(core, |c| {
+        let ok = c.device_manager.select_device(serial).is_ok();
+        if ok {
+            c.state = DspState::default();
+        }
+        ok
+    })
 }
 
-/// Disconnect from the current device.
 #[no_mangle]
 pub extern "C" fn dspi_disconnect(core: *mut FfiCore) {
     with_core(core, |c| c.device_manager.disconnect());
 }
 
-/// Check if a device is currently connected.
 #[no_mangle]
 pub extern "C" fn dspi_is_connected(core: *const FfiCore) -> bool {
     with_core_const(core, |c| c.device_manager.is_connected())
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// FFI — Bulk Operations
+// FFI — Sync / Status
 // ═══════════════════════════════════════════════════════════════════
 
-/// Fetch all parameters from the device. Returns true on success.
+/// Identify the firmware and read all parameters. Returns false only when the
+/// device could not be talked to; check `DspState.compat` for compatibility.
 #[no_mangle]
 pub extern "C" fn dspi_fetch_all(core: *mut FfiCore) -> bool {
     with_core(core, |c| c.fetch_all().is_ok())
 }
 
-/// Fetch device status. Writes to `out_status`. Returns true on success.
+/// Re-read the bulk parameter image only.
+#[no_mangle]
+pub extern "C" fn dspi_refresh_params(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.refresh_params().is_ok())
+}
+
+/// Write the whole cached state to the device in one bulk transfer.
+#[no_mangle]
+pub extern "C" fn dspi_apply_all_params(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.apply_all_params().is_ok())
+}
+
+/// Fetch device status into `out_status`. Returns true on success.
 #[no_mangle]
 pub extern "C" fn dspi_fetch_status(core: *mut FfiCore, out_status: *mut SystemStatus) -> bool {
-    with_core(core, |c| {
-        match c.fetch_status() {
-            Ok(status) => {
-                if !out_status.is_null() {
-                    unsafe { *out_status = status; }
-                }
-                true
+    with_core(core, |c| match c.fetch_status() {
+        Ok(status) => {
+            if !out_status.is_null() {
+                unsafe { *out_status = status };
             }
-            Err(_) => false,
+            true
         }
+        Err(_) => false,
     })
 }
 
-/// Get a pointer to the current cached state. Valid until the next mutable FFI call.
+/// Pointer to the cached state. Valid until the next mutating FFI call.
 #[no_mangle]
 pub extern "C" fn dspi_get_state(core: *const FfiCore) -> *const DspState {
     with_core_const(core, |c| c.state() as *const DspState)
+}
+
+/// Longest channel/output delay the connected platform supports, in ms.
+#[no_mangle]
+pub extern "C" fn dspi_max_delay_ms(core: *const FfiCore) -> f32 {
+    with_core_const(core, |c| c.max_delay_ms())
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // FFI — EQ
 // ═══════════════════════════════════════════════════════════════════
 
+/// Set PEQ band `band` (0..9) of wire channel `ch`.
 #[no_mangle]
-pub extern "C" fn dspi_set_filter(
-    core: *mut FfiCore,
-    ch: u8,
-    band: u8,
-    params: FilterParams,
-) -> bool {
+pub extern "C" fn dspi_set_filter(core: *mut FfiCore, ch: u8, band: u8, params: FilterParams) -> bool {
     with_core(core, |c| c.set_filter(ch, band, params).is_ok())
 }
 
+/// Set crossover band `xband` (0..3) of an output's wire channel `ch`.
+#[no_mangle]
+pub extern "C" fn dspi_set_crossover(core: *mut FfiCore, ch: u8, xband: u8, params: FilterParams) -> bool {
+    with_core(core, |c| c.set_crossover(ch, xband, params).is_ok())
+}
+
+/// Bypass one band. `band` is a PEQ band (0..9) or crossover band (20..23).
+#[no_mangle]
+pub extern "C" fn dspi_set_band_bypass(core: *mut FfiCore, ch: u8, band: u8, bypass: bool) -> bool {
+    with_core(core, |c| c.set_band_bypass(ch, band, bypass).is_ok())
+}
+
 // ═══════════════════════════════════════════════════════════════════
-// FFI — Global
+// FFI — Preamp / Bypass / Volume
 // ═══════════════════════════════════════════════════════════════════
 
+/// Legacy preamp: sets every input to the same value.
 #[no_mangle]
 pub extern "C" fn dspi_set_preamp(core: *mut FfiCore, db: f32) -> bool {
     with_core(core, |c| c.set_preamp(db).is_ok())
+}
+
+/// Preamp of one input (input index).
+#[no_mangle]
+pub extern "C" fn dspi_set_input_preamp(core: *mut FfiCore, input: u8, db: f32) -> bool {
+    with_core(core, |c| c.set_input_preamp(input, db).is_ok())
 }
 
 #[no_mangle]
@@ -230,10 +269,39 @@ pub extern "C" fn dspi_set_bypass(core: *mut FfiCore, enabled: bool) -> bool {
     with_core(core, |c| c.set_bypass(enabled).is_ok())
 }
 
+/// Master volume in dB (−128 = mute, otherwise −127..0).
+#[no_mangle]
+pub extern "C" fn dspi_set_master_volume(core: *mut FfiCore, db: f32) -> bool {
+    with_core(core, |c| c.set_master_volume(db).is_ok())
+}
+
+/// 0 = master volume independent of presets, 1 = saved with presets.
+#[no_mangle]
+pub extern "C" fn dspi_set_master_volume_mode(core: *mut FfiCore, mode: u8) -> bool {
+    with_core(core, |c| c.set_master_volume_mode(mode).is_ok())
+}
+
+/// Persist the live master volume (independent mode). Returns a PRESET_* code, 0xFF on error.
+#[no_mangle]
+pub extern "C" fn dspi_save_master_volume(core: *mut FfiCore) -> u8 {
+    with_core(core, |c| c.save_master_volume().unwrap_or(0xFF))
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_user_volume(core: *mut FfiCore, db: f32) -> bool {
+    with_core(core, |c| c.set_user_volume(db).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_user_mute(core: *mut FfiCore, muted: bool) -> bool {
+    with_core(core, |c| c.set_user_mute(muted).is_ok())
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // FFI — Delay
 // ═══════════════════════════════════════════════════════════════════
 
+/// Delay of wire channel `ch` (an output channel's delay is its output delay).
 #[no_mangle]
 pub extern "C" fn dspi_set_delay(core: *mut FfiCore, ch: u8, ms: f32) -> bool {
     with_core(core, |c| c.set_delay(ch, ms).is_ok())
@@ -256,6 +324,12 @@ pub extern "C" fn dspi_set_loudness_ref(core: *mut FfiCore, spl: f32) -> bool {
 #[no_mangle]
 pub extern "C" fn dspi_set_loudness_intensity(core: *mut FfiCore, pct: f32) -> bool {
     with_core(core, |c| c.set_loudness_intensity(pct).is_ok())
+}
+
+/// Bit k: loudness compensates output k.
+#[no_mangle]
+pub extern "C" fn dspi_set_loudness_mask(core: *mut FfiCore, mask: u16) -> bool {
+    with_core(core, |c| c.set_loudness_mask(mask).is_ok())
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -287,8 +361,78 @@ pub extern "C" fn dspi_set_crossfeed_itd(core: *mut FfiCore, enabled: bool) -> b
     with_core(core, |c| c.set_crossfeed_itd(enabled).is_ok())
 }
 
+/// Bit p: crossfeed runs on output pair p.
+#[no_mangle]
+pub extern "C" fn dspi_set_crossfeed_outputs(core: *mut FfiCore, pair_mask: u8) -> bool {
+    with_core(core, |c| c.set_crossfeed_outputs(pair_mask).is_ok())
+}
+
 // ═══════════════════════════════════════════════════════════════════
-// FFI — Matrix
+// FFI — Volume Leveller
+// ═══════════════════════════════════════════════════════════════════
+
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_enabled(core: *mut FfiCore, enabled: bool) -> bool {
+    with_core(core, |c| c.set_leveller_enabled(enabled).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_amount(core: *mut FfiCore, pct: f32) -> bool {
+    with_core(core, |c| c.set_leveller_amount(pct).is_ok())
+}
+
+/// 0 = slow, 1 = medium, 2 = fast.
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_speed(core: *mut FfiCore, speed: u8) -> bool {
+    with_core(core, |c| c.set_leveller_speed(speed).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_max_gain(core: *mut FfiCore, db: f32) -> bool {
+    with_core(core, |c| c.set_leveller_max_gain(db).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_lookahead(core: *mut FfiCore, enabled: bool) -> bool {
+    with_core(core, |c| c.set_leveller_lookahead(enabled).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_gate(core: *mut FfiCore, db: f32) -> bool {
+    with_core(core, |c| c.set_leveller_gate(db).is_ok())
+}
+
+/// Bit k of each mask = input k.
+#[no_mangle]
+pub extern "C" fn dspi_set_leveller_masks(core: *mut FfiCore, detector: u8, apply: u8) -> bool {
+    with_core(core, |c| c.set_leveller_masks(detector, apply).is_ok())
+}
+
+/// Select the audio input source (firmware InputSource enum).
+#[no_mangle]
+pub extern "C" fn dspi_set_input_source(core: *mut FfiCore, source: u8) -> bool {
+    with_core(core, |c| c.set_input_source(source).is_ok())
+}
+
+/// Set psybass parameter `param` (PSYBASS_PARAM_*).
+#[no_mangle]
+pub extern "C" fn dspi_set_psybass_param(core: *mut FfiCore, param: u8, value: f32) -> bool {
+    with_core(core, |c| c.set_psybass_param(param, value).is_ok())
+}
+
+/// Bit k: psybass processes output k.
+#[no_mangle]
+pub extern "C" fn dspi_set_psybass_mask(core: *mut FfiCore, mask: u16) -> bool {
+    with_core(core, |c| c.set_psybass_mask(mask).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_psybass_enabled(core: *mut FfiCore, enabled: bool) -> bool {
+    with_core(core, |c| c.set_psybass_enabled(enabled).is_ok())
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Matrix / Outputs
 // ═══════════════════════════════════════════════════════════════════
 
 #[no_mangle]
@@ -300,18 +444,17 @@ pub extern "C" fn dspi_set_matrix_route(
     gain: f32,
     invert: bool,
 ) -> bool {
-    with_core(core, |c| {
-        c.set_matrix_route(input, output, enabled, gain, invert).is_ok()
-    })
+    with_core(core, |c| c.set_matrix_route(input, output, enabled, gain, invert).is_ok())
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FFI — Output
-// ═══════════════════════════════════════════════════════════════════
-
+/// Enable/disable an output. Returns the resulting state (1 on, 0 off; the
+/// firmware may refuse a PDM / Core 1 conflict), or −1 on error.
 #[no_mangle]
-pub extern "C" fn dspi_set_output_enable(core: *mut FfiCore, output: u8, enabled: bool) -> bool {
-    with_core(core, |c| c.set_output_enable(output, enabled).is_ok())
+pub extern "C" fn dspi_set_output_enable(core: *mut FfiCore, output: u8, enabled: bool) -> i8 {
+    with_core(core, |c| match c.set_output_enable(output, enabled) {
+        Ok(v) => v as i8,
+        Err(_) => -1,
+    })
 }
 
 #[no_mangle]
@@ -329,20 +472,55 @@ pub extern "C" fn dspi_set_output_delay(core: *mut FfiCore, output: u8, ms: f32)
     with_core(core, |c| c.set_output_delay(output, ms).is_ok())
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FFI — Pin Config
-// ═══════════════════════════════════════════════════════════════════
-
-/// Returns firmware status code (0 = success). 0xFF on communication error.
+/// Set limiter parameter `param` (LIMITER_PARAM_*) of `output`
+/// (LIMITER_ALL_OUTPUTS = every output).
 #[no_mangle]
-pub extern "C" fn dspi_set_output_pin(core: *mut FfiCore, output: u8, pin: u8) -> u8 {
-    with_core(core, |c| c.set_output_pin(output, pin).unwrap_or(0xFF))
+pub extern "C" fn dspi_set_limiter_param(core: *mut FfiCore, output: u8, param: u8, value: f32) -> bool {
+    with_core(core, |c| c.set_limiter_param(output, param, value).is_ok())
 }
 
-/// Returns pin number. 0xFF on error.
+/// Read gain reduction (dB, positive = reducing) for every output into
+/// `out_gr`, which must hold MAX_OUTPUTS floats.
 #[no_mangle]
-pub extern "C" fn dspi_fetch_output_pin(core: *mut FfiCore, output: u8) -> u8 {
-    with_core(core, |c| c.fetch_output_pin(output).unwrap_or(0xFF))
+pub extern "C" fn dspi_fetch_limiter_meter(core: *mut FfiCore, out_gr: *mut f32) -> bool {
+    if out_gr.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_limiter_meter() {
+        Ok(gr) => {
+            unsafe { std::slice::from_raw_parts_mut(out_gr, MAX_OUTPUTS) }.copy_from_slice(&gr);
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Pins / Output config
+// ═══════════════════════════════════════════════════════════════════
+
+/// Returns a PIN_CONFIG_* status (0 = success), 0xFF on communication error.
+#[no_mangle]
+pub extern "C" fn dspi_set_output_pin(core: *mut FfiCore, slot: u8, pin: u8) -> u8 {
+    with_core(core, |c| c.set_output_pin(slot, pin).unwrap_or(0xFF))
+}
+
+/// Returns the pin number, 0xFF on error.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_output_pin(core: *mut FfiCore, slot: u8) -> u8 {
+    with_core(core, |c| c.fetch_output_pin(slot).unwrap_or(0xFF))
+}
+
+/// 0 = output config stored independently, 1 = saved with presets.
+#[no_mangle]
+pub extern "C" fn dspi_set_output_config_mode(core: *mut FfiCore, mode: u8) -> bool {
+    with_core(core, |c| c.set_output_config_mode(mode).is_ok())
+}
+
+/// Persist the live output config (independent mode). PRESET_* code, 0xFF on error.
+#[no_mangle]
+pub extern "C" fn dspi_save_output_config(core: *mut FfiCore) -> u8 {
+    with_core(core, |c| c.save_output_config().unwrap_or(0xFF))
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -350,43 +528,17 @@ pub extern "C" fn dspi_fetch_output_pin(core: *mut FfiCore, output: u8) -> u8 {
 // ═══════════════════════════════════════════════════════════════════
 
 #[no_mangle]
-pub extern "C" fn dspi_set_channel_name(
-    core: *mut FfiCore,
-    channel: u8,
-    name: *const c_char,
-) -> bool {
-    if name.is_null() {
-        return false;
-    }
-    let name_str = unsafe { CStr::from_ptr(name) };
-    let Ok(name_str) = name_str.to_str() else {
-        return false;
-    };
-    with_core(core, |c| c.set_channel_name(channel, name_str).is_ok())
+pub extern "C" fn dspi_set_channel_name(core: *mut FfiCore, ch: u8, name: *const c_char) -> bool {
+    let Some(name) = c_str(name) else { return false };
+    with_core(core, |c| c.set_channel_name(ch, name).is_ok())
 }
 
+/// Read a channel name from the device into `out_buf`.
 #[no_mangle]
-pub extern "C" fn dspi_get_channel_name(
-    core: *mut FfiCore,
-    channel: u8,
-    out_buf: *mut c_char,
-    buf_len: u32,
-) -> bool {
-    if out_buf.is_null() || buf_len == 0 {
-        return false;
-    }
-    with_core(core, |c| {
-        let name: String = match c.fetch_channel_name(channel) {
-            Ok(n) => n,
-            Err(_) => return false,
-        };
-        let bytes = name.as_bytes();
-        let copy_len = bytes.len().min((buf_len - 1) as usize);
-        let out_slice =
-            unsafe { std::slice::from_raw_parts_mut(out_buf as *mut u8, buf_len as usize) };
-        out_slice[..copy_len].copy_from_slice(&bytes[..copy_len]);
-        out_slice[copy_len] = 0;
-        true
+pub extern "C" fn dspi_get_channel_name(core: *mut FfiCore, ch: u8, out_buf: *mut c_char, buf_len: u32) -> bool {
+    with_core(core, |c| match c.fetch_channel_name(ch) {
+        Ok(name) => copy_out(&name, out_buf, buf_len),
+        Err(_) => false,
     })
 }
 
@@ -394,12 +546,14 @@ pub extern "C" fn dspi_get_channel_name(
 // FFI — Presets
 // ═══════════════════════════════════════════════════════════════════
 
-/// Returns preset status code (0 = success). 0xFF on communication error.
+/// PRESET_* status (0 = success), 0xFF on communication error. Waits for the
+/// device to finish the (deferred) save.
 #[no_mangle]
 pub extern "C" fn dspi_save_preset(core: *mut FfiCore, slot: u8) -> u8 {
     with_core(core, |c| c.save_preset(slot).unwrap_or(0xFF))
 }
 
+/// Load a preset and re-read every parameter.
 #[no_mangle]
 pub extern "C" fn dspi_load_preset(core: *mut FfiCore, slot: u8) -> u8 {
     with_core(core, |c| c.load_preset(slot).unwrap_or(0xFF))
@@ -411,81 +565,41 @@ pub extern "C" fn dspi_delete_preset(core: *mut FfiCore, slot: u8) -> u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn dspi_set_preset_name(
-    core: *mut FfiCore,
-    slot: u8,
-    name: *const c_char,
-) -> bool {
-    if name.is_null() {
-        return false;
-    }
-    let name_str = unsafe { CStr::from_ptr(name) };
-    let Ok(name_str) = name_str.to_str() else {
-        return false;
-    };
-    with_core(core, |c| c.set_preset_name(slot, name_str).is_ok())
+pub extern "C" fn dspi_set_preset_name(core: *mut FfiCore, slot: u8, name: *const c_char) -> bool {
+    let Some(name) = c_str(name) else { return false };
+    with_core(core, |c| c.set_preset_name(slot, name).is_ok())
 }
 
 #[no_mangle]
-pub extern "C" fn dspi_get_preset_name(
-    core: *mut FfiCore,
-    slot: u8,
-    out_buf: *mut c_char,
-    buf_len: u32,
-) -> bool {
-    if out_buf.is_null() || buf_len == 0 {
-        return false;
-    }
-    with_core(core, |c| {
-        let name: String = match c.get_preset_name(slot) {
-            Ok(n) => n,
-            Err(_) => return false,
-        };
-        let bytes = name.as_bytes();
-        let copy_len = bytes.len().min((buf_len - 1) as usize);
-        let out_slice =
-            unsafe { std::slice::from_raw_parts_mut(out_buf as *mut u8, buf_len as usize) };
-        out_slice[..copy_len].copy_from_slice(&bytes[..copy_len]);
-        out_slice[copy_len] = 0;
-        true
+pub extern "C" fn dspi_get_preset_name(core: *mut FfiCore, slot: u8, out_buf: *mut c_char, buf_len: u32) -> bool {
+    with_core(core, |c| match c.get_preset_name(slot) {
+        Ok(name) => copy_out(&name, out_buf, buf_len),
+        Err(_) => false,
     })
 }
 
 #[no_mangle]
-pub extern "C" fn dspi_get_preset_directory(
-    core: *mut FfiCore,
-    out_dir: *mut PresetDirectory,
-) -> bool {
+pub extern "C" fn dspi_get_preset_directory(core: *mut FfiCore, out_dir: *mut PresetDirectory) -> bool {
     if out_dir.is_null() {
         return false;
     }
-    with_core(core, |c| {
-        match c.get_preset_directory() {
-            Ok(dir) => {
-                unsafe { *out_dir = dir; }
-                true
-            }
-            Err(_) => false,
+    with_core(core, |c| match c.get_preset_directory() {
+        Ok(dir) => {
+            unsafe { *out_dir = dir };
+            true
         }
+        Err(_) => false,
     })
 }
 
+/// mode 0 = load `default_slot` at boot, 1 = load the last active slot.
 #[no_mangle]
-pub extern "C" fn dspi_set_preset_startup(
-    core: *mut FfiCore,
-    mode: u8,
-    default_slot: u8,
-) -> bool {
+pub extern "C" fn dspi_set_preset_startup(core: *mut FfiCore, mode: u8, default_slot: u8) -> bool {
     with_core(core, |c| c.set_preset_startup(mode, default_slot).is_ok())
 }
 
-#[no_mangle]
-pub extern "C" fn dspi_set_preset_include_pins(core: *mut FfiCore, include: bool) -> bool {
-    with_core(core, |c| c.set_preset_include_pins(include).is_ok())
-}
-
 // ═══════════════════════════════════════════════════════════════════
-// FFI — Flash
+// FFI — Flash / System
 // ═══════════════════════════════════════════════════════════════════
 
 #[no_mangle]
@@ -493,6 +607,7 @@ pub extern "C" fn dspi_save_params(core: *mut FfiCore) -> u8 {
     with_core(core, |c| c.save_params().unwrap_or(FLASH_ERR_WRITE))
 }
 
+/// Revert to saved (reloads the active preset).
 #[no_mangle]
 pub extern "C" fn dspi_load_params(core: *mut FfiCore) -> u8 {
     with_core(core, |c| c.load_params().unwrap_or(FLASH_ERR_WRITE))
@@ -503,29 +618,23 @@ pub extern "C" fn dspi_factory_reset(core: *mut FfiCore) -> u8 {
     with_core(core, |c| c.factory_reset().unwrap_or(FLASH_ERR_WRITE))
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FFI — Core1
-// ═══════════════════════════════════════════════════════════════════
+/// Restart the device into its USB bootloader.
+#[no_mangle]
+pub extern "C" fn dspi_enter_bootloader(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.enter_bootloader().is_ok())
+}
 
-/// Returns core1 mode (0=IDLE, 1=PDM, 2=EQ_WORKER). -1 on error.
+/// Core 1 mode (0 = idle, 1 = PDM, 2 = EQ worker), −1 on error.
 #[no_mangle]
 pub extern "C" fn dspi_fetch_core1_mode(core: *mut FfiCore) -> i8 {
     with_core(core, |c| c.fetch_core1_mode().map(|v| v as i8).unwrap_or(-1))
 }
 
-/// Returns 1 if conflict, 0 if no conflict, -1 on error.
+/// 1 if enabling `output` would conflict with Core 1's mode, 0 if not, −1 on error.
 #[no_mangle]
 pub extern "C" fn dspi_check_core1_conflict(core: *mut FfiCore, output: u8) -> i8 {
-    with_core(core, |c| {
-        c.check_core1_conflict(output)
-            .map(|v| if v { 1 } else { 0 })
-            .unwrap_or(-1)
-    })
+    with_core(core, |c| c.check_core1_conflict(output).map(|v| v as i8).unwrap_or(-1))
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// FFI — Clips
-// ═══════════════════════════════════════════════════════════════════
 
 #[no_mangle]
 pub extern "C" fn dspi_clear_clips(core: *mut FfiCore) -> bool {
@@ -536,13 +645,9 @@ pub extern "C" fn dspi_clear_clips(core: *mut FfiCore) -> bool {
 // FFI — DSP Math (stateless, no device needed)
 // ═══════════════════════════════════════════════════════════════════
 
-/// Compute frequency response magnitude in dB at a single frequency.
+/// Magnitude in dB at one frequency for a chain of bands.
 #[no_mangle]
-pub extern "C" fn dspi_compute_response(
-    filters: *const FilterParams,
-    num_filters: u32,
-    freq: f32,
-) -> f32 {
+pub extern "C" fn dspi_compute_response(filters: *const FilterParams, num_filters: u32, freq: f32) -> f32 {
     if filters.is_null() || num_filters == 0 {
         return 0.0;
     }
@@ -550,21 +655,46 @@ pub extern "C" fn dspi_compute_response(
     dsp_math::response_at(freq, slice)
 }
 
-/// Compute 201-point magnitude curve (10 Hz to 20 kHz, log-spaced).
-/// `out_magnitudes` must point to at least 201 f64s.
+/// 201-point magnitude curve (dB, 10 Hz..20 kHz log-spaced).
+/// `out_magnitudes` must hold 201 doubles.
 #[no_mangle]
 pub extern "C" fn dspi_compute_magnitude_curve(
     filters: *const FilterParams,
     num_filters: u32,
     out_magnitudes: *mut f64,
 ) -> bool {
-    if filters.is_null() || out_magnitudes.is_null() || num_filters == 0 {
+    if out_magnitudes.is_null() {
         return false;
     }
-    let slice = unsafe { std::slice::from_raw_parts(filters, num_filters as usize) };
+    let slice = if filters.is_null() || num_filters == 0 {
+        &[][..]
+    } else {
+        unsafe { std::slice::from_raw_parts(filters, num_filters as usize) }
+    };
     let curve = dsp_math::compute_magnitude_curve(slice);
-    let out = unsafe { std::slice::from_raw_parts_mut(out_magnitudes, MAGNITUDE_POINTS) };
-    out.copy_from_slice(&curve);
+    unsafe { std::slice::from_raw_parts_mut(out_magnitudes, MAGNITUDE_POINTS) }.copy_from_slice(&curve);
+    true
+}
+
+/// 201-point phase curve in degrees over the same grid; continuous when
+/// `unwrap` is set, otherwise wrapped to ±180°.
+#[no_mangle]
+pub extern "C" fn dspi_compute_phase_curve(
+    filters: *const FilterParams,
+    num_filters: u32,
+    unwrap: bool,
+    out_phases: *mut f64,
+) -> bool {
+    if out_phases.is_null() {
+        return false;
+    }
+    let slice = if filters.is_null() || num_filters == 0 {
+        &[][..]
+    } else {
+        unsafe { std::slice::from_raw_parts(filters, num_filters as usize) }
+    };
+    let curve = dsp_math::compute_phase_curve(slice, unwrap);
+    unsafe { std::slice::from_raw_parts_mut(out_phases, MAGNITUDE_POINTS) }.copy_from_slice(&curve);
     true
 }
 
@@ -585,32 +715,23 @@ pub extern "C" fn dspi_set_hotplug_callback(
     })
 }
 
-/// Poll for hot-plug changes. Must be called periodically (~500ms).
-/// Fires the registered callback for arrivals (event=0) and departures (event=1).
-/// No-op if no callback is registered.
+/// Poll for hot-plug changes (~every 500 ms). Fires the registered callback
+/// for arrivals (event 0) and departures (event 1).
 #[no_mangle]
 pub extern "C" fn dspi_poll_hotplug(core: *mut FfiCore) {
     with_core(core, |c| {
         let (arrivals, departures) = c.device_manager.poll_changes();
         if let Some((callback, user_data)) = c.hotplug_callback {
-            for serial in &arrivals {
-                let mut buf = Vec::with_capacity(serial.len() + 1);
-                buf.extend_from_slice(serial.as_bytes());
-                buf.push(0);
-                callback(0, buf.as_ptr() as *const c_char, user_data);
-            }
-            for serial in &departures {
-                let mut buf = Vec::with_capacity(serial.len() + 1);
-                buf.extend_from_slice(serial.as_bytes());
-                buf.push(0);
-                callback(1, buf.as_ptr() as *const c_char, user_data);
+            for (event, serials) in [(0u8, &arrivals), (1u8, &departures)] {
+                for serial in serials {
+                    let mut buf = serial.as_bytes().to_vec();
+                    buf.push(0);
+                    callback(event, buf.as_ptr() as *const c_char, user_data);
+                }
             }
         }
     });
 }
 
 // Re-export constants that C consumers need
-pub use protocol::FLASH_ERR_WRITE;
-pub use protocol::FLASH_OK;
-pub use protocol::PIN_CONFIG_SUCCESS;
-pub use protocol::PRESET_OK;
+pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};

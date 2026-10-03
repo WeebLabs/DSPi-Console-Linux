@@ -137,9 +137,6 @@ Column {
         }
     }
 
-    // Graph legend
-    GraphLegend {
-        width: parent.width
-        leftPadding: 16
-    }
+    // Bottom spacing (curve visibility is toggled from the sidebar pills)
+    Item { width: 1; height: 8 }
 }

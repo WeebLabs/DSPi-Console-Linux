@@ -22,6 +22,32 @@
         <file>qml/components/MatrixPoint.qml</file>
         <file>qml/components/DashboardCard.qml</file>
         <file>qml/components/BorderlessComboBox.qml</file>
+        <file>qml/components/InputHeaderCard.qml</file>
+        <file>qml/components/LimiterButton.qml</file>
+        <file>qml/components/CrossoverRow.qml</file>
+        <file>qml/components/BypassDot.qml</file>
+        <file>qml/components/LinkwitzEditor.qml</file>
+        <file>qml/components/Icon.qml</file>
+        <file>qml/components/WindowTitleBar.qml</file>
+        <file>icons/bassclef.svg</file>
+        <file>icons/gauge.svg</file>
+        <file>icons/gear.svg</file>
+        <file>icons/headphones.svg</file>
+        <file>icons/info.svg</file>
+        <file>icons/loudness.svg</file>
+        <file>icons/more.svg</file>
+        <file>icons/power.svg</file>
+        <file>icons/sliders.svg</file>
+        <file>icons/speaker-mute.svg</file>
+        <file>icons/speaker.svg</file>
+        <file>icons/waveform.svg</file>
+        <file>icons/xmark.svg</file>
+        <file>qml/components/ToolHeader.qml</file>
+        <file>qml/components/ParamRow.qml</file>
+        <file>qml/components/ChannelChips.qml</file>
+        <file>qml/VolumeLevellerWindow.qml</file>
+        <file>qml/PsychoacousticBassWindow.qml</file>
+        <file>qml/components/AppMenu.qml</file>
         <file>qml/qmldir</file>
         <file>qml/components/qmldir</file>
     </qresource>
