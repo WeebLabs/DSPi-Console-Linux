@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 
 // A tool parameter: name, value field with unit, slider, and an explanation.
 // Dragging the slider sends live (liveChanged); release or typing commits
-// (committed).
+// (committed). Right-click on the slider resets to `defaultValue` if set.
 Column {
     id: row
     property string label: ""
@@ -16,27 +16,27 @@ Column {
     property real to: 100
     property real stepSize: 0.1
     property int decimals: 1
+    property var defaultValue: undefined
     signal liveChanged(real v)
     signal committed(real v)
 
-    spacing: 6
+    spacing: 4
     width: parent ? parent.width : 300
 
     Item {
         width: parent.width
-        height: 26
+        height: 22
         Text {
             text: row.label
-            font.pixelSize: 15
-            font.weight: Font.Medium
-            color: "white"
+            font.pixelSize: 13
+            color: Qt.rgba(1, 1, 1, 0.9)
             anchors.verticalCenter: parent.verticalCenter
         }
         ValueField {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            fieldWidth: 64
-            height: 26
+            fieldWidth: 54
+            height: 22
             value: row.value
             decimals: row.decimals
             suffix: row.unit
@@ -47,12 +47,9 @@ Column {
         }
     }
 
-    Slider {
+    StyledSlider {
         id: slider
         width: parent.width
-        height: 22
-        topPadding: 0
-        bottomPadding: 0
         from: row.from
         to: row.to
         stepSize: row.stepSize
@@ -64,35 +61,20 @@ Column {
             target: row
             function onValueChanged() { if (!slider.pressed) slider.value = row.value }
         }
-        background: Rectangle {
-            x: slider.leftPadding
-            y: (slider.height - height) / 2
-            width: slider.availableWidth
-            height: 4
-            radius: 2
-            color: Qt.rgba(1, 1, 1, 0.12)
-            Rectangle {
-                width: slider.visualPosition * parent.width
-                height: parent.height
-                radius: 2
-                color: "#3A79DE"
-            }
-        }
-        handle: Rectangle {
-            x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
-            y: (slider.height - height) / 2
-            width: 20; height: 20; radius: 10
-            color: "#a8a8a8"
-            border.color: Qt.rgba(0, 0, 0, 0.3)
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.RightButton
+            enabled: row.defaultValue !== undefined
+            onClicked: row.committed(row.defaultValue)
         }
     }
 
     Item {
         visible: row.leftHint !== "" || row.rightHint !== ""
         width: parent.width
-        height: 16
-        Text { text: row.leftHint; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.55) }
-        Text { anchors.right: parent.right; text: row.rightHint; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.55) }
+        height: 14
+        Text { text: row.leftHint; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+        Text { anchors.right: parent.right; text: row.rightHint; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
     }
 
     Text {
@@ -100,7 +82,7 @@ Column {
         width: parent.width
         wrapMode: Text.WordWrap
         text: row.caption
-        font.pixelSize: 12
-        color: Qt.rgba(1, 1, 1, 0.55)
+        font.pixelSize: 11
+        color: Qt.rgba(1, 1, 1, 0.5)
     }
 }

@@ -6,22 +6,23 @@ import "components"
 // Psychoacoustic Bass: phantom fundamental bass enhancement.
 AppWindow {
     id: win
+    fitHeight: header.height + flick.contentHeight
     title: "Psychoacoustic Bass"
     visible: false
-    width: 900
-    height: 640 + titlebarHeight
-    minimumWidth: 760
-    minimumHeight: 420 + titlebarHeight
+    width: 720
+    height: 520 + titlebarHeight
+    minimumWidth: 640
+    minimumHeight: 360 + titlebarHeight
 
     readonly property int numOut: bridge.numOutputChannels
     readonly property int pdm: numOut - 1
 
     // Apply preset: cutoff, harmonics, drive, character, original (macOS values)
     readonly property var presets: [
-        { name: "Bookshelf speakers",  detail: "Gentle low-end help",       v: [60, 0, 6, 50, 0] },
+        { name: "Bookshelf Speakers",  detail: "Gentle low-end help",       v: [60, 0, 6, 50, 0] },
         { name: "Small Bluetooth",     detail: "Portable speaker",           v: [100, 3, 9, 40, -12] },
-        { name: "Laptop / tablet",     detail: "Tiny drivers, protect them", v: [180, 6, 12, 50, -24] },
-        { name: "Headphone bass feel", detail: "Extra sub sensation",        v: [45, -3, 6, 30, 0] }]
+        { name: "Laptop / Tablet",     detail: "Tiny drivers, protect them", v: [180, 6, 12, 50, -24] },
+        { name: "Headphone Bass Feel", detail: "Extra sub sensation",        v: [45, -3, 6, 30, 0] }]
 
     function applyPreset(p) {
         for (var i = 0; i < 5; i++) bridge.setPsybassParam(i, p.v[i])
@@ -33,22 +34,35 @@ AppWindow {
     }
 
     component SectionLabel: Text {
-        font.pixelSize: 13
-        font.weight: Font.DemiBold
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.letterSpacing: 0.4
         color: Qt.rgba(1, 1, 1, 0.5)
     }
     component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
-    component MenuLink: Text {
+    // "Presets ⌄" link that opens an ActionMenu under itself
+    component MenuLink: Item {
         id: link
-        property Menu menu
-        font.pixelSize: 14
-        color: linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.8)
+        property string text: ""
+        property ActionMenu menu
+        width: linkRow.width
+        height: linkRow.height
+        Row {
+            id: linkRow
+            spacing: 4
+            Text {
+                text: link.text
+                font.pixelSize: 12
+                color: linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+            }
+            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+        }
         MouseArea {
             id: linkMouse
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: link.menu.popup(link, 0, link.height)
+            onClicked: link.menu.openAt(link, 0, link.height + 4)
         }
     }
 
@@ -63,48 +77,44 @@ AppWindow {
     }
 
     Flickable {
+        id: flick
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
         width: parent.width
-        contentHeight: columns.height + 40
+        contentHeight: columns.height + 32
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 
         Row {
             id: columns
-            x: 28
-            y: 20
-            spacing: 28
+            x: 16
+            y: 16
+            spacing: 20
             enabled: bridge.connected
-            readonly property real colWidth: (win.width - 56 - 2 * 28 - 1) / 2
+            readonly property real colWidth: (win.width - 32 - 2 * 20 - 1) / 2
 
             // ── Left: spectrum + harmonics ──
             Column {
                 width: columns.colWidth
-                spacing: 18
+                spacing: 12
 
                 Item {
                     width: parent.width
-                    height: 22
+                    height: 20
                     SectionLabel { text: "SPECTRUM"; anchors.verticalCenter: parent.verticalCenter }
                     MenuLink {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Apply preset ▾"
-                        menu: Menu {
-                            MenuItem { text: win.presets[0].name + "  \u2014  " + win.presets[0].detail; onTriggered: win.applyPreset(win.presets[0]) }
-                            MenuItem { text: win.presets[1].name + "  \u2014  " + win.presets[1].detail; onTriggered: win.applyPreset(win.presets[1]) }
-                            MenuItem { text: win.presets[2].name + "  \u2014  " + win.presets[2].detail; onTriggered: win.applyPreset(win.presets[2]) }
-                            MenuItem { text: win.presets[3].name + "  \u2014  " + win.presets[3].detail; onTriggered: win.applyPreset(win.presets[3]) }
-                        }
+                        text: "Apply Preset"
+                        menu: spectrumPresetMenu
                     }
                 }
 
                 // Diagram of the effect (not a measurement)
                 Rectangle {
                     width: parent.width
-                    height: 300
+                    height: 190
                     radius: 10
                     color: Qt.rgba(0, 0, 0, 0.2)
                     border.color: Qt.rgba(1, 1, 1, 0.1)
@@ -112,7 +122,7 @@ AppWindow {
                     Canvas {
                         id: spectrum
                         anchors.fill: parent
-                        anchors.margins: 14
+                        anchors.margins: 12
                         property real fc: bridge.psybassCutoff
                         property real harm: bridge.psybassHarmonics
                         property real orig: bridge.psybassOriginal
@@ -126,26 +136,26 @@ AppWindow {
                         onPaint: {
                             var ctx = getContext("2d")
                             ctx.reset()
-                            var w = width, h = height - 22
+                            var w = width, h = height - 18
                             var lo = Math.log(20), hi = Math.log(20000)
                             function xOf(f) { return (Math.log(f) - lo) / (hi - lo) * w }
 
                             // Decade grid and labels
                             ctx.strokeStyle = "rgba(255,255,255,0.08)"
                             ctx.fillStyle = "rgba(255,255,255,0.45)"
-                            ctx.font = "11px monospace"
+                            ctx.font = "10px sans-serif"
                             ctx.textAlign = "center"
                             var marks = [[100, "100"], [1000, "1k"], [10000, "10k"]]
                             for (var i = 0; i < marks.length; i++) {
                                 var x = xOf(marks[i][0])
                                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke()
-                                ctx.fillText(marks[i][1], x, h + 16)
+                                ctx.fillText(marks[i][1], x, h + 13)
                             }
                             ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w, h); ctx.stroke()
 
                             if (!active) {
                                 ctx.fillStyle = "rgba(255,255,255,0.35)"
-                                ctx.font = "14px sans-serif"
+                                ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", w / 2, h / 2)
                                 return
                             }
@@ -167,8 +177,8 @@ AppWindow {
                             ctx.beginPath(); ctx.moveTo(x4, 0); ctx.lineTo(x4, h); ctx.stroke()
                             ctx.setLineDash([])
                             ctx.fillStyle = "rgba(255,255,255,0.5)"
-                            ctx.fillText("fc", xfc, 14)
-                            ctx.fillText("4fc", x4, 14)
+                            ctx.fillText("fc", xfc, 11)
+                            ctx.fillText("4fc", x4, 11)
                         }
                     }
 
@@ -176,19 +186,19 @@ AppWindow {
                     Rectangle {
                         anchors.top: parent.top
                         anchors.right: parent.right
-                        anchors.margins: 24
-                        width: legend.width + 16
-                        height: legend.height + 12
+                        anchors.margins: 16
+                        width: legend.width + 12
+                        height: legend.height + 10
                         radius: 4
                         color: Qt.rgba(0, 0, 0, 0.35)
                         Column {
                             id: legend
                             anchors.centerIn: parent
                             spacing: 4
-                            Row { spacing: 6; Rectangle { width: 14; height: 10; color: "#2b6fd6"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Original"; font.pixelSize: 12; font.weight: Font.DemiBold; color: "white" } }
-                            Row { spacing: 6; Rectangle { width: 14; height: 10; color: "#e8901f"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Harmonics"; font.pixelSize: 12; font.weight: Font.DemiBold; color: "white" } }
+                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: "#2b6fd6"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Original"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
+                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: "#e8901f"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Harmonics"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
                         }
                     }
                 }
@@ -218,38 +228,30 @@ AppWindow {
             // ── Right: outputs + shaping ──
             Column {
                 width: columns.colWidth
-                spacing: 18
+                spacing: 12
 
                 Item {
                     width: parent.width
-                    height: 22
+                    height: 20
                     SectionLabel { text: "OUTPUTS"; anchors.verticalCenter: parent.verticalCenter }
                     MenuLink {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Presets ▾"
-                        menu: Menu {
-                            MenuItem { text: "All outputs"; onTriggered: bridge.setPsybassOutputMask((1 << win.numOut) - 1) }
-                            MenuItem {
-                                text: "Exclude sub (recommended)"
-                                onTriggered: bridge.setPsybassOutputMask(((1 << win.numOut) - 1) & ~(1 << win.pdm))
-                            }
-                            MenuItem { text: "None"; onTriggered: bridge.setPsybassOutputMask(0) }
-                        }
+                        text: "Presets"
+                        menu: outputPresetMenu
                     }
                 }
 
                 Text {
                     width: parent.width
                     wrapMode: Text.WordWrap
-                    font.pixelSize: 12
-                    color: Qt.rgba(1, 1, 1, 0.55)
-                    text: "Enhance only the small-speaker outputs. Mask off the sub and any full-range outputs - synthesizing harmonics on a channel that can reproduce real bass is counterproductive."
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    text: "Enhance only the small-speaker outputs. Mask off the sub and any full-range outputs: synthesizing harmonics on a channel that can reproduce real bass is counterproductive."
                 }
 
                 ChannelChips {
                     width: parent.width
-                    spacing: 6
                     count: win.numOut
                     mask: bridge.psybassOutputMask
                     names: outputNames()
@@ -283,6 +285,29 @@ AppWindow {
                     onCommitted: bridge.setPsybassParam(4, v)
                 }
             }
+        }
+    }
+
+    ActionMenu {
+        id: spectrumPresetMenu
+        parent: Overlay.overlay
+        items: win.presets.map(function(p, i) { return { key: String(i), text: p.name, shortcut: p.detail } })
+        onTriggered: win.applyPreset(win.presets[Number(key)])
+    }
+
+    ActionMenu {
+        id: outputPresetMenu
+        parent: Overlay.overlay
+        items: [
+            { key: "all", text: "All Outputs" },
+            { key: "nosub", text: "Exclude Sub (Recommended)" },
+            { key: "none", text: "None" }
+        ]
+        onTriggered: {
+            var all = (1 << win.numOut) - 1
+            if (key === "all") bridge.setPsybassOutputMask(all)
+            else if (key === "nosub") bridge.setPsybassOutputMask(all & ~(1 << win.pdm))
+            else if (key === "none") bridge.setPsybassOutputMask(0)
         }
     }
 }

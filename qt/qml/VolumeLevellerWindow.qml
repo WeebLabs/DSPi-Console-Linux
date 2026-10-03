@@ -6,12 +6,13 @@ import "components"
 // Volume Leveller: upward dynamic range compression.
 AppWindow {
     id: win
+    fitHeight: header.height + flick.contentHeight
     title: "Volume Leveller"
     visible: false
-    width: 460
-    height: 660 + titlebarHeight
-    minimumWidth: 400
-    minimumHeight: 360 + titlebarHeight
+    width: 380
+    height: 560 + titlebarHeight
+    minimumWidth: 340
+    minimumHeight: 320 + titlebarHeight
 
     readonly property int inputCount: Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels))
     readonly property var speedCaptions: [
@@ -26,77 +27,86 @@ AppWindow {
     }
 
     component SectionLabel: Text {
-        font.pixelSize: 13
-        font.weight: Font.DemiBold
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.letterSpacing: 0.4
         color: Qt.rgba(1, 1, 1, 0.5)
     }
     component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    // Row name with a grey note after it ("Detector  sets the shared gain")
+    component RowTitle: Row {
+        property string text: ""
+        property string note: ""
+        spacing: 6
+        Text { id: rt; text: parent.text; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+        Text { text: parent.note; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5); anchors.baseline: rt.baseline }
+    }
 
     ToolHeader {
         id: header
         width: parent.width
         icon: "waveform"
         title: "Volume Leveller"
-        subtitle: "Upward Dynamic Range Compression"
+        subtitle: "Upward dynamic range compression"
         checked: bridge.levellerEnabled
         onToggled: bridge.setLevellerEnabled(enable)
     }
 
     Flickable {
+        id: flick
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
         width: parent.width
-        contentHeight: body.height + 40
+        contentHeight: body.height + 32
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 
         Column {
             id: body
-            x: 28
-            y: 20
-            width: win.width - 56
-            spacing: 18
+            x: 16
+            y: 16
+            width: win.width - 32
+            spacing: 12
             enabled: bridge.connected
 
             // ── Channels (multichannel inputs only) ──
             Column {
                 visible: inputCount > 2
                 width: parent.width
-                spacing: 12
+                spacing: 8
 
                 Item {
                     width: parent.width
-                    height: 22
+                    height: 20
                     SectionLabel { text: "CHANNELS"; anchors.verticalCenter: parent.verticalCenter }
-                    Text {
+                    Item {
                         id: presetsLink
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Presets ▾"
-                        font.pixelSize: 14
-                        color: presetMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.8)
+                        width: presetsRow.width
+                        height: presetsRow.height
+                        Row {
+                            id: presetsRow
+                            spacing: 4
+                            Text {
+                                text: "Presets"
+                                font.pixelSize: 12
+                                color: presetMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                            }
+                            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                        }
                         MouseArea {
                             id: presetMouse
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: presetMenu.popup(presetsLink, 0, presetsLink.height)
-                        }
-                        Menu {
-                            id: presetMenu
-                            MenuItem { text: "All channels (Night mode)"; onTriggered: bridge.setLevellerMasks(0xFF, 0xFF) }
-                            MenuItem { text: "Center only (Dialog boost)"; onTriggered: bridge.setLevellerMasks(0x04, 0x04) }
-                            MenuItem { text: "Front L / R only"; onTriggered: bridge.setLevellerMasks(0x03, 0x03) }
+                            onClicked: presetMenu.openAt(presetsLink, 0, presetsLink.height + 4)
                         }
                     }
                 }
 
-                Row {
-                    spacing: 8
-                    Text { text: "Detector"; font.pixelSize: 15; font.weight: Font.Medium; color: "white" }
-                    Text { text: "sets the shared gain"; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.55); anchors.baseline: parent.children[0].baseline }
-                }
+                RowTitle { text: "Detector"; note: "sets the shared gain" }
                 ChannelChips {
                     width: parent.width
                     count: inputCount
@@ -105,11 +115,7 @@ AppWindow {
                     onMaskEdited: bridge.setLevellerMasks(mask, bridge.levellerApplyMask)
                 }
 
-                Row {
-                    spacing: 8
-                    Text { text: "Apply"; font.pixelSize: 15; font.weight: Font.Medium; color: "white" }
-                    Text { text: "receives the gain"; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.55); anchors.baseline: parent.children[0].baseline }
-                }
+                RowTitle { text: "Apply"; note: "receives the gain" }
                 ChannelChips {
                     width: parent.width
                     count: inputCount
@@ -118,6 +124,7 @@ AppWindow {
                     onMaskEdited: bridge.setLevellerMasks(bridge.levellerDetectorMask, mask)
                 }
 
+                Item { width: 1; height: 2 }
                 Divider {}
             }
 
@@ -135,32 +142,37 @@ AppWindow {
             // Speed: segmented Slow / Medium / Fast
             Column {
                 width: parent.width
-                spacing: 8
-                Text { text: "Speed"; font.pixelSize: 15; font.weight: Font.Medium; color: "white" }
+                spacing: 6
+                Text { text: "Speed"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
                 Rectangle {
                     width: parent.width
-                    height: 34
+                    height: 26
                     radius: 7
                     color: Qt.rgba(1, 1, 1, 0.06)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    border.color: Qt.rgba(1, 1, 1, 0.08)
                     Row {
                         anchors.fill: parent
                         anchors.margins: 2
                         Repeater {
                             model: ["Slow", "Medium", "Fast"]
                             Rectangle {
-                                width: (parent.width) / 3
+                                readonly property bool isCurrent: bridge.levellerSpeed === index
+                                width: parent.width / 3
                                 height: parent.height
-                                radius: 6
-                                color: bridge.levellerSpeed === index ? Qt.rgba(1, 1, 1, 0.22) : "transparent"
+                                radius: 5
+                                color: isCurrent ? MenuStyle.highlight
+                                     : speedMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                                 Text {
                                     anchors.centerIn: parent
                                     text: modelData
-                                    font.pixelSize: 14
-                                    color: "white"
+                                    font.pixelSize: 12
+                                    font.weight: parent.isCurrent ? Font.DemiBold : Font.Normal
+                                    color: parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
                                 }
                                 MouseArea {
+                                    id: speedMouse
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: bridge.setLevellerSpeed(index)
                                 }
@@ -172,8 +184,8 @@ AppWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     text: speedCaptions[Math.max(0, Math.min(2, bridge.levellerSpeed))]
-                    font.pixelSize: 12
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.5)
                 }
             }
             Divider {}
@@ -198,20 +210,39 @@ AppWindow {
 
             Item {
                 width: parent.width
-                height: 44
+                height: 34
                 Column {
+                    anchors.left: parent.left
+                    anchors.right: lookSwitch.left
+                    anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 4
-                    Text { text: "Lookahead"; font.pixelSize: 15; font.weight: Font.Medium; color: "white" }
-                    Text { text: "Adds 5ms latency. Improves transient handling."; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.55) }
+                    spacing: 2
+                    Text { text: "Lookahead"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+                    Text { width: parent.width; wrapMode: Text.WordWrap; text: "Adds 5 ms latency. Improves transient handling."; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
                 }
-                Switch {
+                ToggleSwitch {
+                    id: lookSwitch
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     checked: bridge.levellerLookahead
                     onToggled: bridge.setLevellerLookahead(checked)
                 }
             }
+        }
+    }
+
+    ActionMenu {
+        id: presetMenu
+        parent: Overlay.overlay
+        items: [
+            { key: "all", text: "All Channels (Night Mode)" },
+            { key: "center", text: "Center Only (Dialogue Boost)" },
+            { key: "front", text: "Front L / R Only" }
+        ]
+        onTriggered: {
+            if (key === "all") bridge.setLevellerMasks(0xFF, 0xFF)
+            else if (key === "center") bridge.setLevellerMasks(0x04, 0x04)
+            else if (key === "front") bridge.setLevellerMasks(0x03, 0x03)
         }
     }
 }

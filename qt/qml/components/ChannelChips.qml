@@ -9,21 +9,21 @@ Row {
     property var names: []          // tooltip per chip
     signal maskEdited(int mask)
 
-    spacing: 8
+    spacing: 6
     Repeater {
         model: chips.count
         Rectangle {
             readonly property bool isOn: (chips.mask >> index) & 1
-            width: Math.max(36, (chips.width - (chips.count - 1) * chips.spacing) / chips.count)
-            height: 36
-            radius: 7
-            color: isOn ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.08)
+            width: Math.max(28, (chips.width - (chips.count - 1) * chips.spacing) / chips.count)
+            height: 26
+            radius: 6
+            color: isOn ? "#0a7cff" : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
             border.color: isOn ? "transparent" : Qt.rgba(1, 1, 1, 0.12)
             Text {
                 anchors.centerIn: parent
                 text: index + 1
-                font.pixelSize: 15
-                font.weight: Font.Bold
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
                 color: parent.isOn ? "white" : Qt.rgba(1, 1, 1, 0.5)
             }
             MouseArea {

@@ -19,6 +19,10 @@ Window {
     property bool showMinMax: false
     // Fixed-size windows (minimum == maximum) get no resize edges
     readonly property bool resizable: minimumWidth !== maximumWidth || minimumHeight !== maximumHeight
+    // Height the content would like (titlebar excluded); when set, the
+    // window opens tall enough to show all of it (at most 960 px, and never
+    // taller than the screen allows)
+    property real fitHeight: 0
     // The titlebar, for Back/Forward and title overrides
     property alias titleBar: bar
 
@@ -27,6 +31,15 @@ Window {
                    : (Qt.Window | Qt.FramelessWindowHint)
 
     Component.onCompleted: if (!isMacOS) windowEffects.decorate(appWindow, blurWidth, true)
+
+    // Fit once, on first show; later opens keep the user's size
+    property bool fitted: false
+    function fitToContent() {
+        if (fitHeight <= 0) return
+        var avail = Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight : 900
+        height = Math.round(Math.max(minimumHeight, Math.min(fitHeight + titlebarHeight, avail - 80, 960)))
+    }
+    onVisibleChanged: if (visible && !fitted) { fitted = true; fitToContent() }
 
     Item {
         id: contentArea
