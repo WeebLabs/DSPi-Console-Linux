@@ -119,8 +119,10 @@ int main(int argc, char *argv[])
 
     setPlatformDarkMode();
 
-    // Fusion style — consistent dark look across platforms
-    QQuickStyle::setStyle("Fusion");
+    // Fusion style — consistent dark look across platforms. The app's own
+    // style (qml/style) only replaces ToolTip and falls back to Fusion.
+    QQuickStyle::setStyle(QStringLiteral(":/qml/style"));
+    QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
 
     // Dark palette: use system palette on Linux, hardcoded dark on macOS/other
 #ifdef Q_OS_MACOS

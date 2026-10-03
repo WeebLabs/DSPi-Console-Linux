@@ -105,6 +105,7 @@ Channel colours come from the bridge (`bridge.channelColor`).
 | Tool window header / parameter row / channel chips | `ToolHeader`, `ParamRow`, `ChannelChips` |
 | Settings page parts | `qt/qml/settings/` (`SettingsPage`, `SettingsSection`, `Settings*Row`); add pages to the registry in `SettingsWindow.qml` |
 | Window blur and shadow | `windowEffects` (C++ `WindowEffects`) |
+| Tooltip | attached `ToolTip.text` / `ToolTip.visible`; styled app-wide by `qml/style/ToolTip.qml` (the app style overrides only ToolTip, falling back to Fusion) |
 
 ### Patterns
 
