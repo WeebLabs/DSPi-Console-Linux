@@ -45,10 +45,18 @@ Popup {
     // Line the menu's right edge up with the anchor's (for right-aligned values)
     property bool alignRight: false
 
+    // Opens below the anchor, or above it when there's more room there (a
+    // picker near the bottom of the window); scrolls if neither side fits.
     function openAt(anchorItem) {
-        var p = anchorItem.mapToItem(parent, 0, anchorItem.height + 6)
+        var p = anchorItem.mapToItem(parent, 0, 0)
         x = alignRight ? Math.max(6, p.x + anchorItem.width - width + 4) : Math.max(6, p.x - 4)
-        y = p.y
+        var fullHeight = list.implicitHeight + topPadding + bottomPadding
+        var below = parent.height - (p.y + anchorItem.height + 6) - 8
+        var above = p.y - 6 - 8
+        var openUp = fullHeight > below && above > below
+        height = Math.min(fullHeight, openUp ? above : below)
+        y = openUp ? p.y - 6 - height : p.y + anchorItem.height + 6
+        transformOrigin = openUp ? Popup.BottomLeft : Popup.TopLeft
         current = -1
         for (var i = 0; i < options.length; i++)
             if (options[i].value === currentValue) current = i
@@ -96,102 +104,113 @@ Popup {
         }
     }
 
-    contentItem: Column {
+    contentItem: Flickable {
+        id: scroller
         focus: true
+        clip: true
+        contentHeight: list.implicitHeight
+        interactive: contentHeight > height
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollIndicator.vertical: ScrollIndicator {}
         Keys.onUpPressed: menu.current = (menu.current <= 0 ? menu.options.length : menu.current) - 1
         Keys.onDownPressed: menu.current = (menu.current + 1) % menu.options.length
         Keys.onReturnPressed: menu.activate(menu.current)
         Keys.onEnterPressed: menu.activate(menu.current)
 
-        Text {
-            visible: menu.heading !== ""
-            text: menu.heading.toUpperCase()
-            font.pixelSize: 10
-            font.weight: Font.Bold
-            font.letterSpacing: 0.8
-            color: Qt.rgba(1, 1, 1, 0.38)
-            leftPadding: 12
-            topPadding: 6
-            bottomPadding: 6
-        }
+        Column {
+            id: list
+            width: scroller.width
 
-        Repeater {
-            model: menu.options
-            Item {
-                id: row
-                width: parent.width
-                height: modelData.detail ? 42 : 28
-                readonly property bool usable: modelData.enabled !== false
-                readonly property bool hot: menu.current === index && usable
-                readonly property bool selected: modelData.value === menu.currentValue
+            Text {
+                visible: menu.heading !== ""
+                text: menu.heading.toUpperCase()
+                font.pixelSize: 10
+                font.weight: Font.Bold
+                font.letterSpacing: 0.8
+                color: Qt.rgba(1, 1, 1, 0.38)
+                leftPadding: 12
+                topPadding: 6
+                bottomPadding: 6
+            }
 
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.leftMargin: 2
-                    anchors.rightMargin: 2
-                    radius: 6
-                    color: row.hot ? "#0a7cff" : "transparent"
-                    Behavior on color { ColorAnimation { duration: 80 } }
-                }
-                Icon {
-                    id: rowIcon
-                    visible: !!modelData.icon
-                    x: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: modelData.icon || ""
-                    size: 15
-                    color: row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
-                }
-                Text {
-                    id: rowPrefix
-                    visible: menu.hasPrefix
-                    x: rowIcon.visible ? rowIcon.x + rowIcon.width + 8 : 10
-                    width: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    horizontalAlignment: Text.AlignRight
-                    text: modelData.prefix !== undefined ? modelData.prefix : ""
-                    font.pixelSize: 11
-                    color: row.hot ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.35)
-                }
-                Column {
-                    anchors.left: rowPrefix.visible ? rowPrefix.right : rowIcon.visible ? rowIcon.right : parent.left
-                    anchors.leftMargin: rowPrefix.visible ? 8 : rowIcon.visible ? 8 : 10
-                    anchors.right: check.left
-                    anchors.rightMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
-                    Text {
-                        text: modelData.text
-                        font.pixelSize: 13
-                        font.weight: row.selected ? Font.DemiBold : Font.Normal
-                        color: row.usable ? "white" : Qt.rgba(1, 1, 1, 0.3)
+            Repeater {
+                model: menu.options
+                Item {
+                    id: row
+                    width: parent.width
+                    height: modelData.detail ? 42 : 28
+                    readonly property bool usable: modelData.enabled !== false
+                    readonly property bool hot: menu.current === index && usable
+                    readonly property bool selected: modelData.value === menu.currentValue
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.leftMargin: 2
+                        anchors.rightMargin: 2
+                        radius: 6
+                        color: row.hot ? "#0a7cff" : "transparent"
+                        Behavior on color { ColorAnimation { duration: 80 } }
+                    }
+                    Icon {
+                        id: rowIcon
+                        visible: !!modelData.icon
+                        x: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: modelData.icon || ""
+                        size: 15
+                        color: row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
                     }
                     Text {
-                        visible: !!modelData.detail
-                        width: parent.width
-                        elide: Text.ElideRight
-                        text: modelData.detail || ""
+                        id: rowPrefix
+                        visible: menu.hasPrefix
+                        x: rowIcon.visible ? rowIcon.x + rowIcon.width + 8 : 10
+                        width: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        horizontalAlignment: Text.AlignRight
+                        text: modelData.prefix !== undefined ? modelData.prefix : ""
                         font.pixelSize: 11
-                        color: row.hot ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.45)
+                        color: row.hot ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.35)
                     }
-                }
-                Text {
-                    id: check
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: row.selected ? "✓" : ""
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: row.hot ? "white" : "#3a96ff"
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: row.usable ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onEntered: menu.current = index
-                    onExited: if (menu.current === index) menu.current = -1
-                    onClicked: menu.activate(index)
+                    Column {
+                        anchors.left: rowPrefix.visible ? rowPrefix.right : rowIcon.visible ? rowIcon.right : parent.left
+                        anchors.leftMargin: rowPrefix.visible ? 8 : rowIcon.visible ? 8 : 10
+                        anchors.right: check.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+                        Text {
+                            text: modelData.text
+                            font.pixelSize: 13
+                            font.weight: row.selected ? Font.DemiBold : Font.Normal
+                            color: row.usable ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                        }
+                        Text {
+                            visible: !!modelData.detail
+                            width: parent.width
+                            elide: Text.ElideRight
+                            text: modelData.detail || ""
+                            font.pixelSize: 11
+                            color: row.hot ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.45)
+                        }
+                    }
+                    Text {
+                        id: check
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: row.selected ? "✓" : ""
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: row.hot ? "white" : "#3a96ff"
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: row.usable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onEntered: menu.current = index
+                        onExited: if (menu.current === index) menu.current = -1
+                        onClicked: menu.activate(index)
+                    }
                 }
             }
         }
