@@ -131,8 +131,10 @@ Rectangle {
                 from: -60; to: 10
                 stepSize: 0.1
                 value: preampDB
-                onMoved: preampDB = value
-                onPressedChanged: if (!pressed) bridge.setInputPreamp(inputIndex, value)
+                // Value follows the drag; the device gets live updates
+                onMoved: { preampDB = value; preampLive.push(value) }
+                onPressedChanged: if (!pressed) { preampLive.cancel(); bridge.setInputPreamp(inputIndex, value) }
+                Throttle { id: preampLive; onFire: bridge.setInputPreamp(inputIndex, value, true) }
                 // Right-click resets to 0 dB
                 MouseArea {
                     anchors.fill: parent

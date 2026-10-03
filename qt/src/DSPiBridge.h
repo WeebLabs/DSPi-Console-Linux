@@ -221,13 +221,13 @@ public:
     // Setters
     Q_INVOKABLE void setPreamp(float db);
     Q_INVOKABLE void sendPreampToDevice(float db);
-    Q_INVOKABLE void setInputPreamp(int input, float db);
+    Q_INVOKABLE void setInputPreamp(int input, float db, bool sendOnly = false);
     Q_INVOKABLE void setBypass(bool en);
 
-    Q_INVOKABLE void setMasterVolume(float db);
+    Q_INVOKABLE void setMasterVolume(float db, bool sendOnly = false);
     Q_INVOKABLE void setMasterVolumeMode(int mode);
     Q_INVOKABLE int saveMasterVolume();
-    Q_INVOKABLE void setUserVolume(float db);
+    Q_INVOKABLE void setUserVolume(float db, bool sendOnly = false);
     Q_INVOKABLE void setUserMute(bool muted);
 
     Q_INVOKABLE void setFilter(int ch, int band, int type, float freq, float gain, float q);
@@ -238,14 +238,14 @@ public:
     Q_INVOKABLE void setChannelDelay(int ch, float ms);
 
     Q_INVOKABLE void setLoudness(bool en);
-    Q_INVOKABLE void setLoudnessRef(float spl);
-    Q_INVOKABLE void setLoudnessIntensity(float pct);
+    Q_INVOKABLE void setLoudnessRef(float spl, bool sendOnly = false);
+    Q_INVOKABLE void setLoudnessIntensity(float pct, bool sendOnly = false);
     Q_INVOKABLE void setLoudnessOutputMask(int mask);
 
     Q_INVOKABLE void setCrossfeed(bool en);
     Q_INVOKABLE void setCrossfeedPreset(int p);
-    Q_INVOKABLE void setCrossfeedFreq(float freq);
-    Q_INVOKABLE void setCrossfeedFeed(float feed);
+    Q_INVOKABLE void setCrossfeedFreq(float freq, bool sendOnly = false);
+    Q_INVOKABLE void setCrossfeedFeed(float feed, bool sendOnly = false);
     Q_INVOKABLE void setCrossfeedITD(bool en);
     Q_INVOKABLE void setCrossfeedOutputPairMask(int mask);
 
@@ -331,8 +331,8 @@ public:
     Q_INVOKABLE int limiterLinkGroup(int out) const;
     Q_INVOKABLE float limiterReduction(int out) const;   // dB, > 0 while limiting
     Q_INVOKABLE void setLimiterEnabled(int out, bool en);
-    Q_INVOKABLE void setLimiterThreshold(int out, float db);
-    Q_INVOKABLE void setLimiterRelease(int out, float ms);
+    Q_INVOKABLE void setLimiterThreshold(int out, float db, bool sendOnly = false);
+    Q_INVOKABLE void setLimiterRelease(int out, float ms, bool sendOnly = false);
     Q_INVOKABLE void setLimiterLinkGroup(int out, int group);
     Q_INVOKABLE void copyLimiterToAll(int out);
     Q_INVOKABLE void linkAllLimiterPairs();
@@ -360,6 +360,9 @@ signals:
     void deviceArrived(const QString &serial);
     void deviceDeparted(const QString &serial);
     void magnitudesChanged();
+    // A value shown on the graph changed mid-drag (output gain): redraw
+    // straight away, without the full stateChanged refresh
+    void previewChanged();
 
 private slots:
     void pollStatus();

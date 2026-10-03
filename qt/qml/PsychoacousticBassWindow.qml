@@ -123,9 +123,10 @@ AppWindow {
                         id: spectrum
                         anchors.fill: parent
                         anchors.margins: 12
-                        property real fc: bridge.psybassCutoff
-                        property real harm: bridge.psybassHarmonics
-                        property real orig: bridge.psybassOriginal
+                        // Follow the sliders during a drag
+                        property real fc: cutoffRow.displayValue
+                        property real harm: harmonicsRow.displayValue
+                        property real orig: originalRow.displayValue
                         property bool active: bridge.psybassEnabled
                         onFcChanged: requestPaint()
                         onHarmChanged: requestPaint()
@@ -207,6 +208,7 @@ AppWindow {
                 SectionLabel { text: "HARMONICS" }
 
                 ParamRow {
+                    id: cutoffRow
                     label: "Cutoff Frequency"; unit: "Hz"; from: 30; to: 300; stepSize: 1; decimals: 0
                     value: bridge.psybassCutoff
                     caption: "The speaker's low-frequency limit. Content below this feeds the harmonic generator; generated harmonics span roughly this to 4x."
@@ -215,6 +217,7 @@ AppWindow {
                 }
                 Divider {}
                 ParamRow {
+                    id: harmonicsRow
                     label: "Harmonics"; unit: "dB"; from: -24; to: 12; stepSize: 0.5
                     value: bridge.psybassHarmonics
                     caption: "Level of the synthesized harmonics. The primary amount-of-effect control. Higher = more perceived bass."
@@ -278,6 +281,7 @@ AppWindow {
                 }
                 Divider {}
                 ParamRow {
+                    id: originalRow
                     label: "Original Bass"; unit: "dB"; from: -60; to: 0; stepSize: 0.5
                     value: bridge.psybassOriginal
                     caption: "Level of the un-reproducible fundamental below the cutoff. Lower attenuates it, freeing driver excursion and headroom. -60 dB is full removal. Speaker protection."

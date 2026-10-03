@@ -32,3 +32,4 @@ ActionMenu 1.0 ActionMenu.qml
 FilterTypeMenu 1.0 FilterTypeMenu.qml
 AppDialog 1.0 AppDialog.qml
 PresetMenu 1.0 PresetMenu.qml
+Throttle 1.0 Throttle.qml

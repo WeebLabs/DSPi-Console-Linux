@@ -54,8 +54,9 @@ Rectangle {
         }
     }
 
-    // GAIN / DELAY: label and value on top, slider underneath. Dragging
-    // sends live (moved), release or typing commits (committed).
+    // GAIN / DELAY: label and value on top, slider underneath. The value
+    // follows the slider during a drag; the device gets live updates (moved,
+    // at most every 30 ms), and release or typing commits (committed).
     component LevelSection: ColumnLayout {
         id: sec
         property string label: ""
@@ -84,7 +85,7 @@ Rectangle {
                 fieldWidth: 54; height: 22
                 suffix: sec.unit; decimals: sec.decimals; wheelStep: sec.stepSize
                 minValue: sec.from; maxValue: sec.to
-                value: sec.value
+                value: slider.pressed ? slider.value : sec.value
                 onValueEdited: sec.committed(newValue)
             }
         }
@@ -93,9 +94,10 @@ Rectangle {
             Layout.fillWidth: true
             from: sec.from; to: sec.to; stepSize: sec.stepSize
             value: sec.value
-            onMoved: sec.moved(value)
-            onPressedChanged: if (!pressed) sec.committed(value)
+            onMoved: live.push(value)
+            onPressedChanged: if (!pressed) { live.cancel(); sec.committed(value) }
             onReset: sec.reset()
+            Throttle { id: live; onFire: sec.moved(value) }
             Connections {
                 target: sec
                 function onValueChanged() { if (!slider.pressed) slider.value = sec.value }
@@ -202,7 +204,7 @@ Rectangle {
             label: "GAIN"; unit: "dB"; decimals: 1
             from: -60; to: 10; stepSize: 0.1
             value: gainDB
-            onMoved: { gainDB = v; bridge.sendOutputGainToDevice(outputIndex, v) }
+            onMoved: bridge.sendOutputGainToDevice(outputIndex, v)
             onCommitted: bridge.setOutputGain(outputIndex, v)
             onReset: bridge.setOutputGain(outputIndex, 0)
         }
@@ -215,7 +217,7 @@ Rectangle {
             label: "DELAY"; unit: "ms"; decimals: 0
             from: 0; to: bridge.maxDelayMs; stepSize: 1
             value: delayMS
-            onMoved: { delayMS = v; bridge.sendOutputDelayToDevice(outputIndex, v) }
+            onMoved: bridge.sendOutputDelayToDevice(outputIndex, v)
             onCommitted: bridge.setOutputDelay(outputIndex, v)
             onReset: bridge.setOutputDelay(outputIndex, 0)
         }

@@ -2,8 +2,9 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 // A tool parameter: name, value field with unit, slider, and an explanation.
-// Dragging the slider sends live (liveChanged); release or typing commits
-// (committed). Right-click on the slider resets to `defaultValue` if set.
+// Dragging the slider sends live (liveChanged, at most every 30 ms); release
+// or typing commits (committed). displayValue follows the slider during a
+// drag, for graphs. Right-click on the slider resets to `defaultValue` if set.
 Column {
     id: row
     property string label: ""
@@ -17,6 +18,7 @@ Column {
     property real stepSize: 0.1
     property int decimals: 1
     property var defaultValue: undefined
+    readonly property real displayValue: slider.pressed ? slider.value : value
     signal liveChanged(real v)
     signal committed(real v)
 
@@ -37,7 +39,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             fieldWidth: 54
             height: 22
-            value: row.value
+            value: row.displayValue
             decimals: row.decimals
             suffix: row.unit
             minValue: row.from
@@ -55,8 +57,9 @@ Column {
         stepSize: row.stepSize
         enabled: bridge.connected
         value: row.value
-        onMoved: row.liveChanged(value)
-        onPressedChanged: if (!pressed) row.committed(value)
+        onMoved: live.push(value)
+        onPressedChanged: if (!pressed) { live.cancel(); row.committed(value) }
+        Throttle { id: live; onFire: row.liveChanged(value) }
         Connections {
             target: row
             function onValueChanged() { if (!slider.pressed) slider.value = row.value }

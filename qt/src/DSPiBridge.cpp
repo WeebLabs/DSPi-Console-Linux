@@ -506,14 +506,17 @@ void DSPiBridge::sendPreampToDevice(float db) {
     // No stateChanged: used during a drag to avoid a feedback loop
 }
 
-void DSPiBridge::setInputPreamp(int input, float db) {
+// sendOnly: a live update during a drag. The device and the core's state
+// change, but stateChanged isn't emitted (it re-evaluates the whole UI);
+// the release commits with a normal call.
+void DSPiBridge::setInputPreamp(int input, float db, bool sendOnly) {
     if (input < 0 || input >= state()->num_input_channels) return;
     dspi_set_input_preamp(m_core, input, db);
     // A linked pair gets one per-input write each (never the legacy
     // all-inputs preamp, which would clobber the other pairs).
     int partner = inputOf(linkedPartner(inputAppId(input)));
     if (partner >= 0) dspi_set_input_preamp(m_core, partner, db);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setBypass(bool en) {
@@ -521,9 +524,9 @@ void DSPiBridge::setBypass(bool en) {
     emit stateChanged();
 }
 
-void DSPiBridge::setMasterVolume(float db) {
+void DSPiBridge::setMasterVolume(float db, bool sendOnly) {
     dspi_set_master_volume(m_core, db);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setMasterVolumeMode(int mode) {
@@ -535,9 +538,9 @@ int DSPiBridge::saveMasterVolume() {
     return dspi_save_master_volume(m_core);
 }
 
-void DSPiBridge::setUserVolume(float db) {
+void DSPiBridge::setUserVolume(float db, bool sendOnly) {
     dspi_set_user_volume(m_core, db);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setUserMute(bool muted) {
@@ -634,14 +637,14 @@ void DSPiBridge::setLoudness(bool en) {
     emit stateChanged();
 }
 
-void DSPiBridge::setLoudnessRef(float spl) {
+void DSPiBridge::setLoudnessRef(float spl, bool sendOnly) {
     dspi_set_loudness_ref(m_core, spl);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
-void DSPiBridge::setLoudnessIntensity(float pct) {
+void DSPiBridge::setLoudnessIntensity(float pct, bool sendOnly) {
     dspi_set_loudness_intensity(m_core, pct);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setLoudnessOutputMask(int mask) {
@@ -659,14 +662,14 @@ void DSPiBridge::setCrossfeedPreset(int p) {
     emit stateChanged();
 }
 
-void DSPiBridge::setCrossfeedFreq(float freq) {
+void DSPiBridge::setCrossfeedFreq(float freq, bool sendOnly) {
     dspi_set_crossfeed_freq(m_core, freq);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
-void DSPiBridge::setCrossfeedFeed(float feed) {
+void DSPiBridge::setCrossfeedFeed(float feed, bool sendOnly) {
     dspi_set_crossfeed_feed(m_core, feed);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setCrossfeedITD(bool en) {
@@ -700,6 +703,7 @@ void DSPiBridge::setOutputGain(int output, float db) {
 
 void DSPiBridge::sendOutputGainToDevice(int output, float db) {
     dspi_set_output_gain(m_core, output, db);
+    emit previewChanged();
 }
 
 void DSPiBridge::setOutputMute(int output, bool muted) {
@@ -1035,16 +1039,16 @@ void DSPiBridge::setLimiterEnabled(int out, bool en) {
     emit stateChanged();
 }
 
-void DSPiBridge::setLimiterThreshold(int out, float db) {
+void DSPiBridge::setLimiterThreshold(int out, float db, bool sendOnly) {
     if (!validOut(state(), out)) return;
     dspi_set_limiter_param(m_core, out, LIMITER_PARAM_THRESHOLD_DB, db);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
-void DSPiBridge::setLimiterRelease(int out, float ms) {
+void DSPiBridge::setLimiterRelease(int out, float ms, bool sendOnly) {
     if (!validOut(state(), out)) return;
     dspi_set_limiter_param(m_core, out, LIMITER_PARAM_RELEASE_MS, ms);
-    emit stateChanged();
+    if (!sendOnly) emit stateChanged();
 }
 
 void DSPiBridge::setLimiterLinkGroup(int out, int group) {

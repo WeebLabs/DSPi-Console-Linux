@@ -31,6 +31,26 @@ cd qt/build && QT_FORCE_STDERR_LOGGING=1 ./DSPiConsole
 - Work on `linux-parity`. Commit or push only when asked. Never commit
   `channel_editor.png`.
 
+## Rendering and updates
+
+**Never redraw anything unnecessarily.** During a drag or an animation,
+update only what that drag or animation needs to look and behave correctly;
+nothing else re-renders or recomputes.
+
+- `bridge.stateChanged` re-evaluates every binding in the app. Never emit it
+  per mouse move or animation frame. Live updates use the bridge's
+  `sendOnly` variants (device and core state change, no signal), and the
+  release commits once with the normal call.
+- While dragging, the dragged control's own number and graph read the
+  slider's value directly (`slider.pressed ? slider.value : stored`, or
+  `ParamRow.displayValue`), not a round-trip through the bridge.
+- Device updates during a drag go through `Throttle` (first value at once,
+  then the latest every 30 ms; `cancel()` before the release commits).
+- Graphs redraw only the curves affected, and without animation mid-drag
+  (`previewChanged` → `BodePlotItem::refreshNow`).
+- No polling or timers that repaint when nothing changed; no bindings that
+  rebuild models or lists on unrelated state.
+
 ## UI design language
 
 The app follows the redesigned macOS-style look. New or changed UI must match it.

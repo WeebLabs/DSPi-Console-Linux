@@ -60,11 +60,15 @@ public:
 
     Q_INVOKABLE void setBridge(QObject *bridge);
     Q_INVOKABLE void refresh();
+    // Rebuild the curves and repaint at once (live drags: no animation)
+    void refreshNow();
 
 signals:
     void settingsChanged();
 
 private:
+    QVector<ChannelCurve> buildCurves() const;
+    QVector<ChannelCurve> shownCurves() const;
     void drawGrid(QPainter *painter, const QRectF &rect);
     void drawCurves(QPainter *painter, const QRectF &rect);
     void drawLabels(QPainter *painter, const QRectF &rect);

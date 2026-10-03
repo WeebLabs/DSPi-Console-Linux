@@ -145,7 +145,7 @@ AppWindow {
                         Item { width: 1; height: 1 }
                         ValueField {
                             fieldWidth: 60
-                            value: bridge.loudnessRefSPL
+                            value: refSlider.pressed ? refSlider.value : bridge.loudnessRefSPL
                             suffix: "dB"
                             decimals: 0
                             minValue: 40
@@ -156,11 +156,15 @@ AppWindow {
                     }
 
                     CustomSlider {
+                        id: refSlider
                         width: parent.width
                         from: 40; to: 100
                         value: bridge.loudnessRefSPL
                         enabled: bridge.loudnessEnabled
-                        onMoved: bridge.setLoudnessRef(value)
+                        // Live sends skip the app-wide refresh; release commits
+                        onMoved: refLive.push(value)
+                        onPressedChanged: if (!pressed) { refLive.cancel(); bridge.setLoudnessRef(value) }
+                        Throttle { id: refLive; onFire: bridge.setLoudnessRef(value, true) }
                     }
 
                     Text {
@@ -192,7 +196,7 @@ AppWindow {
                         Item { width: 1; height: 1 }
                         ValueField {
                             fieldWidth: 60
-                            value: bridge.loudnessIntensity
+                            value: intensitySlider.pressed ? intensitySlider.value : bridge.loudnessIntensity
                             suffix: "%"
                             decimals: 0
                             minValue: 0
@@ -203,11 +207,14 @@ AppWindow {
                     }
 
                     CustomSlider {
+                        id: intensitySlider
                         width: parent.width
                         from: 0; to: 200
                         value: bridge.loudnessIntensity
                         enabled: bridge.loudnessEnabled
-                        onMoved: bridge.setLoudnessIntensity(value)
+                        onMoved: intensityLive.push(value)
+                        onPressedChanged: if (!pressed) { intensityLive.cancel(); bridge.setLoudnessIntensity(value) }
+                        Throttle { id: intensityLive; onFire: bridge.setLoudnessIntensity(value, true) }
                     }
 
                     Text {

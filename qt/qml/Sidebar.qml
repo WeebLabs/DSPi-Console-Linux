@@ -330,7 +330,8 @@ Rectangle {
                     }
                     ValueField {
                         fieldWidth: 64
-                        value: volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
+                        value: volumeSlider.pressed ? volumeSlider.value
+                             : volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                         suffix: "dB"
                         decimals: 1
                         minValue: volumeSettings.showMaster ? -128 : -60
@@ -357,10 +358,18 @@ Rectangle {
                     stepSize: 0.5
                     enabled: bridge.connected
                     value: volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
+                    // The value follows the drag; the device gets live updates
+                    onMoved: volumeLive.push(value)
                     onPressedChanged: {
                         if (pressed) return
+                        volumeLive.cancel()
                         if (volumeSettings.showMaster) bridge.setMasterVolume(value)
                         else bridge.setUserVolume(value)
+                    }
+                    Throttle {
+                        id: volumeLive
+                        onFire: volumeSettings.showMaster ? bridge.setMasterVolume(value, true)
+                                                          : bridge.setUserVolume(value, true)
                     }
                     function refresh() {
                         if (!pressed) value = volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB

@@ -25,33 +25,14 @@ void BodePlotItem::setBridge(QObject *bridge) {
     if (m_bridge) {
         connect(m_bridge, &DSPiBridge::magnitudesChanged, this, &BodePlotItem::refresh);
         connect(m_bridge, &DSPiBridge::stateChanged, this, &BodePlotItem::refresh);
+        connect(m_bridge, &DSPiBridge::previewChanged, this, &BodePlotItem::refreshNow);
         refresh();
     }
 }
 
-void BodePlotItem::refresh() {
-    if (!m_bridge) return;
-
-    // Save current curves for animation
-    m_currentCurves.clear();
-    if (m_animProgress < 1.0f) {
-        // Mid-animation: interpolate current state as starting point
-        for (int i = 0; i < m_targetCurves.size(); i++) {
-            ChannelCurve c = m_targetCurves[i];
-            if (i < m_currentCurves.size()) {
-                for (int j = 0; j < c.magnitudes.size() && j < m_currentCurves[i].magnitudes.size(); j++) {
-                    c.magnitudes[j] = m_currentCurves[i].magnitudes[j] +
-                        (m_targetCurves[i].magnitudes[j] - m_currentCurves[i].magnitudes[j]) * m_animProgress;
-                }
-            }
-            m_currentCurves.append(c);
-        }
-    } else {
-        m_currentCurves = m_targetCurves;
-    }
-
-    // Build new target curves
-    m_targetCurves.clear();
+// The curves as they'd be drawn now from the bridge's state
+QVector<ChannelCurve> BodePlotItem::buildCurves() const {
+    QVector<ChannelCurve> curves;
     for (int eqCh = 0; eqCh < kAppChannelCount; eqCh++) {
         if (!m_bridge->channelExists(eqCh) || !m_bridge->channelVisible(eqCh)) continue;
 
@@ -70,20 +51,61 @@ void BodePlotItem::refresh() {
         for (int i = 0; i < MAGNITUDE_POINTS; i++) {
             curve.magnitudes[i] = mags[i] + curve.gainOffset;
         }
-
-        m_targetCurves.append(curve);
+        curves.append(curve);
     }
+    return curves;
+}
 
-    // Start animation
-    if (!m_currentCurves.isEmpty()) {
-        m_animProgress = 0.0f;
-        m_animation->stop();
-        m_animation->start();
-    } else {
+static bool sameCurves(const QVector<ChannelCurve> &a, const QVector<ChannelCurve> &b) {
+    if (a.size() != b.size()) return false;
+    for (int i = 0; i < a.size(); i++)
+        if (a[i].color != b[i].color || a[i].magnitudes != b[i].magnitudes) return false;
+    return true;
+}
+
+// What's on screen mid-animation: current blended toward target
+QVector<ChannelCurve> BodePlotItem::shownCurves() const {
+    if (m_animProgress >= 1.0f) return m_targetCurves;
+    QVector<ChannelCurve> shown = m_targetCurves;
+    for (int i = 0; i < shown.size() && i < m_currentCurves.size(); i++) {
+        const auto &from = m_currentCurves[i].magnitudes;
+        auto &to = shown[i].magnitudes;
+        for (int j = 0; j < to.size() && j < from.size(); j++)
+            to[j] = from[j] + (to[j] - from[j]) * m_animProgress;
+    }
+    return shown;
+}
+
+// bridge.stateChanged fires for many edits that don't touch the graph:
+// rebuilding the curves is cheap (magnitudes are cached), so compare and do
+// nothing — no animation, no repaint — unless a curve actually changed.
+void BodePlotItem::refresh() {
+    if (!m_bridge) return;
+    QVector<ChannelCurve> next = buildCurves();
+    if (sameCurves(next, m_targetCurves)) return;
+
+    if (m_targetCurves.isEmpty()) {
         m_animProgress = 1.0f;
-        m_currentCurves = m_targetCurves;
+        m_currentCurves = m_targetCurves = next;
         update();
+        return;
     }
+    // Animate from what's on screen now to the new curves
+    m_currentCurves = shownCurves();
+    m_targetCurves = next;
+    m_animProgress = 0.0f;
+    m_animation->stop();
+    m_animation->start();
+}
+
+void BodePlotItem::refreshNow() {
+    if (!m_bridge) return;
+    QVector<ChannelCurve> next = buildCurves();
+    if (sameCurves(next, m_targetCurves) && m_animProgress >= 1.0f) return;
+    m_animation->stop();
+    m_animProgress = 1.0f;
+    m_currentCurves = m_targetCurves = next;
+    update();
 }
 
 void BodePlotItem::paint(QPainter *painter) {

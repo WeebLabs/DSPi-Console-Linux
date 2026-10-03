@@ -75,6 +75,7 @@
         <file>qml/components/FilterTypeMenu.qml</file>
         <file>qml/components/SidebarPicker.qml</file>
         <file>qml/components/PresetMenu.qml</file>
+        <file>qml/components/Throttle.qml</file>
         <file>qml/components/ToggleSwitch.qml</file>
         <file>qml/components/StyledSlider.qml</file>
         <file>qml/components/StyledComboBox.qml</file>
