@@ -52,10 +52,32 @@ impl DspiCore {
             let bit = 1u16 << slot;
             self.wait_for(|c| Ok(c.read_preset_directory()?.occupied_mask & bit == 0));
             self.state.preset_occupied &= !bit;
+            // The device clears the slot's name with it
+            self.state.preset_names[slot as usize] = [0u8; CHANNEL_NAME_LEN];
             // Deleting the active slot applies factory defaults on the device.
             if self.state.active_preset_slot == slot {
                 self.refresh_params()?;
             }
+        }
+        Ok(status)
+    }
+
+    /// Copy the live state into `dest`, then save it back to `source` so
+    /// `source` stays active (as the macOS Console does). Each deferred save
+    /// must finish (the device reports that slot active) before the next is
+    /// sent, or the second would replace the first's pending slot.
+    pub fn copy_preset(&mut self, source: u8, dest: u8) -> Result<u8> {
+        let status = self.save_preset(dest)?;
+        if status != PRESET_OK {
+            return Ok(status);
+        }
+        if !self.wait_for(|c| Ok(c.get_preset_active()? == dest)) {
+            return Ok(0xFF);
+        }
+        let status = self.save_preset(source)?;
+        if status == PRESET_OK {
+            self.wait_for(|c| Ok(c.get_preset_active()? == source));
+            self.state.active_preset_slot = source;
         }
         Ok(status)
     }

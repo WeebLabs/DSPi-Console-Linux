@@ -266,6 +266,7 @@ public:
     Q_INVOKABLE int savePreset(int slot);
     Q_INVOKABLE int loadPreset(int slot);
     Q_INVOKABLE int deletePreset(int slot);
+    Q_INVOKABLE int copyPreset(int fromSlot, int toSlot);
     Q_INVOKABLE void setPresetName(int slot, const QString &name);
     Q_INVOKABLE void setPresetStartup(int mode, int slot);
 

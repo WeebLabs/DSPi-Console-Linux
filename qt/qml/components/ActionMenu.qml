@@ -46,9 +46,17 @@ Popup {
 
     function itemEnabled(i) { return items[i] && !items[i].separator && items[i].enabled !== false }
 
+    // Worked out from the items, not the list: items set just before
+    // openAt aren't laid out yet
+    function itemsHeight() {
+        var h = 0
+        for (var i = 0; i < items.length; i++) h += items[i].separator ? 7 : MenuStyle.rowHeight
+        return h
+    }
+
     function openAt(item, px, py) {
         var p = item.mapToItem(parent, px, py)
-        var h = list.implicitHeight + topPadding + bottomPadding
+        var h = itemsHeight() + topPadding + bottomPadding
         x = Math.max(6, Math.min(p.x, parent.width - width - 6))
         y = p.y + h > parent.height - 6 ? Math.max(6, p.y - h) : p.y
         current = -1

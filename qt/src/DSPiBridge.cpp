@@ -763,6 +763,12 @@ int DSPiBridge::deletePreset(int slot) {
     return status;
 }
 
+int DSPiBridge::copyPreset(int fromSlot, int toSlot) {
+    int status = dspi_copy_preset(m_core, fromSlot, toSlot);
+    emit stateChanged();
+    return status;
+}
+
 void DSPiBridge::setPresetName(int slot, const QString &name) {
     QByteArray utf8 = name.toUtf8();
     dspi_set_preset_name(m_core, slot, utf8.constData());

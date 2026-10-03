@@ -242,6 +242,7 @@ Rectangle {
                 spacing: 8
 
                 SidebarPicker {
+                    id: presetPicker
                     width: parent.width
                     label: "Preset"
                     enabled: bridge.connected
@@ -261,7 +262,10 @@ Rectangle {
                     currentValue: bridge.activePresetSlot
                     valueText: bridge.connected && slots[bridge.activePresetSlot] ? slots[bridge.activePresetSlot].text : "—"
                     onChosen: if (value !== bridge.activePresetSlot) bridge.loadPreset(value)
+                    onContextMenuRequested: presetMenu.openAt(presetPicker, x, y)
                 }
+
+                PresetMenu { id: presetMenu; anchorItem: presetPicker; width: 0; height: 0 }
 
                 SidebarPicker {
                     width: parent.width

@@ -559,6 +559,13 @@ pub extern "C" fn dspi_load_preset(core: *mut FfiCore, slot: u8) -> u8 {
     with_core(core, |c| c.load_preset(slot).unwrap_or(0xFF))
 }
 
+/// Copy the live state to `dest` and re-save it to `source` (which stays
+/// active). PRESET_* status of the first failing save, 0xFF on timeout.
+#[no_mangle]
+pub extern "C" fn dspi_copy_preset(core: *mut FfiCore, source: u8, dest: u8) -> u8 {
+    with_core(core, |c| c.copy_preset(source, dest).unwrap_or(0xFF))
+}
+
 #[no_mangle]
 pub extern "C" fn dspi_delete_preset(core: *mut FfiCore, slot: u8) -> u8 {
     with_core(core, |c| c.delete_preset(slot).unwrap_or(0xFF))

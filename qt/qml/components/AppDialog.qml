@@ -5,6 +5,8 @@ import QtQuick.Controls 2.15
 // row of buttons. buttons: [{ key, text, role }] with role "primary",
 // "destructive" or "secondary" (the default). Emits chosen(key); Esc or a
 // click outside cancels (chosen("cancel")), Enter picks the primary button.
+// hasInput adds a text field under the message (inputText), focused and
+// selected on open (e.g. Rename).
 Popup {
     id: dlg
     property string title: ""
@@ -15,6 +17,10 @@ Popup {
     // Optional lines in a box under the message: [{ text, color? }]; a
     // colour draws a dot (e.g. a channel's colour)
     property var details: []
+    property bool hasInput: false
+    property alias inputText: input.text
+    property string placeholder: ""
+    property int maxLength: 31
     signal chosen(string key)
 
     parent: Overlay.overlay
@@ -27,8 +33,9 @@ Popup {
 
     property bool answered: false
     onAboutToShow: answered = false
+    onOpened: if (hasInput) { input.forceActiveFocus(); input.selectAll() }
     onClosed: if (!answered) chosen("cancel")
-    function choose(key) { answered = true; close(); chosen(key) }
+    function choose(key) { if (answered) return; answered = true; close(); chosen(key) }
 
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
 
@@ -100,6 +107,32 @@ Popup {
                     text: dlg.message
                     font.pixelSize: 13
                     color: Qt.rgba(1, 1, 1, 0.65)
+                }
+                TextField {
+                    id: input
+                    visible: dlg.hasInput
+                    width: parent.width
+                    height: 30
+                    topPadding: 0
+                    bottomPadding: 0
+                    leftPadding: 10
+                    rightPadding: 10
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 13
+                    color: "white"
+                    selectionColor: "#0a7cff"
+                    selectedTextColor: "white"
+                    selectByMouse: true
+                    maximumLength: dlg.maxLength
+                    placeholderText: dlg.placeholder
+                    placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
+                    onAccepted: dlg.choosePrimary()
+                    background: Rectangle {
+                        radius: 7
+                        color: Qt.rgba(1, 1, 1, 0.06)
+                        border.width: input.activeFocus ? 1.5 : 1
+                        border.color: input.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.12)
+                    }
                 }
                 Rectangle {
                     visible: dlg.details.length > 0

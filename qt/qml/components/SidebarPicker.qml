@@ -2,7 +2,8 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 // A sidebar setting with a pop-up choice: label on the left, the current
-// value and a chevron on the right; clicking the value toggles a ChoiceMenu.
+// value and a chevron on the right; clicking the value toggles a ChoiceMenu,
+// right-clicking the row emits contextMenuRequested.
 Item {
     id: picker
     property string label: ""
@@ -10,8 +11,17 @@ Item {
     property alias options: menu.options
     property alias currentValue: menu.currentValue
     signal chosen(var value)
+    // Right-click anywhere on the row (x, y in the picker)
+    signal contextMenuRequested(real x, real y)
 
     height: 26
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: picker.enabled
+        acceptedButtons: Qt.RightButton
+        onClicked: picker.contextMenuRequested(mouse.x, mouse.y)
+    }
 
     Text {
         text: picker.label
@@ -59,9 +69,15 @@ Item {
             id: mouse
             anchors.fill: parent
             enabled: picker.enabled
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: menu.toggleAt(valueButton)
+            onClicked: {
+                if (mouse.button === Qt.RightButton) {
+                    var p = mapToItem(picker, mouse.x, mouse.y)
+                    picker.contextMenuRequested(p.x, p.y)
+                } else menu.toggleAt(valueButton)
+            }
         }
     }
 
