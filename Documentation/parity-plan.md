@@ -19,12 +19,12 @@ References (cloned for comparison):
 | 1 | Channel pages: input header (Link n/n+1 with keep-which dialog, per-device links, preamp, Clear PEQ), output card (routing preview for inputs 1-2, gain, delay, mute, limiter button + settings popup with gain-reduction indicator), band list (bypass dots, per-band colours, Enable/Bypass All, Clear All, PEQ/XO tabs, crossover rows), type menu with slope submenus, Linkwitz Transform editor (outputs only), User/Master volume in the sidebar, Copy/Paste Parameters (sidebar right-click, Ctrl+C/V), Ctrl+scroll value stepping | Done, untested on hardware |
 | UI | Sidebar to the macOS layout (meters, pills toggle curves, quick-access icons, Preset/Source/Volume), matrix mixer rebuilt to the macOS layout, client-side titlebar with menu button, KDE shadow (focused only) and sidebar blur via KWindowEffects, graph legend pills removed | Done |
 | 2 | Interrupt endpoint notifications (param changes from other hosts and hardware controls, preset/bulk invalidation) | Not started |
-| 3 | Tool windows: volume leveller, loudness/crossfeed output masks, psychoacoustic bass, subharmonic synth, tube modeller, stereo upmixer, output limiter | Leveller and Psychoacoustic Bass windows done (shared ToolHeader / ParamRow / ChannelChips components); the rest not started |
-| 4 | Signal generator, statistics (buffer stats), interrupt monitor | Not started |
+| 3 | Tool windows: volume leveller, loudness/crossfeed output masks, psychoacoustic bass, subharmonic synth, tube modeller, stereo upmixer, output limiter | Leveller, Psychoacoustic Bass, Crossfeed (with output pairs) and Loudness (ISO 226 curve, output mask) windows done on the shared ToolHeader / ParamRow / ChannelChips components; subharmonic synth, tube modeller and upmixer not started |
+| 4 | Signal generator, statistics (buffer stats), interrupt monitor | Statistics window restyled with the data the core reads today; buffer / S/PDIF / ADAT stats, signal generator and interrupt monitor not started |
 | 5 | Spectrum analyser (RTA): engine, graph overlay, bar strip | Not started |
 | 6 | On-graph editing; phase graphing (core already computes phase curves) | Not started |
 | 7 | Settings: inputs (S/PDIF ×4, I2S multichannel, ADAT, clock modes), outputs (types, I2S/MCK, ADAT out), DAC hardware mute, LG Sound Sync, UART/I2C control | Not started |
-| 8 | Control Surfaces + IR remote; presets "Copy to…", "Save as default", preset files | Not started |
+| 8 | Control Surfaces + IR remote; presets "Copy to…", "Save as default", preset files | Preset right-click menu done (Save, Rename, Set as Default, Copy to, Clear, Clear All); control surfaces, IR remote and preset files not started |
 | 9 | Firmware updater (bootloader + UF2 install), onboarding, What's New | Not started |
 
 ## Notes

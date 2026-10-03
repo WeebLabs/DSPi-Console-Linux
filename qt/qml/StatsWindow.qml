@@ -3,135 +3,183 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import "components"
 
+// Stats for Nerds: device, processor and preset details, in the macOS
+// layout (small-caps sections of label / value rows, status footer). The
+// buffer and S/PDIF statistics the macOS window adds need core support
+// (parity plan, phase 4).
 AppWindow {
-    id: statsWindow
+    id: win
+    fitHeight: body.height + 32 + footer.height
     title: "System Statistics"
     visible: false
-    width: 320
-    height: 420 + titlebarHeight
-    minimumWidth: 320
-    minimumHeight: 420 + titlebarHeight
-    maximumWidth: 320
-    maximumHeight: 420 + titlebarHeight
+    width: 340
+    height: 520 + titlebarHeight
+    minimumWidth: 300
+    minimumHeight: 300 + titlebarHeight
 
-    Column {
-        anchors.fill: parent
-        anchors.margins: 16
-        spacing: 12
+    readonly property string dash: "—"
 
-        // Device Information
+    component SectionLabel: Text {
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.letterSpacing: 0.4
+        color: Qt.rgba(1, 1, 1, 0.5)
+    }
+    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+
+    // Label on the left, value on the right
+    component StatRow: Item {
+        property string label: ""
+        property string value: ""
+        property color valueColor: Qt.rgba(1, 1, 1, 0.9)
+        width: parent.width
+        height: 24
         Text {
-            text: "Device Information"
-            font.pixelSize: 10
-            font.weight: Font.Bold
-            color: Qt.rgba(1, 1, 1, 0.5)
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent.label
+            font.pixelSize: 13
+            color: Qt.rgba(1, 1, 1, 0.75)
         }
-
-        Column {
-            width: parent.width
-            spacing: 4
-
-            StatInfoRow { title: "Platform"; value: bridge.platformName }
-            StatInfoRow { title: "Firmware"; value: bridge.firmwareVersion }
-            StatInfoRow { title: "Channels"; value: bridge.numChannels.toString() }
-            StatInfoRow { title: "Outputs"; value: bridge.numOutputChannels.toString() }
-            StatInfoRow { title: "Serial"; value: bridge.selectedSerial || "—" }
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
-
-        // System Information
         Text {
-            text: "System Information"
-            font.pixelSize: 10
-            font.weight: Font.Bold
-            color: Qt.rgba(1, 1, 1, 0.5)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent.value
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
+            color: parent.valueColor
         }
+    }
 
-        Column {
+    // CPU load: value with a thin bar under the row (orange past 80 %)
+    component CpuRow: Item {
+        id: cpu
+        property string label: ""
+        property int load: 0
+        width: parent.width
+        height: 30
+        StatRow {
+            label: cpu.label
+            value: bridge.connected ? cpu.load + " %" : win.dash
+        }
+        Rectangle {
+            anchors.bottom: parent.bottom
             width: parent.width
-            spacing: 4
-
-            StatInfoRow { title: "Core 0 CPU"; value: bridge.cpu0 + "%" }
-            StatInfoRow { title: "Core 1 CPU"; value: bridge.cpu1 + "%" }
-            StatInfoRow {
-                title: "Core 1 Mode"
-                value: {
-                    var mode = bridge.core1Mode
-                    if (mode === 0) return "Idle"
-                    if (mode === 1) return "PDM"
-                    if (mode === 2) return "EQ Worker"
-                    return "Unknown"
-                }
-            }
-        }
-
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
-
-        // Preset Information
-        Text {
-            text: "Preset Information"
-            font.pixelSize: 10
-            font.weight: Font.Bold
-            color: Qt.rgba(1, 1, 1, 0.5)
-        }
-
-        Column {
-            width: parent.width
-            spacing: 4
-
-            StatInfoRow { title: "Active Slot"; value: (bridge.activePresetSlot + 1).toString() }
-            StatInfoRow {
-                title: "Startup Mode"
-                value: bridge.presetStartupMode === 0 ? "Specified Default" : "Last Used"
-            }
-            StatInfoRow { title: "Default Slot"; value: (bridge.presetDefaultSlot + 1).toString() }
-            StatInfoRow { title: "Output Config"; value: bridge.outputConfigMode === 1 ? "Saved with Presets" : "Independent" }
-        }
-
-        // Footer
-        Item { width: 1; height: 8 }
-        Row {
-            spacing: 6
-            anchors.horizontalCenter: parent.horizontalCenter
-
+            height: 3
+            radius: 1.5
+            color: Qt.rgba(1, 1, 1, 0.08)
             Rectangle {
-                width: 6; height: 6; radius: 3
-                color: bridge.connected ? "#4caf50" : "#f44336"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            Text {
-                text: bridge.connected ? "Connected" : "Disconnected"
-                font.pixelSize: 10
-                color: Qt.rgba(1, 1, 1, 0.5)
-                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width * Math.min(1, Math.max(0, cpu.load / 100))
+                height: parent.height
+                radius: 1.5
+                color: cpu.load > 80 ? "#ff9f0a" : "#0a7cff"
+                Behavior on width { NumberAnimation { duration: 180 } }
             }
         }
     }
 
-    component StatInfoRow: Row {
-        property string title: ""
-        property string value: ""
-        width: parent.width
-        height: 22
+    Flickable {
+        anchors.fill: parent
+        anchors.bottomMargin: footer.height
+        contentHeight: body.height + 32
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {}
 
-        Text {
-            text: title
-            font.pixelSize: 11
-            font.weight: Font.Medium
-            color: Qt.rgba(1, 1, 1, 0.7)
-            width: parent.width / 2
+        Column {
+            id: body
+            x: 16
+            y: 16
+            width: win.width - 32
+            spacing: 10
+
+            SectionLabel { text: "DEVICE INFORMATION" }
+            Column {
+                width: parent.width
+                StatRow { label: "Platform"; value: bridge.connected ? bridge.platformName : win.dash }
+                StatRow { label: "Firmware"; value: bridge.connected ? bridge.firmwareVersion : win.dash }
+                StatRow { label: "Serial"; value: bridge.selectedSerial || win.dash }
+                StatRow {
+                    label: "Channels"
+                    value: bridge.connected ? bridge.numInputChannels + " in · " + bridge.numOutputChannels + " out" : win.dash
+                }
+            }
+
+            Divider {}
+            SectionLabel { text: "SYSTEM INFORMATION" }
+            Column {
+                width: parent.width
+                spacing: 2
+                CpuRow { label: "Core 0 Load"; load: bridge.cpu0 }
+                CpuRow { label: "Core 1 Load"; load: bridge.cpu1 }
+                StatRow {
+                    label: "Core 1 Mode"
+                    value: !bridge.connected ? win.dash
+                         : ["Idle", "PDM", "EQ Worker"][bridge.core1Mode] || "Unknown"
+                }
+                StatRow {
+                    label: "Active Inputs"
+                    value: bridge.connected ? String(bridge.activeInputChannels) : win.dash
+                }
+                StatRow {
+                    label: "Input Source"
+                    value: {
+                        if (!bridge.connected) return win.dash
+                        var s = bridge.inputSources
+                        for (var i = 0; i < s.length; i++) if (s[i].id === bridge.inputSource) return s[i].name
+                        return "USB"
+                    }
+                }
+            }
+
+            Divider {}
+            SectionLabel { text: "PRESETS" }
+            Column {
+                width: parent.width
+                StatRow { label: "Active Slot"; value: bridge.connected ? String(bridge.activePresetSlot + 1) : win.dash }
+                StatRow {
+                    label: "Startup"
+                    value: !bridge.connected ? win.dash
+                         : bridge.presetStartupMode === 0 ? "Slot " + (bridge.presetDefaultSlot + 1) : "Last Used"
+                }
+                StatRow {
+                    label: "Output Config"
+                    value: !bridge.connected ? win.dash
+                         : bridge.outputConfigMode === 1 ? "Saved with Presets" : "Independent"
+                }
+            }
+        }
+    }
+
+    // Footer: connection state
+    Rectangle {
+        id: footer
+        anchors.bottom: parent.bottom
+        width: parent.width
+        height: 34
+        color: Qt.rgba(1, 1, 1, 0.03)
+        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+        Row {
+            x: 16
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 8
+            Rectangle {
+                width: 8; height: 8; radius: 4
+                anchors.verticalCenter: parent.verticalCenter
+                color: bridge.connected ? "#32d74b" : "#ff453a"
+            }
+            Text {
+                text: bridge.connected ? "Connected" : "Disconnected"
+                font.pixelSize: 12
+                color: Qt.rgba(1, 1, 1, 0.65)
+            }
         }
         Text {
-            text: value
-            font.pixelSize: 12
-            font.weight: Font.Bold
-            font.family: root.monoFont
-            color: "white"
-            horizontalAlignment: Text.AlignRight
-            width: parent.width / 2
+            anchors.right: parent.right
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
+            text: "Updated live"
+            font.pixelSize: 11
+            color: Qt.rgba(1, 1, 1, 0.4)
         }
     }
 }

@@ -69,7 +69,7 @@ AppWindow {
     ToolHeader {
         id: header
         width: parent.width
-        icon: "loudness"
+        icon: "bassclef"
         title: "Psychoacoustic Bass"
         subtitle: "Phantom fundamental bass enhancement"
         checked: bridge.psybassEnabled
