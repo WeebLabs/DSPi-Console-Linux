@@ -1,15 +1,17 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 import "components"
 
-// Settings card of an output channel page: routing preview, gain, delay,
-// mute and the output limiter.
+// Settings card of an output channel page, laid out as on the macOS Console:
+// routing preview | GAIN | DELAY | mute and limiter, separated by dividers.
 Rectangle {
     id: settingsRoot
-    height: 76
+    height: 72
     radius: 10
-    color: Qt.rgba(0.21, 0.21, 0.21, 0.6)
-    border.color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
+    // Same surface as the band list below it
+    color: isMacOS ? Qt.rgba(0.21, 0.21, 0.21, 0.6) : nativeAltBaseColor
+    border.color: Qt.rgba(1, 1, 1, 0.1)
     border.width: 1
 
     property int outputIndex: 0
@@ -21,206 +23,231 @@ Rectangle {
     Connections {
         target: bridge
         function onStateChanged() {
-            if (!gainSlider.pressed) gainDB = bridge.outputGainDB(outputIndex)
-            if (!delaySlider.pressed) delayMS = bridge.outputDelayMS(outputIndex)
+            if (!gainSection.dragging) gainDB = bridge.outputGainDB(outputIndex)
+            if (!delaySection.dragging) delayMS = bridge.outputDelayMS(outputIndex)
             isMuted = bridge.outputMuted(outputIndex)
             routingRev++
         }
     }
 
     component SectionLabel: Text {
-        font.pixelSize: 9
+        font.pixelSize: 11
         font.weight: Font.Bold
-        color: Qt.rgba(1, 1, 1, 0.45)
+        font.letterSpacing: 0.4
+        color: Qt.rgba(1, 1, 1, 0.5)
     }
 
-    component CardSlider: Slider {
+    component Divider: Rectangle {
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        color: Qt.rgba(1, 1, 1, 0.08)
+    }
+
+    // Slider that resets on right-click
+    component CardSlider: StyledSlider {
         id: sl
-        property real resetValue: 0
         signal reset()
-        height: 20
-        topPadding: 0
-        bottomPadding: 0
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.RightButton
             onClicked: sl.reset()
         }
-        background: Rectangle {
-            x: sl.leftPadding
-            y: (sl.height - height) / 2
-            width: sl.availableWidth
-            height: 3; radius: 2
-            color: Qt.rgba(1, 1, 1, 0.15)
-            Rectangle {
-                width: sl.visualPosition * parent.width
-                height: parent.height; radius: 2
-                color: "#0078d4"
+    }
+
+    // GAIN / DELAY: label and value on top, slider underneath. Dragging
+    // sends live (moved), release or typing commits (committed).
+    component LevelSection: ColumnLayout {
+        id: sec
+        property string label: ""
+        property string unit: ""
+        property int decimals: 1
+        property real value: 0
+        property real from: 0
+        property real to: 100
+        property real stepSize: 1
+        readonly property bool dragging: slider.pressed
+        signal moved(real v)
+        signal committed(real v)
+        signal reset()
+
+        spacing: 6
+        Layout.fillWidth: true
+        Layout.leftMargin: 18
+        Layout.rightMargin: 18
+        Layout.alignment: Qt.AlignVCenter
+
+        RowLayout {
+            Layout.fillWidth: true
+            SectionLabel { text: sec.label }
+            Item { Layout.fillWidth: true }
+            ValueField {
+                fieldWidth: 54; height: 22
+                suffix: sec.unit; decimals: sec.decimals; wheelStep: sec.stepSize
+                minValue: sec.from; maxValue: sec.to
+                value: sec.value
+                onValueEdited: sec.committed(newValue)
             }
         }
-        handle: Rectangle {
-            x: sl.leftPadding + sl.visualPosition * (sl.availableWidth - width)
-            y: (sl.height - height) / 2
-            width: 12; height: 12; radius: 6; color: "white"
+        CardSlider {
+            id: slider
+            Layout.fillWidth: true
+            from: sec.from; to: sec.to; stepSize: sec.stepSize
+            value: sec.value
+            onMoved: sec.moved(value)
+            onPressedChanged: if (!pressed) sec.committed(value)
+            onReset: sec.reset()
+            Connections {
+                target: sec
+                function onValueChanged() { if (!slider.pressed) slider.value = sec.value }
+            }
         }
     }
 
-    Row {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        anchors.leftMargin: 14
-        spacing: 14
+        spacing: 0
 
-        // 1. Routing preview: inputs 1 and 2 into this output
+        // ── Routing preview: inputs 1 and 2 into this output ──
         Column {
-            id: routing
-            spacing: 4
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: 14
+            Layout.rightMargin: 14
+            spacing: 2
 
             Repeater {
                 model: 2
                 Row {
-                    spacing: 6
+                    id: route
+                    spacing: 8
+                    height: 26
                     readonly property bool connected: { settingsRoot.routingRev; return bridge.matrixRouting(index, outputIndex) }
                     readonly property real level: { settingsRoot.routingRev; return bridge.matrixGain(index, outputIndex) }
                     readonly property bool inverted: { settingsRoot.routingRev; return bridge.matrixInvert(index, outputIndex) }
+                    readonly property color inputColor: bridge.channelColor(bridge.inputAppId(index))
+                    function toggle() { bridge.setMatrixRoute(index, outputIndex, !connected, level, inverted) }
 
-                    Text {
-                        width: 54
-                        text: bridge.channelName(bridge.inputAppId(index))
-                        elide: Text.ElideRight
-                        font.pixelSize: 11
-                        font.weight: Font.Medium
-                        color: parent.connected ? bridge.channelColor(bridge.inputAppId(index)) : Qt.rgba(1, 1, 1, 0.3)
-                        anchors.verticalCenter: parent.verticalCenter
+                    // Connection dot + name: click to connect / disconnect
+                    Item {
+                        width: 74
+                        height: parent.height
+                        Rectangle {
+                            id: dot
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 9; height: 9; radius: 4.5
+                            color: route.connected ? route.inputColor : "transparent"
+                            border.width: route.connected ? 0 : 1.2
+                            border.color: Qt.rgba(1, 1, 1, 0.45)
+                        }
+                        Text {
+                            anchors.left: dot.right
+                            anchors.leftMargin: 8
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            elide: Text.ElideRight
+                            text: bridge.channelName(bridge.inputAppId(index))
+                            font.pixelSize: 13
+                            font.weight: route.connected ? Font.DemiBold : Font.Normal
+                            color: route.connected ? route.inputColor : Qt.rgba(1, 1, 1, 0.75)
+                        }
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: bridge.setMatrixRoute(index, outputIndex, !parent.parent.connected,
-                                                             parent.parent.level, parent.parent.inverted)
+                            onClicked: route.toggle()
                         }
                     }
+
+                    // Level (settable before connecting); right-click resets to 0 dB
                     Item {
-                        id: levelCell
-                        readonly property var routeRow: parent
                         width: levelField.width
-                        height: 20
-                        anchors.verticalCenter: parent.verticalCenter
+                        height: parent.height
                         ValueField {
                             id: levelField
-                            fieldWidth: 46; suffix: "dB"; decimals: 1; minValue: -60; maxValue: 12
-                            height: 20
-                            value: levelCell.routeRow.level
-                            opacity: levelCell.routeRow.connected ? 1.0 : 0.45
-                            onValueEdited: bridge.setMatrixRoute(index, outputIndex, levelCell.routeRow.connected,
-                                                                 newValue, levelCell.routeRow.inverted)
+                            anchors.verticalCenter: parent.verticalCenter
+                            fieldWidth: 44; height: 22; suffix: "dB"; decimals: 1
+                            minValue: -60; maxValue: 12
+                            value: route.level
+                            textColor: route.connected ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.5)
+                            onValueEdited: bridge.setMatrixRoute(index, outputIndex, route.connected, newValue, route.inverted)
                         }
-                        // Right-click resets the level to 0 dB
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.RightButton
-                            onClicked: bridge.setMatrixRoute(index, outputIndex, levelCell.routeRow.connected,
-                                                             0, levelCell.routeRow.inverted)
+                            onClicked: bridge.setMatrixRoute(index, outputIndex, route.connected, 0, route.inverted)
                         }
                     }
-                    Rectangle {
-                        width: 30; height: 18; radius: 3
+
+                    // Polarity
+                    Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        color: parent.inverted ? Qt.rgba(1, 0.6, 0.2, 0.25) : Qt.rgba(1, 1, 1, 0.06)
-                        Text {
-                            anchors.centerIn: parent
-                            text: "INV"
-                            font.pixelSize: 9; font.weight: Font.Bold
-                            color: parent.parent.inverted ? "#ff9800" : Qt.rgba(1, 1, 1, 0.4)
-                        }
+                        text: "INV"
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                        color: route.inverted ? "#ff9f0a" : Qt.rgba(1, 1, 1, route.connected ? 0.35 : 0.2)
                         MouseArea {
                             anchors.fill: parent
+                            anchors.margins: -5
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: bridge.setMatrixRoute(index, outputIndex, parent.parent.connected,
-                                                             parent.parent.level, !parent.parent.inverted)
+                            onClicked: bridge.setMatrixRoute(index, outputIndex, route.connected, route.level, !route.inverted)
                         }
                     }
                 }
             }
         }
 
-        Rectangle { width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.1) }
+        Divider {}
 
-        // 2. Gain and 3. Delay
-        Column {
-            id: levels
-            width: settingsRoot.width - routing.width - sideButtons.width - 90
-            spacing: 6
-            anchors.verticalCenter: parent.verticalCenter
-
-            Row {
-                spacing: 8
-                width: parent.width
-                SectionLabel { text: "GAIN"; width: 42; anchors.verticalCenter: parent.verticalCenter }
-                ValueField {
-                    fieldWidth: 54; height: 20; suffix: "dB"; decimals: 1; minValue: -60; maxValue: 10
-                    value: gainDB
-                    onValueEdited: bridge.setOutputGain(outputIndex, newValue)
-                }
-                CardSlider {
-                    id: gainSlider
-                    width: parent.width - 140
-                    from: -60; to: 10; stepSize: 0.1
-                    value: gainDB
-                    anchors.verticalCenter: parent.verticalCenter
-                    onMoved: bridge.sendOutputGainToDevice(outputIndex, value)
-                    onPressedChanged: if (!pressed) bridge.setOutputGain(outputIndex, value)
-                    onReset: bridge.setOutputGain(outputIndex, 0)
-                }
-            }
-
-            Row {
-                spacing: 8
-                width: parent.width
-                SectionLabel { text: "DELAY"; width: 42; anchors.verticalCenter: parent.verticalCenter }
-                ValueField {
-                    fieldWidth: 54; height: 20; suffix: "ms"; decimals: 0; minValue: 0; maxValue: bridge.maxDelayMs
-                    value: delayMS
-                    onValueEdited: bridge.setOutputDelay(outputIndex, newValue)
-                }
-                CardSlider {
-                    id: delaySlider
-                    width: parent.width - 140
-                    from: 0; to: bridge.maxDelayMs; stepSize: 1
-                    value: delayMS
-                    anchors.verticalCenter: parent.verticalCenter
-                    onMoved: bridge.sendOutputDelayToDevice(outputIndex, value)
-                    onPressedChanged: if (!pressed) bridge.setOutputDelay(outputIndex, value)
-                    onReset: bridge.setOutputDelay(outputIndex, 0)
-                }
-            }
+        // ── Gain ──
+        LevelSection {
+            id: gainSection
+            label: "GAIN"; unit: "dB"; decimals: 1
+            from: -60; to: 10; stepSize: 0.1
+            value: gainDB
+            onMoved: { gainDB = v; bridge.sendOutputGainToDevice(outputIndex, v) }
+            onCommitted: bridge.setOutputGain(outputIndex, v)
+            onReset: bridge.setOutputGain(outputIndex, 0)
         }
 
-        Rectangle { width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.1) }
+        Divider {}
 
-        // 4. Mute and 5. Limiter
+        // ── Delay ──
+        LevelSection {
+            id: delaySection
+            label: "DELAY"; unit: "ms"; decimals: 0
+            from: 0; to: bridge.maxDelayMs; stepSize: 1
+            value: delayMS
+            onMoved: { delayMS = v; bridge.sendOutputDelayToDevice(outputIndex, v) }
+            onCommitted: bridge.setOutputDelay(outputIndex, v)
+            onReset: bridge.setOutputDelay(outputIndex, 0)
+        }
+
+        Divider {}
+
+        // ── Mute and output limiter ──
         Column {
-            id: sideButtons
-            spacing: 2
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            spacing: 4
 
             Rectangle {
-                width: 36; height: 28; radius: 5
-                color: isMuted ? Qt.rgba(1, 0, 0, 0.12) : "transparent"
-                Text {
+                width: 36; height: 26; radius: 6
+                color: muteMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                Icon {
                     anchors.centerIn: parent
-                    text: isMuted ? "🔇" : "🔊"
-                    font.pixelSize: 16
-                    color: isMuted ? "#f44336" : Qt.rgba(1, 1, 1, 0.4)
+                    name: isMuted ? "speaker-mute" : "speaker"
+                    size: 18
+                    color: isMuted ? "#ff453a" : Qt.rgba(1, 1, 1, 0.6)
                 }
                 MouseArea {
+                    id: muteMouse
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: bridge.setOutputMute(outputIndex, !isMuted)
                 }
             }
 
-            LimiterButton { outputIndex: settingsRoot.outputIndex }
+            LimiterButton { outputIndex: settingsRoot.outputIndex; height: 26 }
         }
     }
 }

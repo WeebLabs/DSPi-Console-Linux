@@ -20,12 +20,12 @@ Rectangle {
         function onStatusChanged() { btn.reduction = bridge.limiterReduction(btn.outputIndex) }
     }
 
-    Text {
+    Icon {
         anchors.centerIn: parent
-        text: "◔"  // gauge
-        font.pixelSize: 16
-        color: !btn.enabled_ ? Qt.rgba(1, 1, 1, 0.35)
-             : btn.reduction > 0.05 ? "#ff9800" : "#3a96dd"
+        name: "gauge"
+        size: 18
+        color: !btn.enabled_ ? Qt.rgba(1, 1, 1, 0.4)
+             : btn.reduction > 0.05 ? "#ff9f0a" : "#3a96dd"
     }
 
     MouseArea {

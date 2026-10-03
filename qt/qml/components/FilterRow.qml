@@ -65,87 +65,57 @@ Rectangle {
             width: 24
             text: (bandIndex + 1).toString()
             font.pixelSize: 12
-            font.family: root.monoFont
-            color: isActive ? bandColors[bandIndex % bandColors.length] : Qt.rgba(1, 1, 1, 0.4)
+            color: isActive ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.3)
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        // Type button + menu (types with more than one slope open a submenu)
+        // Type button: name and up/down chevrons; opens the type menu
         Rectangle {
             id: typeBtn
             width: 150
-            height: 30
-            radius: 3
-            color: "transparent"
-            border.color: typeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
+            height: 28
+            radius: 6
             anchors.verticalCenter: parent.verticalCenter
+            color: typeMenu.visible ? Qt.rgba(1, 1, 1, 0.10)
+                 : typeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
 
             Text {
-                anchors.fill: parent
-                leftPadding: 4
-                verticalAlignment: Text.AlignVCenter
+                anchors.left: parent.left
+                anchors.leftMargin: 6
+                anchors.right: typeChevrons.left
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideRight
                 text: typeNames[filterType] || "Unknown"
-                font.pixelSize: 12
-                font.weight: Font.Bold
-                color: isActive ? "white" : Qt.rgba(1, 1, 1, 0.4)
+                font.pixelSize: 13
+                color: isActive ? Qt.rgba(1, 1, 1, 0.92) : Qt.rgba(1, 1, 1, 0.4)
+            }
+            Column {
+                id: typeChevrons
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: -4
+                Icon { name: "chev-up"; size: 10; color: Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
+                Icon { name: "chev-down"; size: 10; color: Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
             }
             MouseArea {
                 id: typeMouse
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: typeMenu.popup(typeBtn, 0, typeBtn.height)
+                onClicked: typeMenu.toggleAt(typeBtn)
             }
 
-            Menu {
+            FilterTypeMenu {
                 id: typeMenu
-                MenuItem { text: "Off"; onTriggered: chooseType(0) }
-                MenuItem { text: "Peaking"; onTriggered: chooseType(1) }
-                Menu {
-                    title: "Low Shelf"
-                    MenuItem { text: "6 dB/oct"; onTriggered: chooseType(9) }
-                    MenuItem { text: "12 dB/oct"; onTriggered: chooseType(2) }
-                }
-                Menu {
-                    title: "High Shelf"
-                    MenuItem { text: "6 dB/oct"; onTriggered: chooseType(10) }
-                    MenuItem { text: "12 dB/oct"; onTriggered: chooseType(3) }
-                }
-                Menu {
-                    title: "High Cut"
-                    MenuItem { text: "6 dB/oct"; onTriggered: chooseType(12) }
-                    MenuItem { text: "12 dB/oct"; onTriggered: chooseType(4) }
-                }
-                Menu {
-                    title: "Low Cut"
-                    MenuItem { text: "6 dB/oct"; onTriggered: chooseType(13) }
-                    MenuItem { text: "12 dB/oct"; onTriggered: chooseType(5) }
-                }
-                MenuItem { text: "Notch"; onTriggered: chooseType(6) }
-                Menu {
-                    title: "All Pass"
-                    MenuItem { text: "180°"; onTriggered: chooseType(8) }
-                    MenuItem { text: "360°"; onTriggered: chooseType(7) }
-                }
-                MenuSeparator { visible: isOutput; height: isOutput ? implicitHeight : 0 }
-                MenuItem {
-                    text: "Linkwitz Transform"
-                    visible: isOutput
-                    height: isOutput ? implicitHeight : 0
-                    onTriggered: chooseType(11)
-                }
+                parent: Overlay.overlay
+                currentType: filterType
+                allowLinkwitz: isOutput
+                onChosen: chooseType(type)
             }
         }
 
-        Text {
-            visible: !isActive
-            text: "Filter Disabled"
-            font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.25)
-            anchors.verticalCenter: parent.verticalCenter
-            leftPadding: 8
-        }
 
         // Linkwitz Transform: one button standing in for FREQ/GAIN/WIDTH
         Rectangle {
@@ -159,9 +129,8 @@ Rectangle {
                 anchors.fill: parent
                 leftPadding: 10
                 verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 12
-                font.family: root.monoFont
-                color: "white"
+                font.pixelSize: 13
+                color: Qt.rgba(1, 1, 1, 0.9)
                 text: "⚙  f0 " + filterFreq.toFixed(0) + " Hz → fp " + filterGain.toFixed(0) + " Hz"
             }
             MouseArea {

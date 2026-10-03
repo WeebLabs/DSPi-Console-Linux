@@ -75,7 +75,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        ComboBox {
+        StyledComboBox {
             width: 140; height: 30
             anchors.verticalCenter: parent.verticalCenter
             font.pixelSize: 12
@@ -91,7 +91,7 @@ Rectangle {
             }
         }
 
-        ComboBox {
+        StyledComboBox {
             visible: isActive
             width: 110; height: 30
             anchors.verticalCenter: parent.verticalCenter
@@ -101,7 +101,7 @@ Rectangle {
             onActivated: bridge.setCrossover(channelId, bandIndex, encode(meta.family, meta.order, index === 1), filterFreq)
         }
 
-        ComboBox {
+        StyledComboBox {
             id: slopeCombo
             visible: isActive
             width: 110; height: 30
@@ -113,14 +113,6 @@ Rectangle {
                                              encode(meta.family, familyOrders[meta.family][index], meta.hp), filterFreq)
         }
 
-        Text {
-            visible: !isActive
-            text: "Crossover Disabled"
-            font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.25)
-            leftPadding: 8
-            anchors.verticalCenter: parent.verticalCenter
-        }
 
         ValueField {
             visible: isActive

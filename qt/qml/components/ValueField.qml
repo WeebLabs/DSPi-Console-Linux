@@ -1,6 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
+// A numeric value with its unit, editable in place (macOS-style): plain text
+// at rest, a soft rounded fill on hover, and a filled field with an accent
+// ring while editing. Return commits, Esc cancels.
 Row {
     id: valueFieldRoot
     spacing: 4
@@ -12,10 +15,12 @@ Row {
     property real minValue: -999
     property real maxValue: 999
     property int fieldWidth: 60
-    // Ctrl+scroll steps the value by this much; plain scrolling scrolls the page
+    property int fontSize: 13
+    property color textColor: Qt.rgba(1, 1, 1, 0.9)
     // Values at or below this read as -∞ (e.g. the master volume mute sentinel)
     property real infinityAt: -1e9
-    // Compact fields (Matrix Mixer) adjust on plain scrolling
+    // Compact fields (Matrix Mixer) adjust on plain scrolling; otherwise
+    // Ctrl+scroll steps the value and plain scrolling scrolls the page
     property bool plainWheel: false
     property real wheelStep: Math.pow(10, -decimals)
 
@@ -25,25 +30,32 @@ Row {
         id: textField
         width: fieldWidth
         height: parent.height
-        font.pixelSize: 12
-        font.family: root.monoFont
-        color: activeFocus ? "#0a7cff" : "white"
+        font.pixelSize: valueFieldRoot.fontSize
+        color: valueFieldRoot.textColor
+        selectionColor: "#0a7cff"
+        selectedTextColor: "white"
         horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
         selectByMouse: true
-        padding: 4
+        hoverEnabled: true
+        leftPadding: 6
+        rightPadding: 6
+        topPadding: 0
+        bottomPadding: 0
 
         background: Rectangle {
-            color: "transparent"
-            border.color: textField.activeFocus ? "#0a7cff" : "transparent"
-            border.width: 1
-            radius: 3
+            radius: 5
+            color: textField.activeFocus ? Qt.rgba(1, 1, 1, 0.10)
+                 : textField.hovered && textField.enabled ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+            border.width: textField.activeFocus ? 1.5 : 0
+            border.color: "#0a7cff"
+            Behavior on color { ColorAnimation { duration: 90 } }
         }
 
         text: formatValue(value)
 
         function formatValue(v) {
-            return v <= infinityAt ? "-\u221E" : v.toFixed(decimals)
+            return v <= infinityAt ? "-∞" : v.toFixed(decimals)
         }
 
         onEditingFinished: {
@@ -57,12 +69,14 @@ Row {
         }
 
         onActiveFocusChanged: {
-            if (activeFocus) {
-                text = formatValue(value)
-                selectAll()
-            } else {
-                text = formatValue(value)
-            }
+            text = formatValue(value)
+            if (activeFocus) selectAll()
+        }
+
+        // Esc drops the edit and the focus
+        Keys.onEscapePressed: {
+            text = formatValue(valueFieldRoot.value)
+            focus = false
         }
 
         Connections {
@@ -87,8 +101,8 @@ Row {
 
     Text {
         text: suffix
-        font.pixelSize: 10
-        color: Qt.rgba(1, 1, 1, 0.5)
+        font.pixelSize: Math.max(10, valueFieldRoot.fontSize - 2)
+        color: Qt.rgba(1, 1, 1, 0.45)
         anchors.verticalCenter: parent.verticalCenter
         width: 20
         visible: suffix !== ""
