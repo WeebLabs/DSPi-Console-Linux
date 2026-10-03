@@ -67,6 +67,10 @@ Rectangle {
         property real to: 100
         property real stepSize: 1
         readonly property bool dragging: slider.pressed
+        // What the field and slider show: the dragged value until the
+        // stored value catches up, so release never flashes the old one
+        property real shown: value
+        onValueChanged: if (!slider.pressed) shown = value
         signal moved(real v)
         signal committed(real v)
         signal reset()
@@ -85,7 +89,7 @@ Rectangle {
                 fieldWidth: 54; height: 22
                 suffix: sec.unit; decimals: sec.decimals; wheelStep: sec.stepSize
                 minValue: sec.from; maxValue: sec.to
-                value: slider.pressed ? slider.value : sec.value
+                value: sec.shown
                 onValueEdited: sec.committed(newValue)
             }
         }
@@ -93,15 +97,11 @@ Rectangle {
             id: slider
             Layout.fillWidth: true
             from: sec.from; to: sec.to; stepSize: sec.stepSize
-            value: sec.value
-            onMoved: live.push(value)
+            value: sec.shown
+            onMoved: { sec.shown = value; live.push(value) }
             onPressedChanged: if (!pressed) { live.cancel(); sec.committed(value) }
             onReset: sec.reset()
             Throttle { id: live; onFire: sec.moved(value) }
-            Connections {
-                target: sec
-                function onValueChanged() { if (!slider.pressed) slider.value = sec.value }
-            }
         }
     }
 
@@ -205,7 +205,7 @@ Rectangle {
             from: -60; to: 10; stepSize: 0.1
             value: gainDB
             onMoved: bridge.sendOutputGainToDevice(outputIndex, v)
-            onCommitted: bridge.setOutputGain(outputIndex, v)
+            onCommitted: { gainDB = v; bridge.setOutputGain(outputIndex, v) }
             onReset: bridge.setOutputGain(outputIndex, 0)
         }
 
@@ -218,7 +218,7 @@ Rectangle {
             from: 0; to: bridge.maxDelayMs; stepSize: 1
             value: delayMS
             onMoved: bridge.sendOutputDelayToDevice(outputIndex, v)
-            onCommitted: bridge.setOutputDelay(outputIndex, v)
+            onCommitted: { delayMS = v; bridge.setOutputDelay(outputIndex, v) }
             onReset: bridge.setOutputDelay(outputIndex, 0)
         }
 
