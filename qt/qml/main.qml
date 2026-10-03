@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import Qt.labs.platform 1.1 as Platform
+import Qt.labs.settings 1.0
 import DSPi 1.0
 import "components"
 
@@ -35,6 +36,21 @@ ApplicationWindow {
     property real graphDbCenter: 0.0
     property real graphMinFreq: 15.0
     property real graphMaxFreq: 20000.0
+
+    // Graph preferences persist between sessions
+    Settings {
+        category: "graph"
+        property alias showGlow: root.graphShowGlow
+        property alias lineWidth: root.graphLineWidth
+        property alias showFreqGrid: root.graphShowFreqGrid
+        property alias showFreqLabels: root.graphShowFreqLabels
+        property alias showDbGrid: root.graphShowDbGrid
+        property alias showDbLabels: root.graphShowDbLabels
+        property alias dbRange: root.graphDbRange
+        property alias dbCenter: root.graphDbCenter
+        property alias minFreq: root.graphMinFreq
+        property alias maxFreq: root.graphMaxFreq
+    }
 
     // Selection state: "overview", "channel:N", "output:N"
     property string selection: "overview"
@@ -305,35 +321,10 @@ ApplicationWindow {
         onMenuRequested: appMenu.toggleAt(anchorItem)
     }
 
-    Item {
-        id: resizeEdges
-        anchors.fill: parent
-        z: 950
+    WindowResizeEdges {
+        window: root
         visible: !isMacOS && root.visibility !== Window.Maximized
-        readonly property int grip: 6
-
-        component Edge: MouseArea {
-            property int edges: 0
-            hoverEnabled: true
-            acceptedButtons: Qt.LeftButton
-            onPressed: root.startSystemResize(edges)
-        }
-        Edge { edges: Qt.LeftEdge; cursorShape: Qt.SizeHorCursor
-               x: 0; y: resizeEdges.grip; width: resizeEdges.grip; height: parent.height - 2 * resizeEdges.grip }
-        Edge { edges: Qt.RightEdge; cursorShape: Qt.SizeHorCursor
-               x: parent.width - resizeEdges.grip; y: resizeEdges.grip; width: resizeEdges.grip; height: parent.height - 2 * resizeEdges.grip }
-        Edge { edges: Qt.TopEdge; cursorShape: Qt.SizeVerCursor
-               x: resizeEdges.grip; y: 0; width: parent.width - 2 * resizeEdges.grip; height: resizeEdges.grip }
-        Edge { edges: Qt.BottomEdge; cursorShape: Qt.SizeVerCursor
-               x: resizeEdges.grip; y: parent.height - resizeEdges.grip; width: parent.width - 2 * resizeEdges.grip; height: resizeEdges.grip }
-        Edge { edges: Qt.TopEdge | Qt.LeftEdge; cursorShape: Qt.SizeFDiagCursor
-               x: 0; y: 0; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
-        Edge { edges: Qt.TopEdge | Qt.RightEdge; cursorShape: Qt.SizeBDiagCursor
-               x: parent.width - resizeEdges.grip * 2; y: 0; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
-        Edge { edges: Qt.BottomEdge | Qt.LeftEdge; cursorShape: Qt.SizeBDiagCursor
-               x: 0; y: parent.height - resizeEdges.grip * 2; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
-        Edge { edges: Qt.BottomEdge | Qt.RightEdge; cursorShape: Qt.SizeFDiagCursor
-               x: parent.width - resizeEdges.grip * 2; y: parent.height - resizeEdges.grip * 2; width: resizeEdges.grip * 2; height: resizeEdges.grip * 2 }
+        z: 950
     }
 
     Rectangle {

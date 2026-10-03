@@ -7,7 +7,7 @@ import "components"
 // icons, preset / source / volume, CPU meters.
 Rectangle {
     id: sidebarRoot
-    color: hasBlurBehind ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#262628"
+    color: windowEffects.blurAvailable ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#262628"
 
     Settings {
         id: volumeSettings

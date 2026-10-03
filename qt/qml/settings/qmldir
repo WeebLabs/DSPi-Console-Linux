@@ -1,0 +1,11 @@
+SettingsPage 1.0 SettingsPage.qml
+SettingsSection 1.0 SettingsSection.qml
+SettingsRow 1.0 SettingsRow.qml
+SettingsSwitchRow 1.0 SettingsSwitchRow.qml
+SettingsChoiceRow 1.0 SettingsChoiceRow.qml
+SettingsSliderRow 1.0 SettingsSliderRow.qml
+SettingsValueRow 1.0 SettingsValueRow.qml
+SettingsButtonRow 1.0 SettingsButtonRow.qml
+SettingsSidebarItem 1.0 SettingsSidebarItem.qml
+SettingsSaveBar 1.0 SettingsSaveBar.qml
+SettingsContext 1.0 SettingsContext.qml

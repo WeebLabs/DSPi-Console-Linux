@@ -261,6 +261,7 @@ public:
     Q_INVOKABLE int saveOutputConfig();
 
     Q_INVOKABLE void setChannelName(int ch, const QString &name);
+    Q_INVOKABLE void resetChannelNames();   // every channel back to its default name
 
     Q_INVOKABLE int savePreset(int slot);
     Q_INVOKABLE int loadPreset(int slot);

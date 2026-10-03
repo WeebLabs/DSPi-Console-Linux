@@ -20,3 +20,7 @@ ToolHeader 1.0 ToolHeader.qml
 ParamRow 1.0 ParamRow.qml
 ChannelChips 1.0 ChannelChips.qml
 AppMenu 1.0 AppMenu.qml
+WindowResizeEdges 1.0 WindowResizeEdges.qml
+ToggleSwitch 1.0 ToggleSwitch.qml
+StyledSlider 1.0 StyledSlider.qml
+StyledComboBox 1.0 StyledComboBox.qml

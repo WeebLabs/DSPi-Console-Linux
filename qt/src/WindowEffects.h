@@ -1,0 +1,50 @@
+#ifndef WINDOWEFFECTS_H
+#define WINDOWEFFECTS_H
+
+#include <QObject>
+#include <QPointer>
+#include <QVector>
+
+class QWindow;
+
+// Desktop effects for the app's frameless windows: a blurred, translucent
+// sidebar strip and a drop shadow drawn by the window manager.
+//
+// On KDE Plasma this uses KWindowEffects / KWindowShadow (on Wayland they need
+// the kwayland-integration plugin). KWin announces its effects
+// asynchronously, so blurAvailable starts false and turns true once KWin
+// confirms blur; QML binds the sidebar colour to it. Elsewhere both effects
+// are no-ops and the sidebars stay solid.
+class WindowEffects : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool blurAvailable READ blurAvailable NOTIFY blurAvailableChanged)
+
+public:
+    explicit WindowEffects(bool blurAlwaysAvailable, QObject *parent = nullptr);
+
+    bool blurAvailable() const { return m_blurAvailable; }
+
+    // Blur behind the strip [0, blurWidth) of `window` (0 = no blur) and give
+    // it a shadow while it has focus. Re-applied each time the window is shown.
+    Q_INVOKABLE void decorate(QWindow *window, int blurWidth, bool shadow = true);
+
+signals:
+    void blurAvailableChanged();
+
+private:
+    struct Decorated {
+        QPointer<QWindow> window;
+        int blurWidth;
+    };
+
+    void pollForBlur();
+    void applyBlur(QWindow *window, int blurWidth);
+    void attachShadow(QWindow *window);
+
+    bool m_blurAvailable = false;
+    bool m_polling = false;
+    QVector<Decorated> m_windows;
+};
+
+#endif // WINDOWEFFECTS_H

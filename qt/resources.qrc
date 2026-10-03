@@ -48,6 +48,27 @@
         <file>qml/VolumeLevellerWindow.qml</file>
         <file>qml/PsychoacousticBassWindow.qml</file>
         <file>qml/components/AppMenu.qml</file>
+        <file>qml/settings/qmldir</file>
+        <file>qml/settings/SettingsButtonRow.qml</file>
+        <file>qml/settings/SettingsChoiceRow.qml</file>
+        <file>qml/settings/SettingsContext.qml</file>
+        <file>qml/settings/SettingsPage.qml</file>
+        <file>qml/settings/SettingsRow.qml</file>
+        <file>qml/settings/SettingsSaveBar.qml</file>
+        <file>qml/settings/SettingsSection.qml</file>
+        <file>qml/settings/SettingsSidebarItem.qml</file>
+        <file>qml/settings/SettingsSliderRow.qml</file>
+        <file>qml/settings/SettingsSwitchRow.qml</file>
+        <file>qml/settings/SettingsValueRow.qml</file>
+        <file>qml/settings/pages/AboutPage.qml</file>
+        <file>qml/settings/pages/AdvancedPage.qml</file>
+        <file>qml/settings/pages/GlobalParametersPage.qml</file>
+        <file>qml/settings/pages/GraphingPage.qml</file>
+        <file>qml/settings/pages/OutputsPage.qml</file>
+        <file>qml/components/WindowResizeEdges.qml</file>
+        <file>qml/components/ToggleSwitch.qml</file>
+        <file>qml/components/StyledSlider.qml</file>
+        <file>qml/components/StyledComboBox.qml</file>
         <file>qml/qmldir</file>
         <file>qml/components/qmldir</file>
     </qresource>

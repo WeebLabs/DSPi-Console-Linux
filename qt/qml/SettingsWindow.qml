@@ -1,299 +1,324 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
-import QtQuick.Layouts 1.15
+import Qt.labs.settings 1.0
 import "components"
+import "settings"
 
+// Settings: a translucent sidebar of grouped pages, page content on the
+// right, Back/Forward history, search, and a save bar for draft changes.
+//
+// To add a page: write settings/pages/<Name>Page.qml (a SettingsPage built
+// from SettingsSection and the Settings*Row components) and add one entry
+// to `groups` below.
 Window {
     id: settingsWindow
     title: "Settings"
     visible: false
-    width: 450
-    height: 500
-    minimumWidth: 450
-    minimumHeight: 400
-    color: "#1e1e1e"
-    flags: Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    width: 900
+    height: 640
+    minimumWidth: 720
+    minimumHeight: 480
+    color: "#1e1e20"
+    flags: isMacOS ? Qt.Window : (Qt.Window | Qt.FramelessWindowHint)
 
-    // Inline component for toggle settings
-    component SettingsToggle: Row {
-        property string label: ""
-        property alias checked: toggleSwitch.checked
-        signal toggled()
-        width: parent.width
-        spacing: 8
-        Text {
-            text: label
-            font.pixelSize: 12
-            color: "white"
-            anchors.verticalCenter: parent.verticalCenter
-        }
-        Item { width: 1; height: 1 }
-        Switch {
-            id: toggleSwitch
-            onToggled: parent.toggled()
+    readonly property int sidebarWidth: 232
+    readonly property int titlebarHeight: isMacOS ? 28 : 46
+
+    // ── Page registry ──
+    // id: stable key (history, deep links); icon: Icon name; tint: tile colour;
+    // keywords: extra search terms; needsDevice: hidden while disconnected.
+    readonly property var groups: [
+        { title: "Application", pages: [
+            { id: "about", title: "About", icon: "info", tint: "#8e8e93",
+              source: "settings/pages/AboutPage.qml", keywords: "version links github discord patreon ko-fi youtube" },
+            { id: "advanced", title: "Advanced", icon: "wrench", tint: "#636366",
+              source: "settings/pages/AdvancedPage.qml", keywords: "channel names reset device serial firmware" }
+        ]},
+        { title: "Display", pages: [
+            { id: "graphing", title: "Graphing", icon: "chart", tint: "#30b0c7",
+              source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid labels range center frequency" }
+        ]},
+        { title: "System", pages: [
+            { id: "outputs", title: "Outputs", icon: "output", tint: "#34c759", needsDevice: true,
+              source: "settings/pages/OutputsPage.qml", keywords: "pins gpio spdif pdm sub reset" },
+            { id: "global", title: "Global Parameters", icon: "globe", tint: "#ff9f0a", needsDevice: true,
+              source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent" }
+        ]}
+    ]
+
+    function findPage(id) {
+        for (var g = 0; g < groups.length; g++)
+            for (var p = 0; p < groups[g].pages.length; p++)
+                if (groups[g].pages[p].id === id) return groups[g].pages[p]
+        return null
+    }
+    function pageAvailable(page) { return page && (!page.needsDevice || bridge.connected) }
+    function matchesSearch(page) {
+        var q = search.text.trim().toLowerCase()
+        if (q === "") return true
+        return (page.title + " " + (page.keywords || "")).toLowerCase().indexOf(q) >= 0
+    }
+
+    // ── Navigation with history ──
+    property var history: []
+    property int historyIndex: -1
+    readonly property var currentPage: historyIndex >= 0 ? findPage(history[historyIndex]) : null
+
+    function navigate(id) {
+        if (!findPage(id) || (currentPage && currentPage.id === id)) return
+        var h = history.slice(0, historyIndex + 1)
+        h.push(id)
+        history = h
+        historyIndex = h.length - 1
+        remembered.lastPage = id
+    }
+    function goBack() { if (historyIndex > 0) { historyIndex--; remembered.lastPage = history[historyIndex] } }
+    function goForward() { if (historyIndex < history.length - 1) { historyIndex++; remembered.lastPage = history[historyIndex] } }
+
+    Settings {
+        id: remembered
+        category: "settingsWindow"
+        property string lastPage: "about"
+    }
+
+    // Reopen on the last page used; leave a device page if the device goes
+    onVisibleChanged: if (visible && historyIndex < 0) navigate(remembered.lastPage)
+    Connections {
+        target: bridge
+        function onStatusChanged() {
+            if (settingsWindow.currentPage && !settingsWindow.pageAvailable(settingsWindow.currentPage))
+                settingsWindow.navigate("about")
         }
     }
 
-    TabBar {
-        id: tabBar
-        width: parent.width
-        z: 1
-
-        TabButton { text: "General" }
-        TabButton { text: "Appearance" }
-        TabButton { text: "Graphing" }
-        TabButton { text: "Hardware" }
-        TabButton { text: "Advanced" }
+    SettingsContext {
+        id: ctx
+        app: root
+        window: settingsWindow
+        onNavigateRequested: settingsWindow.navigate(pageId)
     }
 
-    StackLayout {
-        anchors.top: tabBar.bottom
-        anchors.left: parent.left
+    Component.onCompleted: if (!isMacOS) windowEffects.decorate(settingsWindow, sidebarWidth, true)
+
+    // ── Sidebar ──
+    Rectangle {
+        id: sidebar
+        width: settingsWindow.sidebarWidth
+        height: parent.height
+        color: windowEffects.blurAvailable ? Qt.rgba(0.13, 0.13, 0.14, 0.35) : "#262628"
+
+        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Qt.rgba(0, 0, 0, 0.6) }
+
+        Column {
+            anchors.fill: parent
+            anchors.topMargin: settingsWindow.titlebarHeight + 2
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            spacing: 2
+
+            // Search
+            Rectangle {
+                width: parent.width
+                height: 30
+                radius: 8
+                color: Qt.rgba(1, 1, 1, 0.08)
+                border.color: search.activeFocus ? "#0a7cff" : "transparent"
+                Icon {
+                    id: searchIcon
+                    x: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "search"
+                    size: 14
+                    color: Qt.rgba(1, 1, 1, 0.45)
+                }
+                TextInput {
+                    id: search
+                    anchors.left: searchIcon.right
+                    anchors.leftMargin: 7
+                    anchors.right: clearSearch.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: 13
+                    color: "white"
+                    selectByMouse: true
+                    clip: true
+                    Text {
+                        visible: !search.text && !search.activeFocus
+                        text: "Search"
+                        font: search.font
+                        color: Qt.rgba(1, 1, 1, 0.4)
+                    }
+                    // Enter opens the first match
+                    onAccepted: {
+                        for (var g = 0; g < settingsWindow.groups.length; g++)
+                            for (var p = 0; p < settingsWindow.groups[g].pages.length; p++) {
+                                var pg = settingsWindow.groups[g].pages[p]
+                                if (settingsWindow.pageAvailable(pg) && settingsWindow.matchesSearch(pg)) {
+                                    settingsWindow.navigate(pg.id)
+                                    return
+                                }
+                            }
+                    }
+                    Keys.onEscapePressed: text = ""
+                }
+                Text {
+                    id: clearSearch
+                    visible: search.text !== ""
+                    anchors.right: parent.right
+                    anchors.rightMargin: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "✕"
+                    font.pixelSize: 11
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    MouseArea { anchors.fill: parent; anchors.margins: -4; onClicked: search.text = "" }
+                }
+            }
+            Item { width: 1; height: 8 }
+
+            // Groups and pages
+            Repeater {
+                model: settingsWindow.groups
+                Column {
+                    id: group
+                    readonly property var groupData: modelData
+                    readonly property int shownCount: {
+                        search.text; bridge.connected
+                        var n = 0
+                        for (var i = 0; i < groupData.pages.length; i++)
+                            if (settingsWindow.pageAvailable(groupData.pages[i]) && settingsWindow.matchesSearch(groupData.pages[i])) n++
+                        return n
+                    }
+                    visible: shownCount > 0
+                    width: parent.width
+                    spacing: 2
+
+                    Text {
+                        text: group.groupData.title
+                        leftPadding: 8
+                        topPadding: 10
+                        bottomPadding: 3
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                        color: Qt.rgba(1, 1, 1, 0.45)
+                    }
+                    Repeater {
+                        model: group.groupData.pages
+                        SettingsSidebarItem {
+                            width: group.width
+                            visible: { search.text; bridge.connected; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
+                            height: visible ? 32 : 0
+                            title: modelData.title
+                            icon: modelData.icon
+                            tint: modelData.tint
+                            selected: settingsWindow.currentPage !== null && settingsWindow.currentPage.id === modelData.id
+                            onClicked: settingsWindow.navigate(modelData.id)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                visible: {
+                    search.text; bridge.connected
+                    for (var g = 0; g < settingsWindow.groups.length; g++)
+                        for (var p = 0; p < settingsWindow.groups[g].pages.length; p++)
+                            if (settingsWindow.pageAvailable(settingsWindow.groups[g].pages[p])
+                                && settingsWindow.matchesSearch(settingsWindow.groups[g].pages[p])) return false
+                    return true
+                }
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                topPadding: 20
+                text: "No matching settings"
+                font.pixelSize: 12
+                color: Qt.rgba(1, 1, 1, 0.4)
+            }
+        }
+    }
+
+    // ── Page area ──
+    // Painted opaque: with blur the window itself is transparent, and only
+    // the sidebar strip should show the blurred backdrop.
+    Rectangle {
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        height: parent.height
+        color: "#1e1e20"
+    }
+    Item {
+        id: content
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.topMargin: settingsWindow.titlebarHeight
+        anchors.bottom: saveBar.top
+
+        Loader {
+            id: pageLoader
+            anchors.fill: parent
+            source: settingsWindow.currentPage ? settingsWindow.currentPage.source : ""
+            onLoaded: item.ctx = ctx
+        }
+    }
+
+    SettingsSaveBar {
+        id: saveBar
+        anchors.left: sidebar.right
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 16
-        currentIndex: tabBar.currentIndex
-
-        // General tab
-        Flickable {
-            contentHeight: generalCol.height
-            clip: true
-            Column {
-                id: generalCol
-                width: parent.width
-                spacing: 16
-
-                Text {
-                    text: "DSPi Console"
-                    font.pixelSize: 32
-                    color: "white"
-                }
-
-                // Startup Preset section
-                Column {
-                    width: parent.width; spacing: 8
-                    Text { text: "Startup Preset"; font.pixelSize: 12; font.weight: Font.Bold; color: Qt.rgba(1,1,1,0.7) }
-
-                    Row {
-                        spacing: 12
-                        RadioButton {
-                            text: "Specified Default"
-                            checked: bridge.presetStartupMode === 0
-                            onClicked: bridge.setPresetStartup(0, bridge.presetDefaultSlot)
-                        }
-                        RadioButton {
-                            text: "Last Used"
-                            checked: bridge.presetStartupMode === 1
-                            onClicked: bridge.setPresetStartup(1, bridge.presetDefaultSlot)
-                        }
-                    }
-
-                    Row {
-                        spacing: 8
-                        visible: bridge.presetStartupMode === 0
-                        Text { text: "Default Slot:"; font.pixelSize: 11; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
-                        BorderlessComboBox {
-                            width: 120
-                            model: {
-                                var items = []
-                                for (var i = 0; i < 10; i++) {
-                                    var name = bridge.presetName(i)
-                                    items.push((i+1) + ": " + (name === "" ? "Empty" : name))
-                                }
-                                return items
-                            }
-                            currentIndex: bridge.presetDefaultSlot
-                            onActivated: bridge.setPresetStartup(0, index)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Appearance tab
-        Column {
-            width: parent.width; spacing: 16
-
-            Row {
-                width: parent.width; spacing: 8
-                Text { text: "Graph Line Glow"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                Item { width: 1; height: 1 }
-                Switch {
-                    checked: root.graphShowGlow
-                    onToggled: root.graphShowGlow = checked
-                }
-            }
-            Text {
-                text: "Adds a soft glow effect behind frequency response curves."
-                font.pixelSize: 9; color: Qt.rgba(1,1,1,0.4); wrapMode: Text.WordWrap; width: parent.width
-            }
-        }
-
-        // Graphing tab
-        Flickable {
-            contentHeight: graphCol.height
-            clip: true
-            Column {
-                id: graphCol
-                width: parent.width; spacing: 12
-
-                // Line Width
-                Column {
-                    width: parent.width; spacing: 4
-                    Row {
-                        width: parent.width
-                        Text { text: "Line Width"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                        Item { width: 1; height: 1 }
-                        Text { text: root.graphLineWidth.toFixed(1) + " pt"; font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
-                    }
-                    CustomSlider { width: parent.width; from: 1.0; to: 4.0; stepSize: 0.5; value: root.graphLineWidth; onMoved: root.graphLineWidth = value }
-                }
-
-                // Grid toggles
-                SettingsToggle { label: "Frequency Grid"; checked: root.graphShowFreqGrid; onToggled: root.graphShowFreqGrid = checked }
-                SettingsToggle { label: "Frequency Labels"; checked: root.graphShowFreqLabels; onToggled: root.graphShowFreqLabels = checked }
-                SettingsToggle { label: "dB Grid"; checked: root.graphShowDbGrid; onToggled: root.graphShowDbGrid = checked }
-                SettingsToggle { label: "dB Labels"; checked: root.graphShowDbLabels; onToggled: root.graphShowDbLabels = checked }
-
-                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.08) }
-
-                // Vertical Range
-                Column {
-                    width: parent.width; spacing: 4
-                    Row {
-                        width: parent.width
-                        Text { text: "Vertical Range"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                        Item { width: 1; height: 1 }
-                        Text { text: Math.round(root.graphDbRange) + " dB"; font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter }
-                    }
-                    CustomSlider { width: parent.width; from: 10; to: 100; value: root.graphDbRange; onMoved: root.graphDbRange = Math.round(value) }
-                }
-
-                // Center
-                Column {
-                    width: parent.width; spacing: 4
-                    Row {
-                        width: parent.width
-                        Text { text: "Center"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                        Item { width: 1; height: 1 }
-                        Text {
-                            text: {
-                                var c = Math.round(root.graphDbCenter)
-                                var h = root.graphDbRange / 2
-                                return c + " dB → +" + (c + h) + " to " + (c - h)
-                            }
-                            font.pixelSize: 11; font.family: root.monoFont; color: Qt.rgba(1,1,1,0.7); anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                    CustomSlider { width: parent.width; from: -40; to: 20; value: root.graphDbCenter; onMoved: root.graphDbCenter = Math.round(value) }
-                }
-
-                // Min/Max Frequency
-                Row {
-                    width: parent.width; spacing: 12
-                    Text { text: "Min Frequency"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 1; height: 1 }
-                    BorderlessComboBox {
-                        width: 80
-                        model: ["10 Hz", "15 Hz", "20 Hz", "50 Hz", "100 Hz"]
-                        property var freqValues: [10, 15, 20, 50, 100]
-                        currentIndex: freqValues.indexOf(root.graphMinFreq)
-                        onActivated: root.graphMinFreq = freqValues[index]
-                    }
-                }
-                Row {
-                    width: parent.width; spacing: 12
-                    Text { text: "Max Frequency"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 1; height: 1 }
-                    BorderlessComboBox {
-                        width: 100
-                        model: ["5000 Hz", "10000 Hz", "20000 Hz"]
-                        property var freqValues: [5000, 10000, 20000]
-                        currentIndex: freqValues.indexOf(root.graphMaxFreq)
-                        onActivated: root.graphMaxFreq = freqValues[index]
-                    }
-                }
-            }
-        }
-
-        // Hardware tab
-        Flickable {
-            contentHeight: hwCol.height
-            clip: true
-            Column {
-                id: hwCol
-                width: parent.width; spacing: 12
-
-                Text { text: "Pin Configuration"; font.pixelSize: 14; font.weight: Font.DemiBold; color: "white" }
-
-                Repeater {
-                    model: {
-                        var pins = []
-                        var numPhys = bridge.numPinOutputs()
-                        for (var i = 0; i < numPhys; i++) {
-                            var name = i < numPhys - 1 ? "SPDIF " + (i + 1) : "PDM"
-                            pins.push({ index: i, name: name })
-                        }
-                        return pins
-                    }
-
-                    Row {
-                        width: parent.width; spacing: 8; height: 30
-
-                        Text {
-                            text: modelData.name
-                            font.pixelSize: 12; font.weight: Font.Medium
-                            color: "white"; width: 130
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Pin " + bridge.outputPin(modelData.index)
-                            font.pixelSize: 12; font.family: root.monoFont
-                            color: Qt.rgba(1,1,1,0.7)
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-
-                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1,1,1,0.08) }
-
-                Row {
-                    width: parent.width; spacing: 8
-                    Text { text: "Save Output Config with Presets"; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { width: 1; height: 1 }
-                    Switch {
-                        checked: bridge.outputConfigMode === 1
-                        onToggled: bridge.setOutputConfigMode(checked ? 1 : 0)
-                    }
-                }
-
-                Text {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    font.pixelSize: 11; color: Qt.rgba(1,1,1,0.4)
-                    text: bridge.outputConfigMode === 1
-                        ? "Output pins, types and limiter settings are stored in each preset."
-                        : "Output pins, types and limiter settings are stored once for the device, independent of presets."
-                }
-
-                Button {
-                    visible: bridge.outputConfigMode === 0
-                    text: "Save Output Config"
-                    onClicked: bridge.saveOutputConfig()
-                }
-            }
-        }
-
-        // Advanced tab
-        Column {
-            width: parent.width; spacing: 16
-
-            Text { text: "Advanced"; font.pixelSize: 14; font.weight: Font.DemiBold; color: "white" }
-            Text {
-                text: "No advanced settings available at this time."
-                font.pixelSize: 11; color: Qt.rgba(1,1,1,0.4)
-            }
-        }
+        height: ctx.dirty ? 56 : 0
+        visible: height > 0
+        clip: true
+        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        onSave: ctx.save()
+        onRevert: ctx.revert()
     }
+    Shortcut {
+        sequences: ["Return", "Enter"]
+        enabled: ctx.dirty && !search.activeFocus
+        onActivated: ctx.save()
+    }
+
+    // ── Titlebar (Linux draws its own) ──
+    Rectangle {
+        // Opaque strip behind the title over the page area
+        visible: !isMacOS
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        height: settingsWindow.titlebarHeight
+        color: "#1e1e20"
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+    }
+    WindowTitleBar {
+        visible: !isMacOS
+        width: parent.width
+        height: settingsWindow.titlebarHeight
+        window: settingsWindow
+        sidebarWidth: settingsWindow.sidebarWidth
+        showMenuButton: false
+        showMinMax: false
+        titleText: settingsWindow.currentPage ? settingsWindow.currentPage.title : "Settings"
+        showNav: true
+        canGoBack: settingsWindow.historyIndex > 0
+        canGoForward: settingsWindow.historyIndex < settingsWindow.history.length - 1
+        onGoBack: settingsWindow.goBack()
+        onGoForward: settingsWindow.goForward()
+    }
+    WindowResizeEdges {
+        visible: !isMacOS
+        window: settingsWindow
+        z: 950
+    }
+    Rectangle {
+        visible: !isMacOS
+        anchors.fill: parent
+        z: 1000
+        color: "transparent"
+        border.color: Qt.rgba(1, 1, 1, 0.12)
+    }
+
+    Shortcut { sequence: "Alt+Left"; onActivated: settingsWindow.goBack() }
+    Shortcut { sequence: "Alt+Right"; onActivated: settingsWindow.goForward() }
+    Shortcut { sequences: [StandardKey.Find]; onActivated: search.forceActiveFocus() }
+    Shortcut { sequence: "Escape"; enabled: !search.activeFocus; onActivated: settingsWindow.close() }
 }

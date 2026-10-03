@@ -9,7 +9,16 @@ Item {
     id: bar
     property var window
     property int sidebarWidth: 260
+    property bool showMenuButton: true
+    property bool showMinMax: true
+    property string titleText: window ? window.title : ""
+    // Back / Forward arrows just right of the sidebar (Settings)
+    property bool showNav: false
+    property bool canGoBack: false
+    property bool canGoForward: false
     signal menuRequested(Item anchorItem)
+    signal goBack()
+    signal goForward()
 
     readonly property bool maximized: window && window.visibility === Window.Maximized
 
@@ -31,7 +40,9 @@ Item {
         property string icon: ""
         property bool danger: false
         property bool lit: false
+        property bool active: true
         signal clicked()
+        opacity: active ? 1.0 : 0.35
         width: 28
         height: 28
         anchors.verticalCenter: parent.verticalCenter
@@ -51,24 +62,35 @@ Item {
         MouseArea {
             id: bbMouse
             anchors.fill: parent
-            hoverEnabled: true
+            hoverEnabled: bb.active
+            enabled: bb.active
             onClicked: bb.clicked()
         }
     }
 
     BarButton {
         id: menuBtn
+        visible: bar.showMenuButton
         x: 10
         icon: "menu"
         onClicked: bar.menuRequested(menuBtn)
         ToolTip.visible: false
     }
 
+    Row {
+        visible: bar.showNav
+        x: bar.sidebarWidth + 10
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 2
+        BarButton { icon: "chev-left"; active: bar.canGoBack; onClicked: bar.goBack() }
+        BarButton { icon: "chev-right"; active: bar.canGoForward; onClicked: bar.goForward() }
+    }
+
     Text {
         // Centred over the content area, like the KDE title
         x: bar.sidebarWidth + (bar.width - bar.sidebarWidth - width) / 2
         anchors.verticalCenter: parent.verticalCenter
-        text: bar.window ? bar.window.title : ""
+        text: bar.titleText
         font.pixelSize: 13
         font.weight: Font.DemiBold
         color: bar.window && bar.window.active ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.45)
@@ -79,8 +101,8 @@ Item {
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         spacing: 4
-        BarButton { icon: "win-min"; onClicked: bar.window.showMinimized() }
-        BarButton { icon: bar.maximized ? "win-restore" : "win-max"; onClicked: bar.toggleMaximized() }
+        BarButton { visible: bar.showMinMax; icon: "win-min"; onClicked: bar.window.showMinimized() }
+        BarButton { visible: bar.showMinMax; icon: bar.maximized ? "win-restore" : "win-max"; onClicked: bar.toggleMaximized() }
         BarButton { icon: "win-close"; danger: true; onClicked: bar.window.close() }
     }
 }

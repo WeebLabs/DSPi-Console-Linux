@@ -1235,3 +1235,21 @@ void DSPiBridge::setPsybassOutputMask(int mask) {
     dspi_set_psybass_mask(m_core, mask);
     emit stateChanged();
 }
+
+// ── Channel names ──
+
+void DSPiBridge::resetChannelNames() {
+    auto *s = state();
+    int nIn = s->num_input_channels, nOut = s->num_output_channels;
+    for (int i = 0; i < nIn; i++) {
+        // Stereo USB input: USB L / USB R; multichannel: USB 1..8
+        QString name = nIn == 2 ? (i == 0 ? "USB L" : "USB R") : QString("USB %1").arg(i + 1);
+        dspi_set_channel_name(m_core, i, name.toUtf8().constData());
+    }
+    for (int o = 0; o < nOut; o++) {
+        QString name = (o == nOut - 1) ? QString("PDM")
+                     : QString("SPDIF %1 %2").arg(o / 2 + 1).arg(o % 2 ? "R" : "L");
+        dspi_set_channel_name(m_core, nIn + o, name.toUtf8().constData());
+    }
+    emit stateChanged();
+}

@@ -1,6 +1,4 @@
 #include <QApplication>
-#include <QTimer>
-#include <memory>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -12,13 +10,6 @@
 #include <objc/message.h>
 #endif
 
-#ifdef HAS_KDE_BLUR
-#include <KWindowEffects>
-#include <KWindowShadow>
-#include <QImage>
-#include <QPainter>
-#include <cmath>
-#endif
 
 #include <QWindow>
 #include <QQuickWindow>
@@ -26,6 +17,7 @@
 #include "DSPiBridge.h"
 #include "BodePlotItem.h"
 #include "MeterItem.h"
+#include "WindowEffects.h"
 
 static const int SIDEBAR_WIDTH = 260;
 
@@ -115,94 +107,13 @@ static void setupPlatformEffects(QQuickWindow *qw)
 #endif
 }
 
-#ifdef HAS_KDE_BLUR
-// The window draws its own titlebar, so KWin gives it no decoration shadow.
-// Ask KWin for one through the KDE shadow protocol, the same mechanism
-// Plasma's frameless popups use. Needs KWindowSystem's Wayland plugin
-// (kwayland-integration) on Wayland; without it create() just fails.
-static void setupWindowShadow(QWindow *qw)
-{
-    const int r = 32;             // shadow reach in px
-    const int offsetY = 5;        // light from above: deeper below the window
-    const double maxAlpha = 0.55;
-    const int size = 2 * r + 1;
-
-    QImage img(size, size, QImage::Format_ARGB32_Premultiplied);
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
-            double dx = x - r, dy = y - (r + offsetY);
-            double t = std::min(1.0, std::sqrt(dx * dx + dy * dy) / r);
-            int a = int(255 * maxAlpha * (1 - t) * (1 - t));
-            img.setPixel(x, y, qRgba(0, 0, 0, a));
-        }
-    }
-
-    auto tile = [&](int x, int y, int w, int h) {
-        auto t = KWindowShadowTile::Ptr::create();
-        t->setImage(img.copy(x, y, w, h));
-        return t;
-    };
-
-    auto *shadow = new KWindowShadow(qw);
-    shadow->setTopLeftTile(tile(0, 0, r, r));
-    shadow->setTopTile(tile(r, 0, 1, r));
-    shadow->setTopRightTile(tile(r + 1, 0, r, r));
-    shadow->setLeftTile(tile(0, r, r, 1));
-    shadow->setRightTile(tile(r + 1, r, r, 1));
-    shadow->setBottomLeftTile(tile(0, r + 1, r, r));
-    shadow->setBottomTile(tile(r, r + 1, 1, r));
-    shadow->setBottomRightTile(tile(r + 1, r + 1, r, r));
-    shadow->setPadding(QMargins(r, r, r, r));
-    shadow->setWindow(qw);
-
-    // Shadow only while the window has focus, and never when maximised
-    auto update = [qw, shadow]() {
-        bool want = qw->isActive()
-                 && !(qw->windowStates() & (Qt::WindowMaximized | Qt::WindowFullScreen));
-        if (want) shadow->create();
-        else shadow->destroy();
-    };
-    QObject::connect(qw, &QWindow::windowStateChanged, qw, update);
-    QObject::connect(qw, &QWindow::activeChanged, qw, update);
-    if (!shadow->create())
-        qInfo("DSPi: no window shadow (KWin shadow protocol unavailable)");
-    update();
-}
-#endif
-
-#ifdef HAS_KDE_BLUR
-// Blur behind the sidebar via KWin. On Wayland, KWindowEffects only learns
-// which effects KWin offers after a round trip to the compositor, so poll
-// briefly; once blur is available, make the window translucent, request the
-// blur region and tell QML (hasBlurBehind) to draw the translucent sidebar.
-static void enableKdeBlurWhenReady(QQuickWindow *qw, QQmlContext *ctx)
-{
-    auto *timer = new QTimer(qw);
-    timer->setInterval(100);
-    auto attempts = std::make_shared<int>(0);
-    QObject::connect(timer, &QTimer::timeout, qw, [qw, ctx, timer, attempts]() {
-        if (++*attempts > 50) { timer->deleteLater(); return; }   // give up after 5 s
-        if (!KWindowEffects::isEffectAvailable(KWindowEffects::BlurBehind)) return;
-        timer->deleteLater();
-
-        qw->setColor(Qt::transparent);
-        auto apply = [qw](int h) {
-            KWindowEffects::enableBlurBehind(qw->winId(), true, QRegion(0, 0, SIDEBAR_WIDTH, h));
-        };
-        apply(qw->height());
-        QObject::connect(qw, &QWindow::heightChanged, qw, apply);
-        ctx->setContextProperty("hasBlurBehind", true);
-    });
-    timer->start();
-}
-#endif
-
 int main(int argc, char *argv[])
 {
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
+    app.setApplicationVersion("1.1.6-beta4");   // firmware release this Console targets
 
     setPlatformDarkMode();
 
@@ -260,13 +171,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("bridge", &bridge);
     engine.rootContext()->setContextProperty("isMacOS", isMacOS);
 
-    bool hasBlurBehind = isMacOS;
-#ifdef HAS_KDE_BLUR
-    // KWin announces its effects asynchronously on Wayland, so this starts
-    // false and enableKdeBlurWhenReady() flips it once blur is confirmed.
-    hasBlurBehind = false;
-#endif
-    engine.rootContext()->setContextProperty("hasBlurBehind", hasBlurBehind);
+    // Blur and shadow for the frameless windows (main window, Settings)
+    WindowEffects windowEffects(isMacOS);
+    engine.rootContext()->setContextProperty("windowEffects", &windowEffects);
     QPalette sysPal = QGuiApplication::palette();
     engine.rootContext()->setContextProperty("nativeWindowColor", sysPal.color(QPalette::Window));
     engine.rootContext()->setContextProperty("nativeButtonColor", sysPal.color(QPalette::Button));
@@ -280,10 +187,10 @@ int main(int argc, char *argv[])
     if (engine.rootObjects().isEmpty())
         return -1;
 
-    setupPlatformEffects(qobject_cast<QQuickWindow *>(engine.rootObjects().first()));
-#ifdef HAS_KDE_BLUR
-    setupWindowShadow(qobject_cast<QQuickWindow *>(engine.rootObjects().first()));
-    enableKdeBlurWhenReady(qobject_cast<QQuickWindow *>(engine.rootObjects().first()), engine.rootContext());
+    auto *mainWindow = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    setupPlatformEffects(mainWindow);
+#ifndef Q_OS_MACOS
+    windowEffects.decorate(mainWindow, SIDEBAR_WIDTH, true);
 #endif
 
     return app.exec();
