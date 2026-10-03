@@ -18,6 +18,7 @@
 #include "BodePlotItem.h"
 #include "MeterItem.h"
 #include "WindowEffects.h"
+#include "TextFocusReleaser.h"
 
 static const int SIDEBAR_WIDTH = 270;   // default; macOS vibrancy frame (resizes with the view)
 
@@ -111,6 +112,7 @@ int main(int argc, char *argv[])
 {
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
+    app.installEventFilter(new TextFocusReleaser(&app));
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
     app.setApplicationVersion("1.1.6-beta4");   // firmware release this Console targets

@@ -104,7 +104,7 @@ Row {
         font.pixelSize: Math.max(10, valueFieldRoot.fontSize - 2)
         color: Qt.rgba(1, 1, 1, 0.45)
         anchors.verticalCenter: parent.verticalCenter
-        width: 20
+        width: Math.max(20, implicitWidth)   // room for longer units (dBFS)
         visible: suffix !== ""
     }
 }

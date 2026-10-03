@@ -1,13 +1,16 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
 
-// Header card of an input channel page: Link, Preamp, Clear PEQ.
+// Header card of an input channel page, laid out as on the macOS Console:
+// Link n/n+1 | Preamp slider and value | Clear PEQ, separated by dividers.
 Rectangle {
     id: card
     height: 60
     radius: 10
-    color: Qt.rgba(0.21, 0.21, 0.21, 0.6)
-    border.color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
+    // Same surface as the band list below it
+    color: isMacOS ? Qt.rgba(0.21, 0.21, 0.21, 0.6) : nativeAltBaseColor
+    border.color: Qt.rgba(1, 1, 1, 0.1)
     border.width: 1
 
     property int channelId: 0
@@ -39,129 +42,156 @@ Rectangle {
         function onStatusChanged() { card.refresh() }
     }
 
-    Row {
-        anchors.fill: parent
-        anchors.margins: 12
-        spacing: 14
-
-        // Link toggle
-        Button {
-            id: linkBtn
-            visible: pairLive
-            anchors.verticalCenter: parent.verticalCenter
-            height: 30
-            checkable: false
-            text: "Link " + pairLabel()
-            font.pixelSize: 11
-            palette.buttonText: linked ? "white" : Qt.rgba(1, 1, 1, 0.7)
-            background: Rectangle {
-                radius: 5
-                color: linked ? "#0078d4" : Qt.rgba(1, 1, 1, 0.08)
-                border.color: Qt.rgba(1, 1, 1, 0.12)
+    // Outlined button (Link / Clear PEQ); `active` fills it with the accent
+    component CardButton: Rectangle {
+        id: cb
+        property string text: ""
+        property string icon: ""
+        property bool active: false
+        signal clicked()
+        implicitWidth: cbRow.implicitWidth + 28
+        implicitHeight: 32
+        radius: 8
+        color: active ? Qt.rgba(0.04, 0.49, 1, cbMouse.containsMouse ? 0.32 : 0.22)
+             : cbMouse.pressed ? Qt.rgba(1, 1, 1, 0.12) : cbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+        border.width: 1
+        border.color: active ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.18)
+        Row {
+            id: cbRow
+            anchors.centerIn: parent
+            spacing: 7
+            Icon {
+                visible: cb.icon !== ""
+                name: cb.icon
+                size: 15
+                color: cb.active ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                anchors.verticalCenter: parent.verticalCenter
             }
+            Text {
+                text: cb.text
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+                color: cb.active ? "white" : Qt.rgba(1, 1, 1, 0.85)
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+        MouseArea {
+            id: cbMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: cb.clicked()
+        }
+    }
+
+    component Divider: Rectangle {
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        color: Qt.rgba(1, 1, 1, 0.08)
+    }
+
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // ── Link (only while both inputs of the pair are live) ──
+        CardButton {
+            visible: pairLive
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: 14
+            Layout.rightMargin: 14
+            icon: "link"
+            text: "Link " + pairLabel()
+            active: linked
             onClicked: {
                 if (linked) bridge.setInputLinked(channelId, false, -1)
                 else if (bridge.inputPairMatches(channelId)) bridge.setInputLinked(channelId, true, -1)
                 else linkDialog.open()
             }
         }
+        Divider { visible: pairLive }
 
-        // Preamp
-        Text {
-            text: "PREAMP"
-            font.pixelSize: 10
-            font.weight: Font.Bold
-            color: Qt.rgba(1, 1, 1, 0.5)
-            anchors.verticalCenter: parent.verticalCenter
-        }
+        // ── Preamp ──
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 22
+            Layout.rightMargin: 18
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 16
 
-        ValueField {
-            fieldWidth: 60
-            value: preampDB
-            suffix: "dB"
-            decimals: 1
-            minValue: -60
-            maxValue: 10
-            anchors.verticalCenter: parent.verticalCenter
-            onValueEdited: bridge.setInputPreamp(inputIndex, newValue)
-        }
-
-        Slider {
-            id: preampSlider
-            width: Math.max(120, card.width - linkBtn.width * (linkBtn.visible ? 1 : 0) - clearBtn.width - 230)
-            height: 20
-            topPadding: 0
-            bottomPadding: 0
-            from: -60; to: 10
-            stepSize: 0.1
-            value: preampDB
-            anchors.verticalCenter: parent.verticalCenter
-            onMoved: preampDB = value
-            onPressedChanged: if (!pressed) bridge.setInputPreamp(inputIndex, value)
-
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.RightButton
-                onClicked: bridge.setInputPreamp(inputIndex, 0)
+            Text {
+                text: "Preamp"
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+                color: Qt.rgba(1, 1, 1, 0.6)
             }
-
-            background: Rectangle {
-                x: preampSlider.leftPadding
-                y: (preampSlider.height - height) / 2
-                width: preampSlider.availableWidth
-                height: 3; radius: 2
-                color: Qt.rgba(1, 1, 1, 0.15)
-                Rectangle {
-                    width: preampSlider.visualPosition * parent.width
-                    height: parent.height; radius: 2
-                    color: "#0078d4"
+            StyledSlider {
+                id: preampSlider
+                Layout.fillWidth: true
+                from: -60; to: 10
+                stepSize: 0.1
+                value: preampDB
+                onMoved: preampDB = value
+                onPressedChanged: if (!pressed) bridge.setInputPreamp(inputIndex, value)
+                // Right-click resets to 0 dB
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: bridge.setInputPreamp(inputIndex, 0)
                 }
             }
-            handle: Rectangle {
-                x: preampSlider.leftPadding + preampSlider.visualPosition * (preampSlider.availableWidth - width)
-                y: (preampSlider.height - height) / 2
-                width: 12; height: 12; radius: 6; color: "white"
+            ValueField {
+                fieldWidth: 58
+                height: 24
+                value: preampDB
+                suffix: "dB"
+                decimals: 1
+                minValue: -60
+                maxValue: 10
+                onValueEdited: bridge.setInputPreamp(inputIndex, newValue)
             }
         }
 
-        Button {
-            id: clearBtn
-            anchors.verticalCenter: parent.verticalCenter
-            height: 30
+        Divider {}
+
+        // ── Clear PEQ (both inputs while linked) ──
+        CardButton {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: 14
+            Layout.rightMargin: 14
             text: linked ? "Clear " + pairLabel() + " PEQ" : "Clear PEQ"
-            font.pixelSize: 11
             onClicked: bridge.clearPeq(channelId)
         }
     }
 
-    Dialog {
-        id: linkDialog
-        title: "Link " + pairLabel() + "?"
-        modal: true
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: 380
-
-        Label {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "These inputs have different filters or preamp. Choose which input's settings to keep; they will be copied onto the other."
+    // One line describing an input's settings, for the link prompt
+    function settingsSummary(appId) {
+        var n = 0
+        for (var b = 0; b < 10; b++) if (bridge.filterType(appId, b) !== 0) n++
+        var p = bridge.inputPreampDB(inputOfApp(appId))
+        return {
+            text: bridge.channelName(appId) + ":  " + n + (n === 1 ? " filter" : " filters")
+                  + "  \u00b7  preamp " + (p > 0 ? "+" : "") + p.toFixed(1) + " dB",
+            color: bridge.channelColor(appId)
         }
+    }
 
-        footer: DialogButtonBox {
-            Button {
-                text: "Keep " + bridge.channelDescriptor(card.firstId)
-                onClicked: { bridge.setInputLinked(card.channelId, true, card.firstId); linkDialog.close() }
-            }
-            Button {
-                text: "Keep " + bridge.channelDescriptor(card.secondId)
-                onClicked: { bridge.setInputLinked(card.channelId, true, card.secondId); linkDialog.close() }
-            }
-            Button {
-                text: "Cancel"
-                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                onClicked: linkDialog.close()
-            }
+    // Linking inputs whose filters or preamp differ: choose which to keep.
+    // The input whose page this is is the default.
+    AppDialog {
+        id: linkDialog
+        icon: "link"
+        title: "Link " + bridge.channelName(card.firstId) + " and " + bridge.channelName(card.secondId) + "?"
+        message: "Their filters or preamp differ. Which settings should both use?"
+        onAboutToShow: details = [card.settingsSummary(card.firstId), card.settingsSummary(card.secondId)]
+        buttons: [
+            { key: "cancel", text: "Cancel" },
+            { key: "other", text: "Keep " + bridge.channelName(card.partnerId) },
+            { key: "this", text: "Keep " + bridge.channelName(card.channelId), role: "primary" }
+        ]
+        onChosen: {
+            if (key === "this") bridge.setInputLinked(card.channelId, true, card.channelId)
+            else if (key === "other") bridge.setInputLinked(card.channelId, true, card.partnerId)
         }
     }
 }

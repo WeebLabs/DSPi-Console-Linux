@@ -414,33 +414,23 @@ AppWindow {
     }
 
     // PDM and the Core 1 EQ-worker outputs cannot run together
-    Dialog {
+    AppDialog {
         id: pdmDialog
         property int output: 0
         property var conflicting: []
         readonly property bool enablingPdm: output === pdm
+        icon: "power"
         title: enablingPdm ? "Enable PDM?" : "Disable PDM?"
-        modal: true
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: 380
-
-        Label {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: {
-                var names = pdmDialog.conflicting.map(function (o) { return "OUT" + (o + 1) }).join(", ")
-                return pdmDialog.enablingPdm
-                    ? "The PDM output shares a processor core with " + names + ". Enabling PDM disables them."
-                    : "OUT" + (pdmDialog.output + 1) + " shares a processor core with the PDM output. Enabling it disables PDM."
-            }
+        message: {
+            var names = pdmDialog.conflicting.map(function (o) { return "OUT" + (o + 1) }).join(", ")
+            return pdmDialog.enablingPdm
+                ? "The PDM output shares a processor core with " + names + ". Enabling PDM disables them."
+                : "OUT" + (pdmDialog.output + 1) + " shares a processor core with the PDM output. Enabling it disables PDM."
         }
-        footer: DialogButtonBox {
-            Button {
-                text: pdmDialog.enablingPdm ? "Enable PDM" : "Disable PDM"
-                onClicked: { bridge.enableOutputResolvingConflict(pdmDialog.output); pdmDialog.close() }
-            }
-            Button { text: "Cancel"; onClicked: pdmDialog.close() }
-        }
+        buttons: [
+            { key: "cancel", text: "Cancel" },
+            { key: "confirm", text: enablingPdm ? "Enable PDM" : "Disable PDM", role: "primary" }
+        ]
+        onChosen: if (key === "confirm") bridge.enableOutputResolvingConflict(pdmDialog.output)
     }
 }

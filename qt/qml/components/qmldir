@@ -30,3 +30,4 @@ SidebarPicker 1.0 SidebarPicker.qml
 singleton MenuStyle 1.0 MenuStyle.qml
 ActionMenu 1.0 ActionMenu.qml
 FilterTypeMenu 1.0 FilterTypeMenu.qml
+AppDialog 1.0 AppDialog.qml

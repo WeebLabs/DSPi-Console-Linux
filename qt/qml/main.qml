@@ -403,20 +403,17 @@ ApplicationWindow {
         onOpenWindow: root.openToolWindow(name)
     }
 
-    Dialog {
+    AppDialog {
         id: factoryResetDialog
+        icon: "warning"
+        iconTint: "#ff6961"
         title: "Factory Reset?"
-        modal: true
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: 360
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        Label {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Every parameter on the device returns to its factory default. This cannot be undone."
-        }
-        onAccepted: bridge.factoryReset()
+        message: "Every parameter on the device returns to its factory default. This cannot be undone."
+        buttons: [
+            { key: "cancel", text: "Cancel" },
+            { key: "reset", text: "Factory Reset", role: "destructive" }
+        ]
+        onChosen: if (key === "reset") bridge.factoryReset()
     }
 
     // Shortcuts (Linux has no native menu bar to carry them)

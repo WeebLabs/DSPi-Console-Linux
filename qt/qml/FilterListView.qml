@@ -178,36 +178,31 @@ Item {
         }
     }
 
-    Dialog {
+    AppDialog {
         id: clearDialog
+        icon: "warning"
+        iconTint: "#ff6961"
         title: "Clear All Bands?"
-        modal: true
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: 360
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        Label {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Every " + (xo ? "crossover" : "PEQ") + " band on " + bridge.channelName(filterListRoot.channelId)
-                  + " will be set to Off."
-        }
-        onAccepted: bridge.clearAllBands(filterListRoot.channelId, xo)
+        message: "Every " + (xo ? "crossover" : "PEQ") + " band on " + bridge.channelName(filterListRoot.channelId)
+                 + " will be set to Off."
+        buttons: [
+            { key: "cancel", text: "Cancel" },
+            { key: "clear", text: "Clear All", role: "destructive" }
+        ]
+        onChosen: if (key === "clear") bridge.clearAllBands(filterListRoot.channelId, xo)
     }
 
-    Dialog {
+    AppDialog {
         id: xoBypassDialog
+        icon: "warning"
+        iconTint: "#ff9f0a"
         title: "Bypass All Crossovers?"
-        modal: true
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: 380
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        Label {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Bypassing the crossovers sends full-range audio to this output, which can damage a tweeter or other driver that relies on them for protection."
-        }
-        onAccepted: bridge.setAllBandsBypass(filterListRoot.channelId, true, true)
+        message: "Bypassing the crossovers sends full-range audio to this output, which can damage "
+                 + "a tweeter or other driver that relies on them for protection."
+        buttons: [
+            { key: "cancel", text: "Cancel" },
+            { key: "bypass", text: "Bypass All", role: "destructive" }
+        ]
+        onChosen: if (key === "bypass") bridge.setAllBandsBypass(filterListRoot.channelId, true, true)
     }
 }

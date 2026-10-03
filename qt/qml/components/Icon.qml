@@ -38,6 +38,7 @@ Item {
         "pencil": '<path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5z"/><line x1="13.5" y1="7" x2="16.5" y2="10"/>',
         "copy": '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/>',
         "paste": '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>',
+        "link": '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
         "menu": '<line x1="4" y1="6.5" x2="20" y2="6.5"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17.5" x2="20" y2="17.5"/>',
         "more": '<circle cx="5" cy="12" r="1.3" fill="COLOR"/><circle cx="12" cy="12" r="1.3" fill="COLOR"/><circle cx="19" cy="12" r="1.3" fill="COLOR"/>',
         "power": '<path d="M7.8 6.3a8 8 0 1 0 8.4 0"/><line x1="12" y1="2.5" x2="12" y2="11.5"/>',
