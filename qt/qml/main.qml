@@ -20,7 +20,7 @@ ApplicationWindow {
     flags: isMacOS ? Qt.Window : (Qt.Window | Qt.FramelessWindowHint)
 
     // Titlebar inset: macOS integrated titlebar needs offset, Linux uses standard decorations
-    property int titlebarHeight: isMacOS ? 28 : 38
+    property int titlebarHeight: isMacOS ? 28 : 30
 
     // Platform-aware monospace font
     readonly property string monoFont: isMacOS ? "Menlo" : "monospace"

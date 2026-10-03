@@ -20,7 +20,7 @@ Popup {
         return false
     }
     width: Math.max(140, widest.advanceWidth + 78 + (hasPrefix ? 18 : 0))
-    padding: 4
+    padding: MenuStyle.padding
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
@@ -28,7 +28,7 @@ Popup {
 
     TextMetrics {
         id: widest
-        font.pixelSize: 13
+        font.pixelSize: MenuStyle.fontSize
         font.weight: Font.DemiBold
         text: {
             var t = ""
@@ -90,7 +90,7 @@ Popup {
                 anchors.fill: parent
                 anchors.margins: -(index + 1) * 2
                 anchors.topMargin: -(index + 1) * 2 + 4
-                radius: 9 + (index + 1) * 2
+                radius: MenuStyle.radius + (index + 1) * 2
                 color: "transparent"
                 border.width: 2
                 border.color: Qt.rgba(0, 0, 0, 0.10 - index * 0.015)
@@ -98,9 +98,9 @@ Popup {
         }
         Rectangle {
             anchors.fill: parent
-            radius: 9
-            color: "#1d1d1f"
-            border.color: Qt.rgba(1, 1, 1, 0.08)
+            radius: MenuStyle.radius
+            color: MenuStyle.background
+            border.color: MenuStyle.border
         }
     }
 
@@ -138,7 +138,7 @@ Popup {
                 Item {
                     id: row
                     width: parent.width
-                    height: modelData.detail ? 42 : 28
+                    height: modelData.detail ? 42 : MenuStyle.rowHeight
                     readonly property bool usable: modelData.enabled !== false
                     readonly property bool hot: menu.current === index && usable
                     readonly property bool selected: modelData.value === menu.currentValue
@@ -147,8 +147,8 @@ Popup {
                         anchors.fill: parent
                         anchors.leftMargin: 2
                         anchors.rightMargin: 2
-                        radius: 6
-                        color: row.hot ? "#0a7cff" : "transparent"
+                        radius: MenuStyle.rowRadius
+                        color: row.hot ? MenuStyle.highlight : "transparent"
                         Behavior on color { ColorAnimation { duration: 80 } }
                     }
                     Icon {
@@ -157,7 +157,7 @@ Popup {
                         x: 10
                         anchors.verticalCenter: parent.verticalCenter
                         name: modelData.icon || ""
-                        size: 15
+                        size: MenuStyle.iconSize
                         color: row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
                     }
                     Text {

@@ -43,19 +43,19 @@ Item {
         property bool active: true
         signal clicked()
         opacity: active ? 1.0 : 0.35
-        width: 28
-        height: 28
+        width: 24
+        height: 24
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
             anchors.centerIn: parent
-            width: 24; height: 24; radius: 12
+            width: 22; height: 22; radius: 11
             color: bbMouse.containsMouse ? (bb.danger ? "#e0454a" : Qt.rgba(1, 1, 1, 0.12))
                  : bb.lit ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
         }
         Icon {
             anchors.centerIn: parent
             name: bb.icon
-            size: 16
+            size: 14
             color: bbMouse.containsMouse && bb.danger ? "white"
                  : bbMouse.containsMouse || bb.lit ? Qt.rgba(1, 1, 1, 0.95) : Qt.rgba(1, 1, 1, 0.65)
         }

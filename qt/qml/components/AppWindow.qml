@@ -10,7 +10,7 @@ Window {
     default property alias content: contentArea.data
 
     // Titlebar height on Linux (macOS keeps its native titlebar)
-    readonly property int titlebarHeight: isMacOS ? 0 : 40
+    readonly property int titlebarHeight: isMacOS ? 0 : 30
     // Content starts under the titlebar (Settings: sidebar runs to the top)
     property bool contentUnderTitlebar: false
     // Width of a translucent, blurred sidebar strip on the left (0 = none)

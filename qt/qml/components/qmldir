@@ -27,3 +27,4 @@ StyledComboBox 1.0 StyledComboBox.qml
 AppWindow 1.0 AppWindow.qml
 ChoiceMenu 1.0 ChoiceMenu.qml
 SidebarPicker 1.0 SidebarPicker.qml
+singleton MenuStyle 1.0 MenuStyle.qml

@@ -5,8 +5,26 @@ import QtQuick.Controls 2.15
 // device actions, tool windows and settings. Keyboard: Up/Down, Enter, Esc.
 Popup {
     id: menu
-    width: 300
-    padding: 6
+    // Fits icon + longest label + gap + longest shortcut
+    width: Math.ceil(MenuStyle.sideInset + MenuStyle.iconSize + 10 + labelWidest.advanceWidth
+                     + 28 + shortcutWidest.advanceWidth + MenuStyle.sideInset + 2 * MenuStyle.padding)
+    padding: MenuStyle.padding
+
+    TextMetrics {
+        id: labelWidest
+        font.pixelSize: MenuStyle.fontSize
+        text: {
+            var t = ""
+            for (var i = 0; i < menu.rows.length; i++)
+                if (menu.rows[i].kind === "item" && menu.rows[i].text.length > t.length) t = menu.rows[i].text
+            return t
+        }
+    }
+    TextMetrics {
+        id: shortcutWidest
+        font.pixelSize: MenuStyle.smallFontSize
+        text: "Ctrl+Shift+M"
+    }
     modal: false
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -119,7 +137,7 @@ Popup {
                 anchors.fill: parent
                 anchors.margins: -(index + 1) * 2
                 anchors.topMargin: -(index + 1) * 2 + 4
-                radius: 12 + (index + 1) * 2
+                radius: MenuStyle.radius + (index + 1) * 2
                 color: "transparent"
                 border.width: 2
                 border.color: Qt.rgba(0, 0, 0, 0.10 - index * 0.015)
@@ -127,9 +145,9 @@ Popup {
         }
         Rectangle {
             anchors.fill: parent
-            radius: 12
-            color: "#1d1d1f"
-            border.color: Qt.rgba(1, 1, 1, 0.08)
+            radius: MenuStyle.radius
+            color: MenuStyle.background
+            border.color: MenuStyle.border
         }
     }
 
@@ -142,44 +160,44 @@ Popup {
         Keys.onReturnPressed: menu.activate(menu.current)
         Keys.onEnterPressed: menu.activate(menu.current)
 
-        // Device summary
+        // Device summary: one line; the serial number is in the tooltip
         Item {
             width: parent.width
-            height: 54
+            height: MenuStyle.rowHeight + 2
             Rectangle {
                 id: dot
-                x: 12
+                x: MenuStyle.sideInset + 3
                 anchors.verticalCenter: parent.verticalCenter
                 width: 8; height: 8; radius: 4
                 color: bridge.connected ? (bridge.compat >= 2 ? "#ff9f0a" : "#32d74b") : "#ff453a"
             }
-            Column {
+            Text {
                 anchors.left: dot.right
                 anchors.leftMargin: 10
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: MenuStyle.sideInset
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: bridge.connected ? "DSPi " + bridge.platformName : "No device connected"
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
-                    color: "white"
-                }
-                Text {
-                    width: parent.width
-                    elide: Text.ElideMiddle
-                    visible: bridge.connected
-                    text: (bridge.firmwareVersion ? "Firmware " + bridge.firmwareVersion + "  ·  " : "") + bridge.selectedSerial
-                    font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
-                }
+                elide: Text.ElideRight
+                textFormat: Text.StyledText
+                text: bridge.connected
+                      ? "<b>DSPi " + bridge.platformName + "</b>"
+                        + (bridge.firmwareVersion ? "<font color='#8c8c90'>  ·  " + bridge.firmwareVersion + "</font>" : "")
+                      : "No device connected"
+                font.pixelSize: MenuStyle.fontSize - 1
+                color: "white"
             }
+            MouseArea {
+                id: deviceMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+            }
+            ToolTip.visible: deviceMouse.containsMouse && bridge.connected
+            ToolTip.delay: 500
+            ToolTip.text: "Serial " + bridge.selectedSerial
         }
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
-        Item { width: 1; height: 4 }
+        Rectangle { width: parent.width; height: 1; color: MenuStyle.separator }
+        Item { width: 1; height: MenuStyle.padding }
 
         Repeater {
             model: menu.rows
@@ -199,26 +217,26 @@ Popup {
         id: headerRow
         Text {
             text: row.text.toUpperCase()
-            font.pixelSize: 10
+            font.pixelSize: MenuStyle.headerFontSize
             font.weight: Font.Bold
             font.letterSpacing: 0.8
             color: Qt.rgba(1, 1, 1, 0.38)
-            leftPadding: 12
-            topPadding: 8
-            bottomPadding: 4
+            leftPadding: MenuStyle.sideInset
+            topPadding: 6
+            bottomPadding: 3
         }
     }
 
     Component {
         id: sepRow
         Item {
-            height: 9
+            height: 7
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 x: 8
                 width: parent.width - 16
                 height: 1
-                color: Qt.rgba(1, 1, 1, 0.07)
+                color: MenuStyle.separator
             }
         }
     }
@@ -227,45 +245,45 @@ Popup {
         id: itemRow
         Item {
             id: item
-            height: 32
+            height: MenuStyle.rowHeight
             readonly property bool enabled_: menu.rowEnabled(row)
             readonly property bool hot: menu.current === rowIndex && enabled_
             readonly property color fg: !enabled_ ? Qt.rgba(1, 1, 1, 0.3)
                                        : hot ? "white"
-                                       : row.danger ? "#ff6961" : Qt.rgba(1, 1, 1, 0.9)
+                                       : row.danger ? MenuStyle.dangerText : MenuStyle.text
 
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 2
                 anchors.rightMargin: 2
-                radius: 7
-                color: item.hot ? (row.danger ? "#d9363e" : "#0a7cff") : "transparent"
+                radius: MenuStyle.rowRadius
+                color: item.hot ? (row.danger ? MenuStyle.danger : MenuStyle.highlight) : "transparent"
                 Behavior on color { ColorAnimation { duration: 80 } }
             }
             Icon {
                 id: rowIcon
-                x: 12
+                x: MenuStyle.sideInset
                 anchors.verticalCenter: parent.verticalCenter
                 name: row.icon
-                size: 16
-                color: item.hot ? "white" : row.danger && item.enabled_ ? "#ff6961"
-                     : Qt.rgba(1, 1, 1, item.enabled_ ? 0.65 : 0.25)
+                size: MenuStyle.iconSize
+                color: item.hot ? "white" : row.danger && item.enabled_ ? MenuStyle.dangerText
+                     : item.enabled_ ? MenuStyle.iconColor : Qt.rgba(1, 1, 1, 0.25)
             }
             Text {
                 anchors.left: rowIcon.right
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.text
-                font.pixelSize: 13
+                font.pixelSize: MenuStyle.fontSize
                 color: item.fg
             }
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: MenuStyle.sideInset
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.shortcut || ""
-                font.pixelSize: 11
-                color: item.hot ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.35)
+                font.pixelSize: MenuStyle.smallFontSize
+                color: item.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
             }
             MouseArea {
                 anchors.fill: parent
