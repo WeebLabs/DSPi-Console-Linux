@@ -3,7 +3,10 @@
 //! Channel-indexed arrays use wire channel indices (see `types.rs`);
 //! output-indexed arrays use output indices 0..num_output_channels-1.
 
-use crate::protocol::BULK_PARAMS_SIZE;
+use crate::protocol::{
+    BULK_PARAMS_SIZE, SUBHARM_DEFAULTS, SUBHARM_PARAM_COUNT, TUBE_DEFAULTS, TUBE_PARAM_COUNT,
+    UPMIX_DEFAULTS, UPMIX_PARAM_COUNT,
+};
 use crate::types::*;
 
 /// Firmware compatibility of the connected device, as judged at connect time.
@@ -130,6 +133,21 @@ pub struct DspState {
     pub psybass_character_pct: f32,
     pub psybass_original_db: f32,
 
+    // ── Stereo upmixer (RP2350 only) ────────────────────────────────
+    /// By `UPMIX_PARAM_*` id; enable and modes as whole numbers.
+    pub upmix: [f32; UPMIX_PARAM_COUNT],
+
+    // ── Subharmonic synthesizer ─────────────────────────────────────
+    /// By `SUBHARM_PARAM_*` id; flags, mask and mode as whole numbers.
+    pub subharm: [f32; SUBHARM_PARAM_COUNT],
+    /// Program muted on the masked outputs. Runtime only: not in the bulk
+    /// image, never saved.
+    pub subharm_solo: bool,
+
+    // ── Tube modeller ───────────────────────────────────────────────
+    /// By `TUBE_PARAM_*` index; flags, mask and enums as whole numbers.
+    pub tube: [f32; TUBE_PARAM_COUNT],
+
     // ── Core 1 mode ─────────────────────────────────────────────────
     pub core1_mode: u8,
 
@@ -214,6 +232,10 @@ impl Default for DspState {
             psybass_drive_db: 6.0,
             psybass_character_pct: 50.0,
             psybass_original_db: 0.0,
+            upmix: UPMIX_DEFAULTS,
+            subharm: SUBHARM_DEFAULTS,
+            subharm_solo: false,
+            tube: TUBE_DEFAULTS,
             core1_mode: 0,
             preset_occupied: 0,
             preset_names: [[0u8; CHANNEL_NAME_LEN]; MAX_PRESETS],

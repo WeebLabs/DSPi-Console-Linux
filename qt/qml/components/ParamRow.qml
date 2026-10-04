@@ -10,6 +10,9 @@ Column {
     property string label: ""
     property string unit: ""
     property string caption: ""
+    property string subtitle: ""      // grey line under the label
+    property string tip: ""           // tooltip on the label
+    property real offAt: NaN          // value shown as "Off"
     property string leftHint: ""      // optional slider end labels
     property string rightHint: ""
     property real value: 0
@@ -27,12 +30,30 @@ Column {
 
     Item {
         width: parent.width
-        height: 22
-        Text {
-            text: row.label
-            font.pixelSize: 13
-            color: Qt.rgba(1, 1, 1, 0.9)
+        height: row.subtitle !== "" ? 34 : 22
+        Column {
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 1
+            Text {
+                text: row.label
+                font.pixelSize: 13
+                color: Qt.rgba(1, 1, 1, 0.9)
+                MouseArea {
+                    id: labelHover
+                    anchors.fill: parent
+                    hoverEnabled: row.tip !== ""
+                    acceptedButtons: Qt.NoButton
+                }
+                ToolTip.visible: labelHover.containsMouse
+                ToolTip.delay: 500
+                ToolTip.text: row.tip
+            }
+            Text {
+                visible: row.subtitle !== ""
+                text: row.subtitle
+                font.pixelSize: 11
+                color: Qt.rgba(1, 1, 1, 0.5)
+            }
         }
         ValueField {
             anchors.right: parent.right
@@ -44,6 +65,7 @@ Column {
             suffix: row.unit
             minValue: row.from
             maxValue: row.to
+            offAt: row.offAt
             wheelStep: row.stepSize
             onValueEdited: row.committed(newValue)
         }

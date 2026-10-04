@@ -34,12 +34,45 @@ Window {
 
     // Fit once, on first show; later opens keep the user's size
     property bool fitted: false
+    function fittedHeight() {
+        var avail = Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight : 900
+        return Math.round(Math.max(minimumHeight, Math.min(fitHeight + titlebarHeight, avail - 80, 960)))
+    }
     function fitToContent() {
         if (fitHeight <= 0) return
-        var avail = Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight : 900
-        height = Math.round(Math.max(minimumHeight, Math.min(fitHeight + titlebarHeight, avail - 80, 960)))
+        height = fittedHeight()
     }
     onVisibleChanged: if (visible && !fitted) { fitted = true; fitToContent() }
+
+    // Refit smoothly once the content's height settles (e.g. after switching
+    // a window between views): call refitAnimated() before the change
+    property bool refitPending: false
+    function refitAnimated() {
+        refitPending = true
+        refitSettle.restart()
+    }
+    onFitHeightChanged: if (refitPending) refitSettle.restart()
+    Timer {
+        id: refitSettle
+        interval: 30   // the new layout lands over a frame or two
+        onTriggered: {
+            appWindow.refitPending = false
+            if (appWindow.fitHeight <= 0 || !appWindow.visible) return
+            var target = appWindow.fittedHeight()
+            if (Math.abs(target - appWindow.height) < 1) return
+            refitAnim.stop()
+            refitAnim.from = appWindow.height
+            refitAnim.to = target
+            refitAnim.start()
+        }
+    }
+    NumberAnimation {
+        id: refitAnim
+        target: appWindow
+        property: "height"
+        duration: 240
+        easing.type: Easing.InOutCubic
+    }
 
     Item {
         id: contentArea

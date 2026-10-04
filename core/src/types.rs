@@ -136,6 +136,23 @@ impl FilterParams {
     }
 }
 
+/// Live upmixer state (REQ_UPMIX_GET_STATUS).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct UpmixStatus {
+    /// True while the upmixer is processing audio.
+    pub active: bool,
+    /// Why it is idle: 0 active, 1 disabled, 2 input not stereo, 3 rate above 48 kHz.
+    pub parked_reason: u8,
+    /// Running L/R correlation, -1..1 (0 with a passive centre).
+    pub correlation: f32,
+    pub balance: f32,
+    /// Current gains of the derived channels, 0..1.
+    pub center_gain: f32,
+    pub ls_gain: f32,
+    pub rs_gain: f32,
+}
+
 /// System status from the device (REQ_GET_STATUS wValue = 9).
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]

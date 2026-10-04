@@ -21,6 +21,9 @@ Row {
     property int unitSize: Math.max(10, fontSize - 2)
     // Values at or below this read as -∞ (e.g. the master volume mute sentinel)
     property real infinityAt: -1e9
+    // A value that means "off" reads as offText (e.g. a level at its -30 dB floor)
+    property real offAt: NaN
+    property string offText: "Off"
     // Compact fields (Matrix Mixer) adjust on plain scrolling; otherwise
     // Ctrl+scroll steps the value and plain scrolling scrolls the page
     property bool plainWheel: false
@@ -57,6 +60,7 @@ Row {
         text: formatValue(value)
 
         function formatValue(v) {
+            if (!isNaN(offAt) && Math.abs(v - offAt) < 1e-4) return offText
             return v <= infinityAt ? "-∞" : v.toFixed(decimals)
         }
 

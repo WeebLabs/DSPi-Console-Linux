@@ -742,6 +742,77 @@ pub extern "C" fn dspi_poll_hotplug(core: *mut FfiCore) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// FFI — Upmixer, subharmonic synth, tube modeller
+// ═══════════════════════════════════════════════════════════════════
+
+/// Set upmixer parameter `id` (UPMIX_PARAM_*). RP2350 only.
+#[no_mangle]
+pub extern "C" fn dspi_set_upmix_param(core: *mut FfiCore, id: u8, value: f32) -> bool {
+    with_core(core, |c| c.set_upmix_param(id, value).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_upmix_status(core: *mut FfiCore, out: *mut UpmixStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_upmix_status() {
+        Ok(st) => {
+            unsafe { *out = st };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Set subharmonic synth parameter `id` (SUBHARM_PARAM_*).
+#[no_mangle]
+pub extern "C" fn dspi_set_subharm_param(core: *mut FfiCore, id: u8, value: f32) -> bool {
+    with_core(core, |c| c.set_subharm_param(id, value).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_subharm_solo(core: *mut FfiCore, solo: bool) -> bool {
+    with_core(core, |c| c.set_subharm_solo(solo).is_ok())
+}
+
+/// Headroom the subharm settings cost, dB (0 = none).
+#[no_mangle]
+pub extern "C" fn dspi_fetch_subharm_headroom(core: *mut FfiCore, out_db: *mut f32) -> bool {
+    if out_db.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_subharm_headroom() {
+        Ok(db) => {
+            unsafe { *out_db = db };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Synthesized sub peak per output, 0..1. `out` must hold MAX_OUTPUTS floats.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_subharm_meter(core: *mut FfiCore, out: *mut f32) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_subharm_meter() {
+        Ok(m) => {
+            unsafe { std::slice::from_raw_parts_mut(out, MAX_OUTPUTS) }.copy_from_slice(&m);
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Set tube parameter `idx` (TUBE_PARAM_*).
+#[no_mangle]
+pub extern "C" fn dspi_set_tube_param(core: *mut FfiCore, idx: u8, value: f32) -> bool {
+    with_core(core, |c| c.set_tube_param(idx, value).is_ok())
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // FFI — Device notifications
 // ═══════════════════════════════════════════════════════════════════
 

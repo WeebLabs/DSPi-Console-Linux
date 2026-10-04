@@ -386,10 +386,14 @@ ApplicationWindow {
     CrossfeedWindow { id: crossfeedWindow }
     VolumeLevellerWindow { id: levellerWindow }
     PsychoacousticBassWindow { id: psybassWindow }
+    SubharmonicSynthWindow { id: subharmWindow }
+    TubeModellerWindow { id: tubeWindow }
+    UpmixerWindow { id: upmixWindow }
 
     function openToolWindow(name) {
         var w = { matrix: matrixWindow, loudness: loudnessWindow, crossfeed: crossfeedWindow,
-                  leveller: levellerWindow, psybass: psybassWindow, stats: statsWindow,
+                  leveller: levellerWindow, psybass: psybassWindow, subharm: subharmWindow,
+                  tube: tubeWindow, upmix: upmixWindow, stats: statsWindow,
                   settings: settingsWindow }[name]
         if (w) { w.visible = true; w.raise(); w.requestActivate() }
     }
@@ -424,6 +428,9 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+X"; onActivated: root.openToolWindow("crossfeed") }
     Shortcut { sequence: "Ctrl+Shift+V"; onActivated: root.openToolWindow("leveller") }
     Shortcut { sequence: "Ctrl+Shift+P"; onActivated: root.openToolWindow("psybass") }
+    Shortcut { sequence: "Ctrl+Shift+S"; onActivated: root.openToolWindow("subharm") }
+    Shortcut { sequence: "Ctrl+Shift+D"; onActivated: root.openToolWindow("tube") }
+    Shortcut { sequence: "Ctrl+Shift+U"; onActivated: root.openToolWindow("upmix") }
     Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }

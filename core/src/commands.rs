@@ -90,6 +90,7 @@ impl DspiCore {
             st.fw_major, st.fw_minor, st.fw_patch, st.platform_name(), st.input_source, st.user_volume_db
         );
         self.fetch_core1_mode_internal();
+        self.fetch_subharm_solo_internal();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {
             self.fetch_preset_name_internal(slot);
@@ -469,6 +470,115 @@ impl DspiCore {
         self.send(req, 0, WINDEX_GLOBAL, &v.to_le_bytes())
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // Stereo upmixer, subharmonic synth, tube modeller
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Set upmixer parameter `id` (`UPMIX_PARAM_*`). The firmware stores the
+    /// raw value, so it is clamped here.
+    pub fn set_upmix_param(&mut self, id: u8, value: f32) -> Result<()> {
+        let i = id as usize;
+        if i >= UPMIX_PARAM_COUNT {
+            return Err(UsbError::InvalidArgument);
+        }
+        let (lo, hi) = UPMIX_LIMITS[i];
+        let mut v = value.clamp(lo, hi);
+        if id <= UPMIX_PARAM_SURROUND_MODE {
+            v = v.round();
+        } else if id == UPMIX_PARAM_PRESENCE {
+            v = (v * 2.0).round() / 2.0; // stored in half-dB steps
+        }
+        self.state.upmix[i] = v;
+        self.send(REQ_UPMIX_SET_PARAM, id as u16, WINDEX_GLOBAL, &v.to_le_bytes())
+    }
+
+    pub fn fetch_upmix_status(&self) -> Result<UpmixStatus> {
+        let d = self.get_exact(REQ_UPMIX_GET_STATUS, 0, WINDEX_GLOBAL, 16, 12)?;
+        let q14 = |o: usize| i16::from_le_bytes([d[o], d[o + 1]]) as f32 / 16384.0;
+        let q15 = |o: usize| u16::from_le_bytes([d[o], d[o + 1]]) as f32 / 32767.0;
+        Ok(UpmixStatus {
+            active: d[0] != 0,
+            parked_reason: d[1],
+            correlation: q14(2),
+            balance: q14(4),
+            center_gain: q15(6),
+            ls_gain: q15(8),
+            rs_gain: q15(10),
+        })
+    }
+
+    /// Set subharmonic synth parameter `id` (`SUBHARM_PARAM_*`), clamped.
+    pub fn set_subharm_param(&mut self, id: u8, value: f32) -> Result<()> {
+        let i = id as usize;
+        if i >= SUBHARM_PARAM_COUNT {
+            return Err(UsbError::InvalidArgument);
+        }
+        let (lo, hi) = SUBHARM_LIMITS[i];
+        let whole = matches!(id, SUBHARM_PARAM_ENABLED | SUBHARM_PARAM_MASK | SUBHARM_PARAM_SELECT | SUBHARM_PARAM_LINK);
+        let v = if whole { value.round().clamp(lo, hi) } else { value.clamp(lo, hi) };
+        self.state.subharm[i] = v;
+        let req = SUBHARM_SET_REQUESTS[i];
+        match id {
+            SUBHARM_PARAM_MASK => self.send(req, 0, WINDEX_GLOBAL, &(v as u16).to_le_bytes()),
+            _ if whole => self.send(req, 0, WINDEX_GLOBAL, &[v as u8]),
+            _ => self.send(req, 0, WINDEX_GLOBAL, &v.to_le_bytes()),
+        }
+    }
+
+    /// Mute the program on the subharm outputs so the sub is heard alone.
+    pub fn set_subharm_solo(&mut self, solo: bool) -> Result<()> {
+        self.state.subharm_solo = solo;
+        self.send(REQ_SET_SUBHARM_SOLO, 0, WINDEX_GLOBAL, &[solo as u8])
+    }
+
+    pub(crate) fn fetch_subharm_solo_internal(&mut self) {
+        if let Ok(v) = self.get_u8(REQ_GET_SUBHARM_SOLO, 0, WINDEX_GLOBAL) {
+            self.state.subharm_solo = v != 0;
+        }
+    }
+
+    /// How far the current settings can push the signal above its input, dB.
+    pub fn fetch_subharm_headroom(&self) -> Result<f32> {
+        let d = self.get_exact(REQ_GET_SUBHARM_HEADROOM, 0, WINDEX_GLOBAL, 4, 4)?;
+        Ok(read_f32_le(&d, 0))
+    }
+
+    /// Decaying peak of the synthesized sub on each output, 0..1.
+    pub fn fetch_subharm_meter(&self) -> Result<[f32; MAX_OUTPUTS]> {
+        let n = self.state.num_output_channels as usize;
+        let d = self.get_exact(REQ_GET_SUBHARM_METER, 0, WINDEX_GLOBAL, (n * 2) as u16, n * 2)?;
+        let mut out = [0.0f32; MAX_OUTPUTS];
+        for (o, v) in out.iter_mut().enumerate().take(n) {
+            *v = read_u16_le(&d, o * 2) as f32 / 32767.0;
+        }
+        Ok(out)
+    }
+
+    /// Set tube parameter `idx` (`TUBE_PARAM_*`), clamped. Mirrors the
+    /// firmware: choosing a tube type copies its character row, and editing a
+    /// character value makes the type Custom (our own writes are not echoed).
+    pub fn set_tube_param(&mut self, idx: u8, value: f32) -> Result<()> {
+        let i = idx as usize;
+        if i >= TUBE_PARAM_COUNT {
+            return Err(UsbError::InvalidArgument);
+        }
+        let (lo, hi) = TUBE_LIMITS[i];
+        let whole = matches!(
+            idx,
+            TUBE_PARAM_ENABLED | TUBE_PARAM_MASK | TUBE_PARAM_TYPE | TUBE_PARAM_RECTIFIER | TUBE_PARAM_XFMR
+        );
+        let v = if whole { value.round().clamp(lo, hi) } else { value.clamp(lo, hi) };
+        let t = &mut self.state.tube;
+        let character = TUBE_PARAM_BIAS as usize..=TUBE_PARAM_SAG as usize;
+        if idx == TUBE_PARAM_TYPE && v >= 1.0 {
+            t[character].copy_from_slice(&TUBE_ROWS[v as usize - 1]);
+        } else if character.contains(&i) && t[i] != v {
+            t[TUBE_PARAM_TYPE as usize] = 0.0;
+        }
+        t[i] = v;
+        self.send(REQ_SET_TUBE_PARAM, idx as u16, WINDEX_GLOBAL, &v.to_le_bytes())
+    }
+
     /// Bit k: psybass processes output k.
     pub fn set_psybass_mask(&mut self, mask: u16) -> Result<()> {
         self.state.psybass_output_mask = mask;
@@ -718,4 +828,36 @@ impl DspiCore {
 enum FetchError {
     Usb(UsbError),
     Bulk(BulkError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Not connected: the state still changes, the send fails.
+    #[test]
+    fn tube_type_and_character_follow_the_firmware_rules() {
+        let mut c = DspiCore::new();
+        let _ = c.set_tube_param(TUBE_PARAM_TYPE, 16.0);
+        assert_eq!(&c.state.tube[4..8], &TUBE_ROWS[15]);
+        let _ = c.set_tube_param(TUBE_PARAM_BIAS, 12.0); // same value: type stays
+        assert_eq!(c.state.tube[TUBE_PARAM_TYPE as usize], 16.0);
+        let _ = c.set_tube_param(TUBE_PARAM_SAG, 40.0);
+        assert_eq!(c.state.tube[TUBE_PARAM_TYPE as usize], 0.0);
+        let _ = c.set_tube_param(TUBE_PARAM_TYPE, 0.0); // Custom keeps the values
+        assert_eq!(c.state.tube[TUBE_PARAM_SAG as usize], 40.0);
+    }
+
+    #[test]
+    fn tool_params_are_clamped_and_rounded() {
+        let mut c = DspiCore::new();
+        let _ = c.set_upmix_param(UPMIX_PARAM_PRESENCE, 3.3);
+        assert_eq!(c.state.upmix[UPMIX_PARAM_PRESENCE as usize], 3.5);
+        let _ = c.set_upmix_param(UPMIX_PARAM_CENTER_MODE, 7.0);
+        assert_eq!(c.state.upmix[UPMIX_PARAM_CENTER_MODE as usize], 2.0);
+        let _ = c.set_subharm_param(SUBHARM_PARAM_HOLD, 10.0);
+        assert_eq!(c.state.subharm[SUBHARM_PARAM_HOLD as usize], 50.0);
+        let _ = c.set_tube_param(TUBE_PARAM_RECTIFIER, 2.6);
+        assert_eq!(c.state.tube[TUBE_PARAM_RECTIFIER as usize], 3.0);
+    }
 }

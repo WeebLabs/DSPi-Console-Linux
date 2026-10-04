@@ -113,6 +113,65 @@ pub const PSYBASS_PARAM_ORIGINAL: u8 = 4;
 pub const REQ_SET_TUBE_PARAM: u8 = 0x3E;
 pub const REQ_GET_TUBE_PARAM: u8 = 0x3F;
 
+/// Tube parameter indices (the firmware's own; wValue of REQ_SET_TUBE_PARAM).
+/// Every value travels as a float, enums and flags included.
+pub const TUBE_PARAM_ENABLED: u8 = 0;
+pub const TUBE_PARAM_MASK: u8 = 1;
+pub const TUBE_PARAM_TYPE: u8 = 2;
+pub const TUBE_PARAM_DRIVE: u8 = 3;
+pub const TUBE_PARAM_BIAS: u8 = 4;
+pub const TUBE_PARAM_ASYM: u8 = 5;
+pub const TUBE_PARAM_HARDNESS: u8 = 6;
+pub const TUBE_PARAM_SAG: u8 = 7;
+pub const TUBE_PARAM_RECTIFIER: u8 = 8;
+pub const TUBE_PARAM_XFMR: u8 = 9;
+pub const TUBE_PARAM_DAMPING: u8 = 10;
+pub const TUBE_PARAM_RESONANCE: u8 = 11;
+pub const TUBE_PARAM_MIX: u8 = 12;
+pub const TUBE_PARAM_TRIM: u8 = 13;
+pub const TUBE_PARAM_COUNT: usize = 14;
+pub(crate) const TUBE_LIMITS: [(f32, f32); TUBE_PARAM_COUNT] = [
+    (0.0, 1.0), (0.0, 65535.0), (0.0, 16.0), (-30.0, 24.0), (-100.0, 100.0), (-12.0, 12.0),
+    (0.0, 100.0), (0.0, 100.0), (0.0, 3.0), (0.0, 1.0), (1.0, 20.0), (30.0, 150.0),
+    (0.0, 100.0), (-12.0, 12.0),
+];
+pub(crate) const TUBE_DEFAULTS: [f32; TUBE_PARAM_COUNT] =
+    [0.0, 65535.0, 1.0, -12.0, 10.0, 3.0, 40.0, 15.0, 1.0, 1.0, 2.0, 95.0, 100.0, 0.0];
+/// Bias, asymmetry, knee hardness and sag of tube types 1..16 (type 0 is
+/// Custom). Choosing a type copies its row; editing one of them makes it Custom.
+pub(crate) const TUBE_ROWS: [[f32; 4]; 16] = [
+    [10.0, 3.0, 40.0, 15.0], [8.0, 3.0, 35.0, 12.0], [5.0, 2.0, 55.0, 10.0], [7.0, 4.0, 25.0, 15.0],
+    [5.0, 5.0, 20.0, 8.0], [7.0, 6.0, 15.0, 10.0], [10.0, 3.0, 30.0, 15.0], [3.0, 2.0, 60.0, 5.0],
+    [2.0, 0.0, 75.0, 12.0], [3.0, 1.0, 65.0, 15.0], [0.0, 0.0, 50.0, 25.0], [0.0, 0.0, 60.0, 30.0],
+    [0.0, 0.0, 55.0, 18.0], [0.0, 0.0, 35.0, 30.0], [0.0, 0.0, 45.0, 10.0], [12.0, 6.0, 10.0, 12.0],
+];
+
+/// Subharmonic synth parameter ids for `set_subharm_param` (host-side; each
+/// field has its own request).
+pub const SUBHARM_PARAM_ENABLED: u8 = 0;
+pub const SUBHARM_PARAM_MASK: u8 = 1;
+pub const SUBHARM_PARAM_LOW: u8 = 2;
+pub const SUBHARM_PARAM_HIGH: u8 = 3;
+pub const SUBHARM_PARAM_TOP: u8 = 4;
+pub const SUBHARM_PARAM_BOOST: u8 = 5;
+pub const SUBHARM_PARAM_SELECT: u8 = 6;
+pub const SUBHARM_PARAM_DEPTH: u8 = 7;
+pub const SUBHARM_PARAM_HOLD: u8 = 8;
+pub const SUBHARM_PARAM_CEILING: u8 = 9;
+pub const SUBHARM_PARAM_LINK: u8 = 10;
+pub const SUBHARM_PARAM_COUNT: usize = 11;
+pub(crate) const SUBHARM_SET_REQUESTS: [u8; SUBHARM_PARAM_COUNT] = [
+    REQ_SET_SUBHARM, REQ_SET_SUBHARM_MASK, REQ_SET_SUBHARM_LOW, REQ_SET_SUBHARM_HIGH,
+    REQ_SET_SUBHARM_TOP, REQ_SET_SUBHARM_BOOST, REQ_SET_SUBHARM_SELECT, REQ_SET_SUBHARM_DEPTH,
+    REQ_SET_SUBHARM_HOLD, REQ_SET_SUBHARM_CEILING, REQ_SET_SUBHARM_LINK,
+];
+pub(crate) const SUBHARM_LIMITS: [(f32, f32); SUBHARM_PARAM_COUNT] = [
+    (0.0, 1.0), (0.0, 65535.0), (-30.0, 12.0), (-30.0, 12.0), (-30.0, 12.0), (0.0, 6.0),
+    (0.0, 2.0), (0.0, 100.0), (50.0, 400.0), (-40.0, 0.0), (0.0, 1.0),
+];
+pub(crate) const SUBHARM_DEFAULTS: [f32; SUBHARM_PARAM_COUNT] =
+    [0.0, 65535.0, 0.0, 0.0, -30.0, 0.0, 0.0, 100.0, 150.0, 0.0, 1.0];
+
 // EQ / Preamp / Bypass / Delay
 pub const REQ_SET_EQ_PARAM: u8 = 0x42;
 pub const REQ_GET_EQ_PARAM: u8 = 0x43;
@@ -130,6 +189,31 @@ pub const REQ_UPMIX_GET_CONFIG: u8 = 0x4B;
 pub const REQ_UPMIX_SET_PARAM: u8 = 0x4C;
 pub const REQ_UPMIX_GET_PARAM: u8 = 0x4D;
 pub const REQ_UPMIX_GET_STATUS: u8 = 0x4E;
+
+/// Upmixer parameter ids (the firmware's own; wValue of REQ_UPMIX_SET_PARAM).
+/// Centre mode: 0 passive, 1 adaptive, 2 off. Surround: 0 off, 1 passive, 2 adaptive.
+pub const UPMIX_PARAM_ENABLED: u8 = 0;
+pub const UPMIX_PARAM_CENTER_MODE: u8 = 1;
+pub const UPMIX_PARAM_SURROUND_MODE: u8 = 2;
+pub const UPMIX_PARAM_STRENGTH: u8 = 3;
+pub const UPMIX_PARAM_WIDTH: u8 = 4;
+pub const UPMIX_PARAM_THRESHOLD: u8 = 5;
+pub const UPMIX_PARAM_ATTACK: u8 = 6;
+pub const UPMIX_PARAM_RELEASE: u8 = 7;
+pub const UPMIX_PARAM_DETECTOR_HPF: u8 = 8;
+pub const UPMIX_PARAM_SURROUND_DELAY: u8 = 9;
+pub const UPMIX_PARAM_SURROUND_HPF: u8 = 10;
+pub const UPMIX_PARAM_SURROUND_LPF: u8 = 11;
+pub const UPMIX_PARAM_DECORRELATION: u8 = 12;
+pub const UPMIX_PARAM_PRESENCE: u8 = 13;
+pub const UPMIX_PARAM_COUNT: usize = 14;
+pub(crate) const UPMIX_LIMITS: [(f32, f32); UPMIX_PARAM_COUNT] = [
+    (0.0, 1.0), (0.0, 2.0), (0.0, 2.0), (0.0, 100.0), (0.0, 100.0), (0.0, 95.0), (1.0, 500.0),
+    (5.0, 2000.0), (20.0, 1000.0), (0.0, 20.0), (20.0, 2000.0), (1000.0, 20000.0), (0.0, 100.0),
+    (-12.0, 12.0),
+];
+pub(crate) const UPMIX_DEFAULTS: [f32; UPMIX_PARAM_COUNT] =
+    [0.0, 1.0, 2.0, 100.0, 25.0, 30.0, 10.0, 100.0, 200.0, 12.0, 300.0, 7000.0, 90.0, 0.0];
 
 // Status / flash
 pub const REQ_GET_STATUS: u8 = 0x50;
@@ -621,6 +705,41 @@ pub fn decode_bulk(data: &[u8], state: &mut DspState) -> Result<(), BulkError> {
     s.psybass_character_pct = read_f32_le(d, OFF_PSYBASS + 16);
     s.psybass_original_db = read_f32_le(d, OFF_PSYBASS + 20);
 
+    // Upmixer (all zero on RP2040)
+    s.upmix[0] = d[OFF_UPMIX] as f32;
+    s.upmix[1] = d[OFF_UPMIX + 1] as f32;
+    s.upmix[2] = d[OFF_UPMIX + 2] as f32;
+    for id in 3..13 {
+        s.upmix[id] = read_f32_le(d, OFF_UPMIX + 4 + (id - 3) * 4);
+    }
+    s.upmix[13] = (d[OFF_UPMIX + 3] as i8).clamp(-24, 24) as f32 * 0.5;
+
+    // Subharmonic synth
+    let sh = &mut s.subharm;
+    sh[SUBHARM_PARAM_ENABLED as usize] = d[OFF_SUBHARM] as f32;
+    sh[SUBHARM_PARAM_MASK as usize] = read_u16_le(d, OFF_SUBHARM + 2) as f32;
+    sh[SUBHARM_PARAM_LOW as usize] = read_f32_le(d, OFF_SUBHARM + 4);
+    sh[SUBHARM_PARAM_HIGH as usize] = read_f32_le(d, OFF_SUBHARM + 8);
+    sh[SUBHARM_PARAM_BOOST as usize] = read_f32_le(d, OFF_SUBHARM + 12);
+    sh[SUBHARM_PARAM_TOP as usize] = read_f32_le(d, OFF_SUBHARM + 16);
+    sh[SUBHARM_PARAM_DEPTH as usize] = read_f32_le(d, OFF_SUBHARM + 20);
+    sh[SUBHARM_PARAM_HOLD as usize] = read_f32_le(d, OFF_SUBHARM + 24);
+    sh[SUBHARM_PARAM_CEILING as usize] = read_f32_le(d, OFF_SUBHARM + 28);
+    sh[SUBHARM_PARAM_SELECT as usize] = d[OFF_SUBHARM + 32] as f32;
+    sh[SUBHARM_PARAM_LINK as usize] = d[OFF_SUBHARM + 33] as f32;
+
+    // Tube modeller
+    let t = &mut s.tube;
+    t[TUBE_PARAM_ENABLED as usize] = d[OFF_TUBE] as f32;
+    t[TUBE_PARAM_TYPE as usize] = d[OFF_TUBE + 1].min(16) as f32;
+    t[TUBE_PARAM_RECTIFIER as usize] = d[OFF_TUBE + 2].min(3) as f32;
+    t[TUBE_PARAM_XFMR as usize] = d[OFF_TUBE + 3] as f32;
+    t[TUBE_PARAM_MASK as usize] = read_u16_le(d, OFF_TUBE + 4) as f32;
+    for (i, idx) in [TUBE_PARAM_DRIVE, TUBE_PARAM_BIAS, TUBE_PARAM_ASYM, TUBE_PARAM_HARDNESS, TUBE_PARAM_SAG,
+                     TUBE_PARAM_DAMPING, TUBE_PARAM_RESONANCE, TUBE_PARAM_MIX, TUBE_PARAM_TRIM].iter().enumerate() {
+        t[*idx as usize] = read_f32_le(d, OFF_TUBE + 8 + i * 4);
+    }
+
     // LG Sound Sync (only `enabled` is honored on SET)
     s.lg_sound_sync_enabled = d[OFF_LG_SOUND_SYNC] != 0;
 
@@ -733,6 +852,41 @@ pub fn encode_bulk(state: &DspState) -> Vec<u8> {
     write_f32_le(&mut d, OFF_PSYBASS + 12, s.psybass_drive_db);
     write_f32_le(&mut d, OFF_PSYBASS + 16, s.psybass_character_pct);
     write_f32_le(&mut d, OFF_PSYBASS + 20, s.psybass_original_db);
+
+    // Upmixer (the firmware ignores the section on RP2040)
+    d[OFF_UPMIX] = s.upmix[0] as u8;
+    d[OFF_UPMIX + 1] = s.upmix[1] as u8;
+    d[OFF_UPMIX + 2] = s.upmix[2] as u8;
+    d[OFF_UPMIX + 3] = (s.upmix[13] * 2.0).round().clamp(-24.0, 24.0) as i8 as u8;
+    for id in 3..13 {
+        write_f32_le(&mut d, OFF_UPMIX + 4 + (id - 3) * 4, s.upmix[id]);
+    }
+
+    // Subharmonic synth (bulk SET copies floats unclamped; setters clamp)
+    let sh = &s.subharm;
+    d[OFF_SUBHARM] = sh[SUBHARM_PARAM_ENABLED as usize] as u8;
+    write_u16_le(&mut d, OFF_SUBHARM + 2, sh[SUBHARM_PARAM_MASK as usize] as u16);
+    write_f32_le(&mut d, OFF_SUBHARM + 4, sh[SUBHARM_PARAM_LOW as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 8, sh[SUBHARM_PARAM_HIGH as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 12, sh[SUBHARM_PARAM_BOOST as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 16, sh[SUBHARM_PARAM_TOP as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 20, sh[SUBHARM_PARAM_DEPTH as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 24, sh[SUBHARM_PARAM_HOLD as usize]);
+    write_f32_le(&mut d, OFF_SUBHARM + 28, sh[SUBHARM_PARAM_CEILING as usize]);
+    d[OFF_SUBHARM + 32] = sh[SUBHARM_PARAM_SELECT as usize] as u8;
+    d[OFF_SUBHARM + 33] = sh[SUBHARM_PARAM_LINK as usize] as u8;
+
+    // Tube modeller
+    let t = &s.tube;
+    d[OFF_TUBE] = t[TUBE_PARAM_ENABLED as usize] as u8;
+    d[OFF_TUBE + 1] = t[TUBE_PARAM_TYPE as usize] as u8;
+    d[OFF_TUBE + 2] = t[TUBE_PARAM_RECTIFIER as usize] as u8;
+    d[OFF_TUBE + 3] = t[TUBE_PARAM_XFMR as usize] as u8;
+    write_u16_le(&mut d, OFF_TUBE + 4, t[TUBE_PARAM_MASK as usize] as u16);
+    for (i, idx) in [TUBE_PARAM_DRIVE, TUBE_PARAM_BIAS, TUBE_PARAM_ASYM, TUBE_PARAM_HARDNESS, TUBE_PARAM_SAG,
+                     TUBE_PARAM_DAMPING, TUBE_PARAM_RESONANCE, TUBE_PARAM_MIX, TUBE_PARAM_TRIM].iter().enumerate() {
+        write_f32_le(&mut d, OFF_TUBE + 8 + i * 4, t[*idx as usize]);
+    }
     d[OFF_LG_SOUND_SYNC] = s.lg_sound_sync_enabled as u8;
     write_f32_le(&mut d, OFF_USER_VOLUME, s.user_volume_db);
     d[OFF_USER_VOLUME + 4] = s.user_mute as u8;

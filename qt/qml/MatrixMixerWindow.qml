@@ -22,9 +22,14 @@ AppWindow {
     readonly property int labelWidth: 96
     readonly property int rowHeight: 78
     readonly property int numOut: bridge.numOutputChannels
-    // Inputs carrying audio right now (at least the stereo pair)
-    readonly property int inputCount: Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels))
-    readonly property bool multichannel: inputCount > 2
+    // On a stereo input the upmixer's Centre / Surround outputs are source
+    // rows 3-5 (3 only with surround off); otherwise the inputs carrying
+    // audio right now (at least the stereo pair)
+    readonly property bool upmixRows: bridge.upmixSupported && bridge.upmixParams[0] > 0
+                                      && Math.max(2, bridge.activeInputChannels) === 2
+    readonly property int inputCount: upmixRows ? (bridge.upmixParams[2] === 0 ? 3 : 5)
+                                    : Math.min(bridge.numInputChannels, Math.max(2, bridge.activeInputChannels))
+    readonly property bool multichannel: !upmixRows && inputCount > 2
     readonly property int pdm: numOut - 1
     readonly property int gridWidth: labelWidth + numOut * colWidth + 12
 
@@ -41,8 +46,13 @@ AppWindow {
     onContentWChanged: width = Math.min(contentW, Screen.desktopAvailableWidth - 40)
     onContentHChanged: height = Math.min(contentH, Screen.desktopAvailableHeight - 80)
 
-    function inName(i) { return bridge.channelName(bridge.inputAppId(i)) }
-    function inColor(i) { return bridge.channelColor(bridge.inputAppId(i)) }
+    function inName(i) { return upmixRows && i >= 2 ? ["Upmix C", "Upmix Ls", "Upmix Rs"][i - 2] : bridge.channelName(bridge.inputAppId(i)) }
+    function inColor(i) {
+        if (upmixRows && i >= 2)
+            return i === 2 && bridge.upmixParams[1] === 2 ? Qt.rgba(1, 1, 1, 0.35)   // centre off: silent row
+                 : ["#32d74b", "#bf5af2", "#ff375f"][i - 2]
+        return bridge.channelColor(bridge.inputAppId(i))
+    }
     function outEnabled(o) { rev; return bridge.outputEnabled(o) }
     function conflicts(o) { rev; return bridge.core1ConflictOutputs(o) }
 

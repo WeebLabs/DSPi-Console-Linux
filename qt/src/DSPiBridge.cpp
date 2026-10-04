@@ -1266,6 +1266,9 @@ void DSPiBridge::setLevellerAmount(float pct, bool sendOnly) { LIVE(dspi_set_lev
 void DSPiBridge::setLevellerMaxGain(float db, bool sendOnly) { LIVE(dspi_set_leveller_max_gain(m_core, db)); }
 void DSPiBridge::setLevellerGate(float db, bool sendOnly) { LIVE(dspi_set_leveller_gate(m_core, db)); }
 void DSPiBridge::setPsybassParam(int param, float value, bool sendOnly) { LIVE(dspi_set_psybass_param(m_core, param, value)); }
+void DSPiBridge::setUpmixParam(int id, float value, bool sendOnly) { LIVE(dspi_set_upmix_param(m_core, id, value)); }
+void DSPiBridge::setSubharmParam(int id, float value, bool sendOnly) { LIVE(dspi_set_subharm_param(m_core, id, value)); }
+void DSPiBridge::setTubeParam(int idx, float value, bool sendOnly) { LIVE(dspi_set_tube_param(m_core, idx, value)); }
 
 #undef LIVE
 
@@ -1282,6 +1285,43 @@ void DSPiBridge::setLevellerLookahead(bool en) {
 void DSPiBridge::setLevellerMasks(int detector, int apply) {
     dspi_set_leveller_masks(m_core, detector, apply);
     emit stateChanged();
+}
+
+void DSPiBridge::setSubharmSolo(bool solo) {
+    dspi_set_subharm_solo(m_core, solo);
+    emit stateChanged();
+}
+
+QVariantList DSPiBridge::floatList(const float *v, int n) {
+    QVariantList list;
+    list.reserve(n);
+    for (int i = 0; i < n; i++) list.append(v[i]);
+    return list;
+}
+
+QVariantMap DSPiBridge::fetchUpmixStatus() {
+    QVariantMap m;
+    UpmixStatus st = {};
+    if (!upmixSupported() || !dspi_fetch_upmix_status(m_core, &st)) return m;
+    m["active"] = st.active;
+    m["parkedReason"] = st.parked_reason;
+    m["correlation"] = st.correlation;
+    m["centerGain"] = st.center_gain;
+    m["lsGain"] = st.ls_gain;
+    m["rsGain"] = st.rs_gain;
+    return m;
+}
+
+QVariant DSPiBridge::fetchSubharmHeadroom() {
+    float db = 0;
+    if (!usable() || !dspi_fetch_subharm_headroom(m_core, &db)) return QVariant();
+    return db;
+}
+
+QVariantList DSPiBridge::fetchSubharmMeter() {
+    float m[MAX_OUTPUTS] = {};
+    if (!usable() || !dspi_fetch_subharm_meter(m_core, m)) return QVariantList();
+    return floatList(m, state()->num_output_channels);
 }
 
 void DSPiBridge::setPsybassOutputMask(int mask) {

@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QVector>
 #include <QString>
 #include <QStringList>
@@ -85,6 +86,13 @@ class DSPiBridge : public QObject
     Q_PROPERTY(QVariantList inputSources READ inputSources NOTIFY stateChanged)
     Q_PROPERTY(bool levellerEnabled READ levellerEnabled NOTIFY stateChanged)
     Q_PROPERTY(bool psybassEnabled READ psybassEnabled NOTIFY stateChanged)
+    // Upmixer / subharmonic synth / tube modeller parameters, indexed by the
+    // core's UPMIX_PARAM_* / SUBHARM_PARAM_* / TUBE_PARAM_* ids
+    Q_PROPERTY(bool upmixSupported READ upmixSupported NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList upmixParams READ upmixParams NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList subharmParams READ subharmParams NOTIFY stateChanged)
+    Q_PROPERTY(bool subharmSolo READ subharmSolo NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList tubeParams READ tubeParams NOTIFY stateChanged)
 
     // Volume leveller parameters
     Q_PROPERTY(float levellerAmount READ levellerAmount NOTIFY stateChanged)
@@ -166,6 +174,11 @@ public:
     bool levellerLookahead() const { return state()->leveller_lookahead; }
     int levellerDetectorMask() const { return state()->leveller_detector_mask; }
     int levellerApplyMask() const { return state()->leveller_apply_mask; }
+    bool upmixSupported() const { return usable() && state()->platform_id == 1; }
+    QVariantList upmixParams() const { return floatList(state()->upmix, UPMIX_PARAM_COUNT); }
+    QVariantList subharmParams() const { return floatList(state()->subharm, SUBHARM_PARAM_COUNT); }
+    bool subharmSolo() const { return state()->subharm_solo; }
+    QVariantList tubeParams() const { return floatList(state()->tube, TUBE_PARAM_COUNT); }
     float psybassCutoff() const { return state()->psybass_cutoff_hz; }
     float psybassHarmonics() const { return state()->psybass_harmonics_db; }
     float psybassDrive() const { return state()->psybass_drive_db; }
@@ -299,6 +312,14 @@ public:
     // Psybass: param 0 cutoff, 1 harmonics, 2 drive, 3 character, 4 original
     Q_INVOKABLE void setPsybassParam(int param, float value, bool sendOnly = false);
     Q_INVOKABLE void setPsybassOutputMask(int mask);
+    Q_INVOKABLE void setUpmixParam(int id, float value, bool sendOnly = false);
+    Q_INVOKABLE void setSubharmParam(int id, float value, bool sendOnly = false);
+    Q_INVOKABLE void setSubharmSolo(bool solo);
+    Q_INVOKABLE void setTubeParam(int idx, float value, bool sendOnly = false);
+    // Live readings, polled by the tool windows while they are open
+    Q_INVOKABLE QVariantMap fetchUpmixStatus();
+    Q_INVOKABLE QVariant fetchSubharmHeadroom();          // dB, undefined on failure
+    Q_INVOKABLE QVariantList fetchSubharmMeter();         // 0..1 per output
 
     // Matrix helpers
     Q_INVOKABLE void directRouting();          // input k -> output k at 0 dB, PDM off
@@ -391,6 +412,7 @@ private:
     bool m_channelVisible[kAppChannelCount];
 
     const DspState *state() const;
+    static QVariantList floatList(const float *v, int n);
     bool usable() const;              // connected to compatible firmware
     int wire(int appCh) const;        // app id -> wire channel, -1 if absent
     int appId(int wireCh) const;      // wire channel -> app id, -1 if absent

@@ -31,6 +31,9 @@
         <file>qml/components/Icon.qml</file>
         <file>qml/components/WindowTitleBar.qml</file>
         <file>icons/bassclef.svg</file>
+        <file>icons/subwave.svg</file>
+        <file>icons/tube.svg</file>
+        <file>icons/upmix.svg</file>
         <file>icons/gauge.svg</file>
         <file>icons/gear.svg</file>
         <file>icons/headphones.svg</file>
@@ -48,6 +51,9 @@
         <file>qml/components/ChannelChips.qml</file>
         <file>qml/VolumeLevellerWindow.qml</file>
         <file>qml/PsychoacousticBassWindow.qml</file>
+        <file>qml/SubharmonicSynthWindow.qml</file>
+        <file>qml/TubeModellerWindow.qml</file>
+        <file>qml/UpmixerWindow.qml</file>
         <file>qml/components/AppMenu.qml</file>
         <file>qml/settings/qmldir</file>
         <file>qml/settings/SettingsButtonRow.qml</file>
@@ -80,6 +86,10 @@
         <file>qml/components/StyledSlider.qml</file>
         <file>qml/components/StyledComboBox.qml</file>
         <file>qml/qmldir</file>
+        <file>qml/components/SegmentedControl.qml</file>
+        <file>qml/components/SectionLabel.qml</file>
+        <file>qml/components/MenuLink.qml</file>
+        <file>qml/components/TubeIllustration.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>
 </RCC>

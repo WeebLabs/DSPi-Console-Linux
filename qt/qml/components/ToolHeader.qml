@@ -10,6 +10,8 @@ Rectangle {
     property string subtitle: ""
     property bool checked: false
     property bool showSwitch: true
+    // Extra controls left of the switch (a SOLO latch, a view picker)
+    property alias accessories: accessoryRow.data
     signal toggled(bool enable)
 
     height: 52
@@ -31,12 +33,19 @@ Rectangle {
     Column {
         anchors.left: tile.right
         anchors.leftMargin: 10
-        anchors.right: sw.left
+        anchors.right: accessoryRow.left
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
         Text { width: parent.width; elide: Text.ElideRight; text: hdr.title; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
         Text { width: parent.width; elide: Text.ElideRight; text: hdr.subtitle; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+    }
+    Row {
+        id: accessoryRow
+        anchors.right: sw.visible ? sw.left : parent.right
+        anchors.rightMargin: children.length > 0 ? 12 : 0
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 8
     }
     ToggleSwitch {
         id: sw
