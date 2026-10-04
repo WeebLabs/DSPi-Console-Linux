@@ -31,6 +31,9 @@
         <file>qml/components/Icon.qml</file>
         <file>qml/components/WindowTitleBar.qml</file>
         <file>icons/bassclef.svg</file>
+        <file>icons/input.svg</file>
+        <file>icons/pins.svg</file>
+        <file>icons/clock.svg</file>
         <file>icons/subwave.svg</file>
         <file>icons/tube.svg</file>
         <file>icons/upmix.svg</file>
@@ -55,6 +58,9 @@
         <file>qml/TubeModellerWindow.qml</file>
         <file>qml/UpmixerWindow.qml</file>
         <file>qml/components/AppMenu.qml</file>
+        <file>qml/settings/SettingsPinRow.qml</file>
+        <file>qml/settings/SettingsSegmentedRow.qml</file>
+        <file>qml/settings/SettingsStatusLine.qml</file>
         <file>qml/settings/qmldir</file>
         <file>qml/settings/SettingsButtonRow.qml</file>
         <file>qml/settings/SettingsChoiceRow.qml</file>
@@ -72,6 +78,10 @@
         <file>qml/settings/pages/GlobalParametersPage.qml</file>
         <file>qml/settings/pages/GraphingPage.qml</file>
         <file>qml/settings/pages/OutputsPage.qml</file>
+        <file>qml/settings/pages/OverviewPage.qml</file>
+        <file>qml/settings/pages/InputsPage.qml</file>
+        <file>qml/settings/pages/I2SPage.qml</file>
+        <file>qml/settings/pages/ControlInterfacesPage.qml</file>
         <file>qml/components/WindowResizeEdges.qml</file>
         <file>qml/components/AppWindow.qml</file>
         <file>qml/components/ChoiceMenu.qml</file>

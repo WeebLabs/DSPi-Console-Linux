@@ -764,18 +764,22 @@ void DSPiBridge::sendOutputDelayToDevice(int output, float ms) {
 }
 
 int DSPiBridge::setOutputPin(int output, int pin) {
-    int status = dspi_set_output_pin(m_core, output, pin);
-    emit stateChanged();
-    return status;
+    return hardwareEdited(dspi_set_output_pin(m_core, output, pin));
 }
 
 void DSPiBridge::setOutputConfigMode(int mode) {
     dspi_set_output_config_mode(m_core, mode);
+    if (mode != 0) m_hardwareUnsaved = false;   // saved with the preset instead
     emit stateChanged();
 }
 
 int DSPiBridge::saveOutputConfig() {
-    return dspi_save_output_config(m_core);
+    int status = dspi_save_output_config(m_core);
+    if (status == PRESET_OK && m_hardwareUnsaved) {
+        m_hardwareUnsaved = false;
+        emit stateChanged();
+    }
+    return status;
 }
 
 void DSPiBridge::setChannelName(int ch, const QString &name) {
@@ -891,6 +895,7 @@ void DSPiBridge::selectDevice(const QString &serial) {
     if (!dspi_select_device(m_core, utf8.constData())) return;
 
     m_selectedSerial = serial;
+    m_hardwareUnsaved = false;
     memset(&m_status, 0, sizeof(m_status));
     memset(m_limiterGR, 0, sizeof(m_limiterGR));
     memset(m_lastClipMs, 0, sizeof(m_lastClipMs));
@@ -1185,7 +1190,7 @@ QVariantList DSPiBridge::inputSources() const {
     for (int k = 1; k < 4; k++)
         if (s->spdif_inputs_enabled & (1u << k)) add(3 + k, QString("S/PDIF %1").arg(k + 1));
     add(2, "I2S");
-    if (s->platform_id == 1 && s->adat_input_enabled) add(3, "ADAT");
+    if (s->platform_id == 1 && s->adat_input_enabled && s->adat_input_pin != 0xFF) add(3, "ADAT");
     return list;
 }
 
@@ -1346,3 +1351,223 @@ void DSPiBridge::resetChannelNames() {
     }
     emit stateChanged();
 }
+
+// ── Hardware IO ──
+
+int DSPiBridge::hardwareEdited(int status) {
+    // In independent mode a hardware edit is RAM-only until Save Output Config
+    if (status == PIN_CONFIG_SUCCESS && state()->output_config_mode == 0)
+        m_hardwareUnsaved = true;
+    emit stateChanged();
+    return status;
+}
+
+QVariantList DSPiBridge::validPins() const {
+    // GPIOs a user can wire on a Pico (23-25 are internal), as on macOS
+    QVariantList pins;
+    for (int g = 0; g <= 28; g++)
+        if (g < 23 || g > 25) pins.append(g);
+    return pins;
+}
+
+QVariantMap DSPiBridge::hardware() const {
+    auto *s = state();
+    auto list = [](const uint8_t *v, int n) { QVariantList l; for (int i = 0; i < n; i++) l.append(int(v[i])); return l; };
+    QVariantMap m;
+    m["rp2350"] = s->platform_id == 1;
+    m["numPinOutputs"] = int(s->num_pin_outputs);
+    m["outputPins"] = list(s->output_pins, s->num_pin_outputs);
+    m["outputTypes"] = list(s->output_types, qMax(0, int(s->num_pin_outputs) - 1));
+    m["bckPin"] = int(s->i2s_bck_pin);
+    m["bckPinSlave"] = int(s->i2s_bck_pin_slave);
+    m["clockPinMode"] = int(s->i2s_clock_pin_mode);
+    m["mckEnabled"] = s->mck_enabled;
+    m["mckPin"] = int(s->mck_pin);
+    m["mckMultiplier"] = int(s->mck_multiplier);
+    m["adatOutEnabled"] = s->adat_out_enabled;
+    m["adatOutPin"] = int(s->adat_out_pin);
+    m["spdifRxPins"] = list(s->spdif_rx_pins, 4);
+    m["spdifMask"] = int(s->spdif_inputs_enabled);
+    m["i2sRxPins"] = list(s->i2s_rx_pins, 4);
+    m["i2sChannels"] = int(s->i2s_input_channels);
+    m["inputRate"] = int(s->i2s_input_rate);
+    m["i2sClockMode"] = int(s->i2s_clock_mode);
+    m["adatInEnabled"] = s->adat_input_enabled;
+    m["adatInPin"] = int(s->adat_input_pin);
+    m["adatInClockMode"] = int(s->adat_input_clock_mode);
+    m["inputSource"] = int(s->input_source);
+    m["lgEnabled"] = s->lg_sound_sync_enabled;
+    m["dacMuteSupported"] = s->dac_mute_supported;
+    m["dacMuteEnabled"] = s->dac_mute_enabled;
+    m["dacMuteActiveLow"] = s->dac_mute_active_low;
+    m["dacMutePin"] = int(s->dac_mute_pin);
+    m["dacMuteHoldMs"] = int(s->dac_mute_hold_ms);
+    m["dacMuteReleaseMs"] = int(s->dac_mute_release_ms);
+    m["ctrlSupported"] = s->ctrl_iface_supported;
+    m["uartEnabled"] = s->uart.enabled;
+    m["uartTx"] = int(s->uart.tx_pin);
+    m["uartRx"] = int(s->uart.rx_pin);
+    m["uartNotify"] = s->uart.notify;
+    m["uartBaud"] = int(s->uart.baud);
+    m["uartLive"] = s->ctrl_status.uart_live;
+    m["uartStatus"] = int(s->ctrl_status.uart_last_status);
+    m["i2cEnabled"] = s->i2c.enabled;
+    m["i2cSda"] = int(s->i2c.sda_pin);
+    m["i2cScl"] = int(s->i2c.scl_pin);
+    m["i2cAddress"] = int(s->i2c.address);
+    m["i2cLive"] = s->ctrl_status.i2c_live;
+    m["i2cStatus"] = int(s->ctrl_status.i2c_last_status);
+    m["ctrlProtocol"] = int(s->ctrl_status.protocol_version);
+    return m;
+}
+
+QVariantList DSPiBridge::pinOwners() const {
+    auto *s = state();
+    QVariantList owners;
+    auto add = [&](int pin, const QString &owner, const QString &role) {
+        if (pin < 0 || pin > 47) return;
+        QVariantMap m; m["pin"] = pin; m["owner"] = owner; m["role"] = role; owners.append(m);
+    };
+    int n = s->num_pin_outputs;
+    for (int i = 0; i < n; i++)
+        add(s->output_pins[i], i == n - 1 ? QStringLiteral("Subwoofer")
+                                          : QString("Output %1/%2").arg(2 * i + 1).arg(2 * i + 2), "output");
+    if (s->adat_out_enabled) add(s->adat_out_pin, "ADAT Output", "output");
+    // The bit clock pair is always held for I2S, as on macOS
+    add(s->i2s_bck_pin, "I2S BCK", "clock");
+    add(s->i2s_bck_pin + 1, "I2S LRCLK", "clock");
+    if (s->i2s_clock_pin_mode == 1) {
+        add(s->i2s_bck_pin_slave, "I2S Slave BCK", "clock");
+        add(s->i2s_bck_pin_slave + 1, "I2S Slave LRCLK", "clock");
+    }
+    if (s->mck_enabled) add(s->mck_pin, "I2S MCK", "clock");
+    for (int k = 0; k < 4; k++)
+        if (s->spdif_inputs_enabled & (1u << k))
+            add(s->spdif_rx_pins[k], (s->spdif_inputs_enabled & ~1u) ? QString("S/PDIF RX %1").arg(k + 1)
+                                                                    : QStringLiteral("S/PDIF RX"), "input");
+    for (int p = 0; p < qMin(4, int(s->i2s_input_channels) / 2); p++)
+        add(s->i2s_rx_pins[p], QString("I2S Data %1").arg(p + 1), "input");
+    if (s->adat_input_enabled && s->adat_input_pin != 0xFF) add(s->adat_input_pin, "ADAT Input", "input");
+    if (s->dac_mute_enabled && s->dac_mute_pin != 0xFF) add(s->dac_mute_pin, "DAC Mute", "other");
+    if (s->uart.enabled) {
+        add(s->uart.tx_pin, "UART TX", "control");
+        add(s->uart.rx_pin, "UART RX", "control");
+    }
+    if (s->i2c.enabled) {
+        add(s->i2c.sda_pin, "I2C SDA", "control");
+        add(s->i2c.scl_pin, "I2C SCL", "control");
+    }
+    return owners;
+}
+
+int DSPiBridge::setOutputType(int slot, int kind) { return hardwareEdited(dspi_set_output_type(m_core, slot, kind)); }
+int DSPiBridge::setI2sBckPin(int role, int pin) { return hardwareEdited(dspi_set_i2s_bck_pin(m_core, role, pin)); }
+int DSPiBridge::setI2sClockPinMode(int mode) { return hardwareEdited(dspi_set_i2s_clock_pin_mode(m_core, mode)); }
+int DSPiBridge::setMckEnabled(bool enabled) { return hardwareEdited(dspi_set_mck_enabled(m_core, enabled)); }
+int DSPiBridge::setMckPin(int pin) { return hardwareEdited(dspi_set_mck_pin(m_core, pin)); }
+int DSPiBridge::setMckMultiplier(int mult) { return hardwareEdited(dspi_set_mck_multiplier(m_core, mult)); }
+int DSPiBridge::setAdatOutEnabled(bool enabled) { return hardwareEdited(dspi_set_adat_out_enabled(m_core, enabled)); }
+int DSPiBridge::setAdatOutPin(int pin) { return hardwareEdited(dspi_set_adat_out_pin(m_core, pin)); }
+int DSPiBridge::setSpdifRxPin(int index, int pin) { return hardwareEdited(dspi_set_spdif_rx_pin(m_core, index, pin)); }
+int DSPiBridge::setSpdifInputEnabled(int index, bool enabled) { return hardwareEdited(dspi_set_spdif_input_enabled(m_core, index, enabled)); }
+int DSPiBridge::setI2sRxPin(int pair, int pin) { return hardwareEdited(dspi_set_i2s_rx_pin(m_core, pair, pin)); }
+int DSPiBridge::setI2sInputChannels(int channels) { return hardwareEdited(dspi_set_i2s_input_channels(m_core, channels)); }
+int DSPiBridge::setAdatInputEnabled(bool enabled) { return hardwareEdited(dspi_set_adat_input_enabled(m_core, enabled)); }
+int DSPiBridge::setAdatInputPin(int pin) { return hardwareEdited(dspi_set_adat_input_pin(m_core, pin)); }
+int DSPiBridge::setAdatInputClockMode(int mode) { return hardwareEdited(dspi_set_adat_input_clock_mode(m_core, mode)); }
+
+void DSPiBridge::setInputRate(int index) {
+    if (dspi_set_input_rate(m_core, index)) hardwareEdited(PIN_CONFIG_SUCCESS);
+}
+
+void DSPiBridge::setI2sClockMode(int mode) {
+    if (dspi_set_i2s_clock_mode(m_core, mode)) hardwareEdited(PIN_CONFIG_SUCCESS);
+}
+
+void DSPiBridge::setLgSoundSync(bool enabled) {
+    dspi_set_lg_sound_sync(m_core, enabled);
+    emit stateChanged();
+}
+
+void DSPiBridge::setDacMute(bool enabled, bool activeLow, int pin, int holdMs, int releaseMs) {
+    if (!dspi_set_dac_mute(m_core, enabled, activeLow, pin, holdMs, releaseMs)) {
+        emit dacMuteApplied(false);
+        return;
+    }
+    // The device validates and applies it in its main loop; read back what it kept
+    QTimer::singleShot(150, this, [=]() {
+        dspi_fetch_dac_mute(m_core);
+        auto *s = state();
+        bool kept = s->dac_mute_enabled == enabled && (!enabled || (s->dac_mute_pin == pin
+                    && s->dac_mute_active_low == activeLow && s->dac_mute_hold_ms == holdMs
+                    && s->dac_mute_release_ms == releaseMs));
+        emit stateChanged();
+        emit dacMuteApplied(kept);
+    });
+}
+
+int DSPiBridge::testDacMute() { return dspi_test_dac_mute(m_core); }
+
+void DSPiBridge::setUart(bool enabled, int txPin, int rxPin, bool notify, int baud) {
+    UartConfig c = { enabled, uint8_t(txPin), uint8_t(rxPin), notify, uint32_t(baud) };
+    if (!dspi_set_uart(m_core, c)) { emit ctrlIfaceApplied(0, 255); return; }
+    QTimer::singleShot(250, this, [this]() {
+        dspi_fetch_ctrl_ifaces(m_core);
+        emit stateChanged();
+        emit ctrlIfaceApplied(0, state()->ctrl_status.uart_last_status);
+    });
+}
+
+void DSPiBridge::setI2c(bool enabled, int sdaPin, int sclPin, int address) {
+    I2cConfig c = { enabled, uint8_t(sdaPin), uint8_t(sclPin), uint8_t(address) };
+    if (!dspi_set_i2c(m_core, c)) { emit ctrlIfaceApplied(1, 255); return; }
+    QTimer::singleShot(250, this, [this]() {
+        dspi_fetch_ctrl_ifaces(m_core);
+        emit stateChanged();
+        emit ctrlIfaceApplied(1, state()->ctrl_status.i2c_last_status);
+    });
+}
+
+void DSPiBridge::refreshCtrlIfaces() {
+    if (!usable()) return;
+    dspi_fetch_ctrl_ifaces(m_core);
+    emit stateChanged();
+}
+
+QVariantMap DSPiBridge::fetchInputLock(int which) {
+    QVariantMap m;
+    InputLockStatus st = {};
+    if (!usable() || !dspi_fetch_input_lock(m_core, which, &st)) return m;
+    m["state"] = int(st.state);
+    m["clockMode"] = int(st.clock_mode);
+    m["detectedRate"] = int(st.detected_rate);
+    m["measuredHz"] = int(st.measured_hz);
+    m["rateOk"] = st.rate_ok;
+    return m;
+}
+
+QVariantMap DSPiBridge::fetchAdatOutStatus() {
+    QVariantMap m;
+    AdatOutStatus st = {};
+    if (!usable() || !dspi_fetch_adat_out_status(m_core, &st)) return m;
+    m["enabled"] = st.enabled;
+    m["active"] = st.active;
+    m["pin"] = int(st.pin);
+    m["rateOk"] = st.rate_ok;
+    m["resyncCount"] = int(st.resync_count);
+    m["slipCount"] = int(st.slip_count);
+    return m;
+}
+
+QVariantMap DSPiBridge::fetchLgStatus() {
+    QVariantMap m;
+    LgStatus st = {};
+    if (!usable() || !dspi_fetch_lg_status(m_core, &st)) return m;
+    m["enabled"] = st.enabled;
+    m["present"] = st.present;
+    m["volume"] = int(st.volume);
+    m["muted"] = st.muted;
+    return m;
+}
+
+int DSPiBridge::fetchInputRate() { return usable() ? int(dspi_fetch_input_rate(m_core)) : 0; }

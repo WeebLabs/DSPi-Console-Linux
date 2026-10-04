@@ -93,6 +93,12 @@ class DSPiBridge : public QObject
     Q_PROPERTY(QVariantList subharmParams READ subharmParams NOTIFY stateChanged)
     Q_PROPERTY(bool subharmSolo READ subharmSolo NOTIFY stateChanged)
     Q_PROPERTY(QVariantList tubeParams READ tubeParams NOTIFY stateChanged)
+    // Hardware IO (Settings): every pin, type, clock, input and control
+    // interface setting in one map, and the GPIOs a user may assign
+    Q_PROPERTY(QVariantMap hardware READ hardware NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList validPins READ validPins CONSTANT)
+    // Hardware edits made in independent mode that Save Output Config would keep
+    Q_PROPERTY(bool hardwareUnsaved READ hardwareUnsaved NOTIFY stateChanged)
 
     // Volume leveller parameters
     Q_PROPERTY(float levellerAmount READ levellerAmount NOTIFY stateChanged)
@@ -312,6 +318,44 @@ public:
     // Psybass: param 0 cutoff, 1 harmonics, 2 drive, 3 character, 4 original
     Q_INVOKABLE void setPsybassParam(int param, float value, bool sendOnly = false);
     Q_INVOKABLE void setPsybassOutputMask(int mask);
+    // ── Hardware IO. Setters return the PIN_CONFIG_* status (255 = no reply)
+    QVariantMap hardware() const;
+    QVariantList validPins() const;
+    bool hardwareUnsaved() const { return m_hardwareUnsaved; }
+    // [{pin, owner, role}] for every claimed GPIO; role: output, clock,
+    // input, control or other
+    Q_INVOKABLE QVariantList pinOwners() const;
+    Q_INVOKABLE int setOutputType(int slot, int kind);
+    Q_INVOKABLE int setI2sBckPin(int role, int pin);
+    Q_INVOKABLE int setI2sClockPinMode(int mode);
+    Q_INVOKABLE int setMckEnabled(bool enabled);
+    Q_INVOKABLE int setMckPin(int pin);
+    Q_INVOKABLE int setMckMultiplier(int mult);
+    Q_INVOKABLE int setAdatOutEnabled(bool enabled);
+    Q_INVOKABLE int setAdatOutPin(int pin);
+    Q_INVOKABLE int setSpdifRxPin(int index, int pin);
+    Q_INVOKABLE int setSpdifInputEnabled(int index, bool enabled);
+    Q_INVOKABLE int setI2sRxPin(int pair, int pin);
+    Q_INVOKABLE int setI2sInputChannels(int channels);
+    Q_INVOKABLE int setAdatInputEnabled(bool enabled);
+    Q_INVOKABLE int setAdatInputPin(int pin);
+    Q_INVOKABLE int setAdatInputClockMode(int mode);
+    Q_INVOKABLE void setInputRate(int index);
+    Q_INVOKABLE void setI2sClockMode(int mode);
+    Q_INVOKABLE void setLgSoundSync(bool enabled);
+    // DAC mute: applied by the device later; dacMuteApplied reports the outcome
+    Q_INVOKABLE void setDacMute(bool enabled, bool activeLow, int pin, int holdMs, int releaseMs);
+    Q_INVOKABLE int testDacMute();
+    // Control interfaces: ctrlIfaceApplied(which 0 = UART / 1 = I2C, status)
+    Q_INVOKABLE void setUart(bool enabled, int txPin, int rxPin, bool notify, int baud);
+    Q_INVOKABLE void setI2c(bool enabled, int sdaPin, int sclPin, int address);
+    Q_INVOKABLE void refreshCtrlIfaces();
+    // Live readings for the pages that show them
+    Q_INVOKABLE QVariantMap fetchInputLock(int which);   // 0 I2S slave, 1 ADAT in
+    Q_INVOKABLE QVariantMap fetchAdatOutStatus();
+    Q_INVOKABLE QVariantMap fetchLgStatus();
+    Q_INVOKABLE int fetchInputRate();
+
     Q_INVOKABLE void setUpmixParam(int id, float value, bool sendOnly = false);
     Q_INVOKABLE void setSubharmParam(int id, float value, bool sendOnly = false);
     Q_INVOKABLE void setSubharmSolo(bool solo);
@@ -382,6 +426,8 @@ signals:
     void deviceArrived(const QString &serial);
     void deviceDeparted(const QString &serial);
     void magnitudesChanged();
+    void dacMuteApplied(bool accepted);
+    void ctrlIfaceApplied(int which, int status);
     // A value shown on the graph changed mid-drag (output gain): redraw
     // straight away, without the full stateChanged refresh
     void previewChanged();
@@ -401,6 +447,8 @@ private:
     // Device notifications are applied at most every 30 ms (a turning
     // hardware knob sends many), each batch with one stateChanged
     QTimer *m_notifyTimer = nullptr;
+    bool m_hardwareUnsaved = false;
+    int hardwareEdited(int status);   // marks unsaved edits, emits, returns status
     QElapsedTimer m_lastNotify;
 
     // Magnitude caching (app ids)

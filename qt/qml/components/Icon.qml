@@ -48,6 +48,9 @@ Item {
         "subwave": '<path d="M2 11c2.7-7.5 7.3-7.5 10 0s7.3 7.5 10 0"/><line x1="2" y1="21" x2="22" y2="21"/>',
         "tube": '<path d="M5.5 17V8.5a6.5 6.5 0 0 1 13 0V17"/><line x1="12" y1="2" x2="12" y2="0.8"/><rect x="4.5" y="16.8" width="15" height="3.6" fill="COLOR" stroke="none"/><line x1="8.5" y1="20.4" x2="8.5" y2="23.2"/><line x1="12" y1="20.4" x2="12" y2="23.2"/><line x1="15.5" y1="20.4" x2="15.5" y2="23.2"/><line x1="10.5" y1="16.8" x2="10.5" y2="11"/><line x1="13.5" y1="16.8" x2="13.5" y2="11"/><path d="M10.5 11Q12 6.5 13.5 11"/>',
         "upmix": '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><line x1="12" y1="3.5" x2="12" y2="20.5"/><line x1="3.5" y1="12" x2="20.5" y2="12"/>',
+        "input": '<path d="M12 3.5v10.5"/><polyline points="7.5,9.5 12,14 16.5,9.5"/><line x1="5" y1="19.5" x2="19" y2="19.5"/>',
+        "pins": '<circle cx="6" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="6" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="6" cy="18" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="18" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="18" r="1.6" fill="COLOR" stroke="none"/>',
+        "clock": '<circle cx="12" cy="12" r="8.5"/><polyline points="12,7 12,12 15.5,14"/>',
         "waveform": '<polyline points="2,12 6,12 8.5,6 11,18 13.5,4 16,20 18,12 22,12"/>',
         "xmark": '<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>'
     })

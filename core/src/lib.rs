@@ -813,6 +813,209 @@ pub extern "C" fn dspi_set_tube_param(core: *mut FfiCore, idx: u8, value: f32) -
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// FFI — Hardware IO (outputs, clocks, inputs). Status-returning calls
+// give the PIN_CONFIG_* code, or 255 when the device did not answer.
+// ═══════════════════════════════════════════════════════════════════
+
+/// Slot type: 0 = S/PDIF, 1 = I2S.
+#[no_mangle]
+pub extern "C" fn dspi_set_output_type(core: *mut FfiCore, slot: u8, kind: u8) -> u8 {
+    with_core(core, |c| c.set_output_type(slot, kind).unwrap_or(255))
+}
+
+/// I2S BCK pin (LRCLK = +1); role 0 = master/shared, 1 = slave pair.
+#[no_mangle]
+pub extern "C" fn dspi_set_i2s_bck_pin(core: *mut FfiCore, role: u8, pin: u8) -> u8 {
+    with_core(core, |c| c.set_i2s_bck_pin(role, pin).unwrap_or(255))
+}
+
+/// 0 = shared clock pins, 1 = separate slave pins.
+#[no_mangle]
+pub extern "C" fn dspi_set_i2s_clock_pin_mode(core: *mut FfiCore, mode: u8) -> u8 {
+    with_core(core, |c| c.set_i2s_clock_pin_mode(mode).unwrap_or(255))
+}
+
+/// Master clock output on/off.
+#[no_mangle]
+pub extern "C" fn dspi_set_mck_enabled(core: *mut FfiCore, enabled: bool) -> u8 {
+    with_core(core, |c| c.set_mck_enabled(enabled).unwrap_or(255))
+}
+
+/// Master clock pin (MCK off first).
+#[no_mangle]
+pub extern "C" fn dspi_set_mck_pin(core: *mut FfiCore, pin: u8) -> u8 {
+    with_core(core, |c| c.set_mck_pin(pin).unwrap_or(255))
+}
+
+/// 0 = 128 x fs, 1 = 256 x fs.
+#[no_mangle]
+pub extern "C" fn dspi_set_mck_multiplier(core: *mut FfiCore, mult: u8) -> u8 {
+    with_core(core, |c| c.set_mck_multiplier(mult).unwrap_or(255))
+}
+
+/// ADAT optical output (RP2350).
+#[no_mangle]
+pub extern "C" fn dspi_set_adat_out_enabled(core: *mut FfiCore, enabled: bool) -> u8 {
+    with_core(core, |c| c.set_adat_out_enabled(enabled).unwrap_or(255))
+}
+
+/// ADAT output data pin.
+#[no_mangle]
+pub extern "C" fn dspi_set_adat_out_pin(core: *mut FfiCore, pin: u8) -> u8 {
+    with_core(core, |c| c.set_adat_out_pin(pin).unwrap_or(255))
+}
+
+/// S/PDIF input RX pin (index 0-3).
+#[no_mangle]
+pub extern "C" fn dspi_set_spdif_rx_pin(core: *mut FfiCore, index: u8, pin: u8) -> u8 {
+    with_core(core, |c| c.set_spdif_rx_pin(index, pin).unwrap_or(255))
+}
+
+/// Enable S/PDIF input 2-4 (index 1-3).
+#[no_mangle]
+pub extern "C" fn dspi_set_spdif_input_enabled(core: *mut FfiCore, index: u8, enabled: bool) -> u8 {
+    with_core(core, |c| c.set_spdif_input_enabled(index, enabled).unwrap_or(255))
+}
+
+/// I2S input data pin of a pair (0-3).
+#[no_mangle]
+pub extern "C" fn dspi_set_i2s_rx_pin(core: *mut FfiCore, pair: u8, pin: u8) -> u8 {
+    with_core(core, |c| c.set_i2s_rx_pin(pair, pin).unwrap_or(255))
+}
+
+/// I2S input channels: 2, 4, 6 or 8.
+#[no_mangle]
+pub extern "C" fn dspi_set_i2s_input_channels(core: *mut FfiCore, channels: u8) -> u8 {
+    with_core(core, |c| c.set_i2s_input_channels(channels).unwrap_or(255))
+}
+
+/// ADAT input on/off (needs a pin).
+#[no_mangle]
+pub extern "C" fn dspi_set_adat_input_enabled(core: *mut FfiCore, enabled: bool) -> u8 {
+    with_core(core, |c| c.set_adat_input_enabled(enabled).unwrap_or(255))
+}
+
+/// ADAT input data pin; 0xFF clears it.
+#[no_mangle]
+pub extern "C" fn dspi_set_adat_input_pin(core: *mut FfiCore, pin: u8) -> u8 {
+    with_core(core, |c| c.set_adat_input_pin(pin).unwrap_or(255))
+}
+
+/// ADAT input clock: 0 = master, 1 = slave.
+#[no_mangle]
+pub extern "C" fn dspi_set_adat_input_clock_mode(core: *mut FfiCore, mode: u8) -> u8 {
+    with_core(core, |c| c.set_adat_input_clock_mode(mode).unwrap_or(255))
+}
+
+/// Master-mode input rate for I2S and ADAT: 0 = 44.1k, 1 = 48k, 2 = 96k.
+#[no_mangle]
+pub extern "C" fn dspi_set_input_rate(core: *mut FfiCore, index: u8) -> bool {
+    with_core(core, |c| c.set_input_rate(index).is_ok())
+}
+
+/// The rate the pipeline runs at now, Hz (0 if unknown).
+#[no_mangle]
+pub extern "C" fn dspi_fetch_input_rate(core: *mut FfiCore) -> u32 {
+    with_core(core, |c| c.fetch_input_rate().unwrap_or(0))
+}
+
+/// I2S input clock: 0 = master, 1 = slave (applied by the device later).
+#[no_mangle]
+pub extern "C" fn dspi_set_i2s_clock_mode(core: *mut FfiCore, mode: u8) -> bool {
+    with_core(core, |c| c.set_i2s_clock_mode(mode).is_ok())
+}
+
+/// `which`: 0 = I2S slave lock, 1 = ADAT input lock.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_input_lock(core: *mut FfiCore, which: u8, out: *mut InputLockStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| {
+        let r = if which == 0 { c.fetch_i2s_slave_status() } else { c.fetch_adat_input_status() };
+        match r {
+            Ok(st) => {
+                unsafe { *out = st };
+                true
+            }
+            Err(_) => false,
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_adat_out_status(core: *mut FfiCore, out: *mut AdatOutStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_adat_out_status() {
+        Ok(st) => {
+            unsafe { *out = st };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — DAC hardware mute, LG Sound Sync, UART / I2C control
+// ═══════════════════════════════════════════════════════════════════
+
+/// Send a DAC mute config; read it back with `dspi_fetch_dac_mute` ~150 ms later.
+#[no_mangle]
+pub extern "C" fn dspi_set_dac_mute(core: *mut FfiCore, enabled: bool, active_low: bool, pin: u8, hold_ms: u16, release_ms: u16) -> bool {
+    with_core(core, |c| c.set_dac_mute(enabled, active_low, pin, hold_ms, release_ms).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_dac_mute(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.fetch_dac_mute().is_ok())
+}
+
+/// Pulse the DAC mute output for ~1 s. Returns 0 when started, 3 when the
+/// feature is disabled, 255 if the device did not answer.
+#[no_mangle]
+pub extern "C" fn dspi_test_dac_mute(core: *mut FfiCore) -> u8 {
+    with_core(core, |c| c.test_dac_mute().unwrap_or(255))
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_lg_sound_sync(core: *mut FfiCore, enabled: bool) -> bool {
+    with_core(core, |c| c.set_lg_sound_sync(enabled).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_lg_status(core: *mut FfiCore, out: *mut LgStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_lg_status() {
+        Ok(st) => {
+            unsafe { *out = st };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Re-read both control interface configs and their status into the state.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_ctrl_ifaces(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.fetch_ctrl_ifaces().is_ok())
+}
+
+/// Send a UART config; read the outcome with `dspi_fetch_ctrl_ifaces` ~250 ms later.
+#[no_mangle]
+pub extern "C" fn dspi_set_uart(core: *mut FfiCore, config: UartConfig) -> bool {
+    with_core(core, |c| c.set_uart(config).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_set_i2c(core: *mut FfiCore, config: I2cConfig) -> bool {
+    with_core(core, |c| c.set_i2c(config).is_ok())
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // FFI — Device notifications
 // ═══════════════════════════════════════════════════════════════════
 

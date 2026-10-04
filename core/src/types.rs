@@ -136,6 +136,95 @@ impl FilterParams {
     }
 }
 
+/// External-clock lock of the I2S input in slave mode, or of the ADAT input.
+/// state: I2S 0 inactive, 1 acquiring, 2 relocking, 3 locked;
+///        ADAT 0 inactive, 1 acquiring, 2 syncing, 3 locked, 4 relocking.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct InputLockStatus {
+    pub state: u8,
+    /// 0 = master (DSPi drives the clock), 1 = slave.
+    pub clock_mode: u8,
+    /// Rate locked to (Hz, 0 until locked) and the raw measurement.
+    pub detected_rate: u32,
+    pub measured_hz: u32,
+    /// ADAT: the rate is supported (44.1/48 kHz).
+    pub rate_ok: bool,
+}
+
+/// ADAT bulk output state (REQ_GET_ADAT_STATUS, RP2350).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct AdatOutStatus {
+    pub enabled: bool,
+    /// Streaming now (suspended above 48 kHz).
+    pub active: bool,
+    pub pin: u8,
+    pub rate_ok: bool,
+    pub resync_count: u16,
+    pub slip_count: u16,
+}
+
+/// LG Sound Sync live state (REQ_GET_LG_SOUND_SYNC_STATUS).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct LgStatus {
+    pub enabled: bool,
+    /// An LG TV's volume signalling is being decoded.
+    pub present: bool,
+    /// TV volume 0..100; 0xFF until one has been decoded.
+    pub volume: u8,
+    pub muted: bool,
+}
+
+/// UART control interface config (REQ_GET/SET_UART_CONFIG). Device-level,
+/// stored in the flash directory, not in the bulk image.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UartConfig {
+    pub enabled: bool,
+    pub tx_pin: u8,
+    pub rx_pin: u8,
+    /// Push change notifications to the controller.
+    pub notify: bool,
+    pub baud: u32,
+}
+
+impl Default for UartConfig {
+    fn default() -> Self {
+        Self { enabled: false, tx_pin: 16, rx_pin: 17, notify: false, baud: 115_200 }
+    }
+}
+
+/// I2C target control interface config (REQ_GET/SET_I2C_CONFIG).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct I2cConfig {
+    pub enabled: bool,
+    pub sda_pin: u8,
+    pub scl_pin: u8,
+    /// 7-bit target address, 0x08..0x77.
+    pub address: u8,
+}
+
+impl Default for I2cConfig {
+    fn default() -> Self {
+        Self { enabled: false, sda_pin: 18, scl_pin: 19, address: 0x42 }
+    }
+}
+
+/// Control interface outcome and run state (REQ_GET_CTRL_IFACE_STATUS).
+/// `*_last_status`: 0 OK, 1 invalid pin, 2 pin in use, 5 invalid parameter.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CtrlIfaceStatus {
+    pub uart_last_status: u8,
+    pub uart_live: bool,
+    pub i2c_last_status: u8,
+    pub i2c_live: bool,
+    pub protocol_version: u8,
+}
+
 /// Live upmixer state (REQ_UPMIX_GET_STATUS).
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

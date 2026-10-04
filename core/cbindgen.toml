@@ -12,4 +12,10 @@ include = [
     "DspState",
     "NotifyResult",
     "UpmixStatus",
+    "LgStatus",
+    "UartConfig",
+    "I2cConfig",
+    "CtrlIfaceStatus",
+    "InputLockStatus",
+    "AdatOutStatus",
 ]

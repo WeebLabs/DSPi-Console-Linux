@@ -91,6 +91,8 @@ impl DspiCore {
         );
         self.fetch_core1_mode_internal();
         self.fetch_subharm_solo_internal();
+        let _ = self.fetch_dac_mute();
+        let _ = self.fetch_ctrl_ifaces();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {
             self.fetch_preset_name_internal(slot);
@@ -579,6 +581,105 @@ impl DspiCore {
         self.send(REQ_SET_TUBE_PARAM, idx as u16, WINDEX_GLOBAL, &v.to_le_bytes())
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // DAC hardware mute, LG Sound Sync, UART / I2C control
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Send a DAC mute config. The device validates and applies it later in
+    /// its main loop and drops it silently if invalid, so read it back with
+    /// `fetch_dac_mute` about 150 ms afterwards.
+    pub fn set_dac_mute(&mut self, enabled: bool, active_low: bool, pin: u8, hold_ms: u16, release_ms: u16) -> Result<()> {
+        let mut d = [0u8; 16];
+        d[0] = enabled as u8;
+        d[1] = active_low as u8;
+        d[2] = pin;
+        d[4..6].copy_from_slice(&hold_ms.to_le_bytes());
+        d[6..8].copy_from_slice(&release_ms.to_le_bytes());
+        self.send(REQ_SET_DAC_HW_MUTE_CONFIG, 0, WINDEX_GLOBAL, &d)
+    }
+
+    /// Read the DAC mute config the device is using (also the support probe).
+    pub fn fetch_dac_mute(&mut self) -> Result<()> {
+        let d = self.get_exact(REQ_GET_DAC_HW_MUTE_CONFIG, 0, WINDEX_GLOBAL, 16, 8)?;
+        let s = &mut self.state;
+        s.dac_mute_supported = true;
+        s.dac_mute_enabled = d[0] != 0;
+        s.dac_mute_active_low = d[1] != 0;
+        s.dac_mute_pin = d[2];
+        s.dac_mute_hold_ms = read_u16_le(&d, 4);
+        s.dac_mute_release_ms = read_u16_le(&d, 6);
+        // Keep the raw image in step: a later bulk SET would re-apply it
+        if s.bulk_valid {
+            s.bulk_raw[OFF_DAC_HW_MUTE..OFF_DAC_HW_MUTE + 8].copy_from_slice(&d[..8]);
+        }
+        Ok(())
+    }
+
+    /// Pulse the mute output for about a second. 0 = started, 3 = disabled.
+    pub fn test_dac_mute(&self) -> Result<u8> {
+        self.get_u8(REQ_TEST_DAC_HW_MUTE, 0, WINDEX_GLOBAL)
+    }
+
+    /// LG Sound Sync on or off (live; saved with the preset).
+    pub fn set_lg_sound_sync(&mut self, enabled: bool) -> Result<()> {
+        self.state.lg_sound_sync_enabled = enabled;
+        self.send(REQ_SET_LG_SOUND_SYNC_ENABLE, 0, WINDEX_GLOBAL, &[enabled as u8])
+    }
+
+    pub fn fetch_lg_status(&self) -> Result<LgStatus> {
+        let d = self.get_exact(REQ_GET_LG_SOUND_SYNC_STATUS, 0, WINDEX_GLOBAL, 16, 4)?;
+        Ok(LgStatus { enabled: d[0] != 0, present: d[1] != 0, volume: d[2], muted: d[3] != 0 })
+    }
+
+    /// Read both control interface configs and their status. A device that
+    /// does not answer the status request has no control interfaces.
+    pub fn fetch_ctrl_ifaces(&mut self) -> Result<()> {
+        let st = match self.get_exact(REQ_GET_CTRL_IFACE_STATUS, 0, WINDEX_GLOBAL, 8, 5) {
+            Ok(d) => d,
+            Err(e) => {
+                self.state.ctrl_iface_supported = false;
+                return Err(e);
+            }
+        };
+        let u = self.get_exact(REQ_GET_UART_CONFIG, 0, WINDEX_GLOBAL, 8, 8)?;
+        let i = self.get_exact(REQ_GET_I2C_CONFIG, 0, WINDEX_GLOBAL, 8, 4)?;
+        let s = &mut self.state;
+        s.ctrl_iface_supported = true;
+        s.ctrl_status = CtrlIfaceStatus {
+            uart_last_status: st[0],
+            uart_live: st[1] != 0,
+            i2c_last_status: st[2],
+            i2c_live: st[3] != 0,
+            protocol_version: st[4],
+        };
+        s.uart = UartConfig {
+            enabled: u[0] != 0,
+            tx_pin: u[1],
+            rx_pin: u[2],
+            notify: u[3] != 0,
+            baud: u32::from_le_bytes([u[4], u[5], u[6], u[7]]),
+        };
+        s.i2c = I2cConfig { enabled: i[0] != 0, sda_pin: i[1], scl_pin: i[2], address: i[3] };
+        Ok(())
+    }
+
+    /// Send a UART config; the device applies it later (read the outcome
+    /// with `fetch_ctrl_ifaces` about 250 ms afterwards).
+    pub fn set_uart(&mut self, c: UartConfig) -> Result<()> {
+        let mut d = [0u8; 8];
+        d[0] = c.enabled as u8;
+        d[1] = c.tx_pin;
+        d[2] = c.rx_pin;
+        d[3] = c.notify as u8;
+        d[4..8].copy_from_slice(&c.baud.to_le_bytes());
+        self.send(REQ_SET_UART_CONFIG, 0, WINDEX_GLOBAL, &d)
+    }
+
+    pub fn set_i2c(&mut self, c: I2cConfig) -> Result<()> {
+        let d = [c.enabled as u8, c.sda_pin, c.scl_pin, c.address, 0, 0, 0, 0];
+        self.send(REQ_SET_I2C_CONFIG, 0, WINDEX_GLOBAL, &d)
+    }
+
     /// Bit k: psybass processes output k.
     pub fn set_psybass_mask(&mut self, mask: u16) -> Result<()> {
         self.state.psybass_output_mask = mask;
@@ -727,7 +828,10 @@ impl DspiCore {
     pub fn set_output_pin(&mut self, slot: u8, pin: u8) -> Result<u8> {
         let status = self.get_u8(REQ_SET_OUTPUT_PIN, pin_config_wvalue(pin, slot), WINDEX_OUTPUT)?;
         if status == PIN_CONFIG_SUCCESS {
-            if let Some(p) = self.state.output_pins.get_mut(slot as usize) {
+            if pin == PIN_RESET_TO_DEFAULT {
+                // Reset to the platform default: read back which pin that is
+                self.fetch_output_pin(slot)?;
+            } else if let Some(p) = self.state.output_pins.get_mut(slot as usize) {
                 *p = pin;
             }
         }
@@ -740,6 +844,204 @@ impl DspiCore {
             *p = v;
         }
         Ok(v)
+    }
+
+    // Write-as-read setters: an IN transfer with the parameters in wValue,
+    // replying a PIN_CONFIG_* status. The state follows only on success.
+
+    /// Slot type: 0 = S/PDIF, 1 = I2S.
+    pub fn set_output_type(&mut self, slot: u8, kind: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_OUTPUT_TYPE, ((kind as u16) << 8) | slot as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            if let Some(t) = self.state.output_types.get_mut(slot as usize) {
+                *t = kind;
+            }
+        }
+        Ok(st)
+    }
+
+    /// I2S bit clock pin (LRCLK = pin + 1). role 0 = master / shared pair,
+    /// 1 = the slave pair used in split mode.
+    pub fn set_i2s_bck_pin(&mut self, role: u8, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_I2S_BCK_PIN, ((role as u16) << 8) | pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            if role == 0 { self.state.i2s_bck_pin = pin } else { self.state.i2s_bck_pin_slave = pin }
+        }
+        Ok(st)
+    }
+
+    /// 0 = master and slave share the clock pins, 1 = separate pins.
+    pub fn set_i2s_clock_pin_mode(&mut self, mode: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_I2S_CLOCK_PIN_MODE, mode as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.i2s_clock_pin_mode = mode;
+        }
+        Ok(st)
+    }
+
+    pub fn set_mck_enabled(&mut self, enabled: bool) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_MCK_ENABLE, enabled as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.mck_enabled = enabled;
+        }
+        Ok(st)
+    }
+
+    pub fn set_mck_pin(&mut self, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_MCK_PIN, pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.mck_pin = pin;
+        }
+        Ok(st)
+    }
+
+    /// 0 = 128 x fs, 1 = 256 x fs.
+    pub fn set_mck_multiplier(&mut self, mult: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_MCK_MULTIPLIER, mult as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.mck_multiplier = mult;
+        }
+        Ok(st)
+    }
+
+    /// ADAT optical output (RP2350; INVALID_OUTPUT on RP2040).
+    pub fn set_adat_out_enabled(&mut self, enabled: bool) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_ADAT_ENABLE, enabled as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.adat_out_enabled = enabled;
+        }
+        Ok(st)
+    }
+
+    pub fn set_adat_out_pin(&mut self, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_ADAT_PIN, pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.adat_out_pin = pin;
+        }
+        Ok(st)
+    }
+
+    pub fn fetch_adat_out_status(&self) -> Result<AdatOutStatus> {
+        let d = self.get_exact(REQ_GET_ADAT_STATUS, 0, WINDEX_OUTPUT, 8, 8)?;
+        Ok(AdatOutStatus {
+            enabled: d[0] != 0,
+            active: d[1] != 0,
+            pin: d[2],
+            rate_ok: d[3] != 0,
+            resync_count: read_u16_le(&d, 4),
+            slip_count: read_u16_le(&d, 6),
+        })
+    }
+
+    // ── Inputs (write-as-read unless noted; saved with the preset, or
+    //    with the output config in independent mode) ──
+
+    /// S/PDIF input `index` (0-3) RX pin. PIN_RESET_TO_DEFAULT resets it.
+    pub fn set_spdif_rx_pin(&mut self, index: u8, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_SPDIF_RX_PIN, ((index as u16) << 8) | pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS && (index as usize) < 4 {
+            self.state.spdif_rx_pins[index as usize] =
+                if pin == PIN_RESET_TO_DEFAULT { self.get_u8(REQ_GET_SPDIF_RX_PIN, index as u16, WINDEX_OUTPUT)? } else { pin };
+        }
+        Ok(st)
+    }
+
+    /// Enable S/PDIF input `index` (1-3; input 0 is always on).
+    pub fn set_spdif_input_enabled(&mut self, index: u8, enabled: bool) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_SPDIF_INPUT_ENABLE, ((index as u16) << 8) | enabled as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS && index < 4 {
+            let bit = 1u8 << index;
+            if enabled { self.state.spdif_inputs_enabled |= bit } else { self.state.spdif_inputs_enabled &= !bit }
+        }
+        Ok(st)
+    }
+
+    /// Master-mode rate for I2S and ADAT: 0 = 44.1k, 1 = 48k, 2 = 96k (OUT).
+    pub fn set_input_rate(&mut self, index: u8) -> Result<()> {
+        let index = if index > 2 { 1 } else { index };
+        let hz: u32 = match index { 0 => 44_100, 2 => 96_000, _ => 48_000 };
+        self.state.i2s_input_rate = index;
+        self.send(REQ_SET_INPUT_RATE, 0, WINDEX_OUTPUT, &hz.to_le_bytes())
+    }
+
+    /// The rate the pipeline runs at now, Hz.
+    pub fn fetch_input_rate(&self) -> Result<u32> {
+        let d = self.get_exact(REQ_GET_INPUT_RATE, 0, WINDEX_OUTPUT, 8, 4)?;
+        Ok(u32::from_le_bytes([d[0], d[1], d[2], d[3]]))
+    }
+
+    /// I2S input data pin of `pair` (0-3).
+    pub fn set_i2s_rx_pin(&mut self, pair: u8, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_I2S_RX_PIN, ((pair as u16) << 8) | pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS && (pair as usize) < 4 {
+            self.state.i2s_rx_pins[pair as usize] =
+                if pin == PIN_RESET_TO_DEFAULT { self.get_u8(REQ_GET_I2S_RX_PIN, pair as u16, WINDEX_OUTPUT)? } else { pin };
+        }
+        Ok(st)
+    }
+
+    /// I2S input channels: 2, 4, 6 or 8.
+    pub fn set_i2s_input_channels(&mut self, channels: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_I2S_INPUT_CHANNELS, channels as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.i2s_input_channels = channels;
+        }
+        Ok(st)
+    }
+
+    /// 0 = master, 1 = slave (OUT; applied later in the main loop).
+    pub fn set_i2s_clock_mode(&mut self, mode: u8) -> Result<()> {
+        self.state.i2s_clock_mode = mode.min(1);
+        self.send(REQ_SET_I2S_CLOCK_MODE, 0, WINDEX_OUTPUT, &[mode.min(1)])
+    }
+
+    pub fn fetch_i2s_slave_status(&self) -> Result<InputLockStatus> {
+        let d = self.get_exact(REQ_GET_I2S_SLAVE_STATUS, 0, WINDEX_OUTPUT, 16, 12)?;
+        Ok(InputLockStatus {
+            state: d[0],
+            clock_mode: d[1],
+            detected_rate: read_u32_le(&d, 4),
+            measured_hz: read_u32_le(&d, 8),
+            rate_ok: true,
+        })
+    }
+
+    /// ADAT input (RP2350): needs a data pin before it can be enabled.
+    pub fn set_adat_input_enabled(&mut self, enabled: bool) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_ADAT_INPUT_ENABLE, enabled as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.adat_input_enabled = enabled;
+        }
+        Ok(st)
+    }
+
+    /// ADAT input data pin; 0xFF clears it (only while disabled).
+    pub fn set_adat_input_pin(&mut self, pin: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_ADAT_INPUT_PIN, pin as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.adat_input_pin = pin;
+        }
+        Ok(st)
+    }
+
+    /// 0 = master, 1 = slave (applied later in the main loop).
+    pub fn set_adat_input_clock_mode(&mut self, mode: u8) -> Result<u8> {
+        let st = self.get_u8(REQ_SET_ADAT_INPUT_CLOCK_MODE, mode as u16, WINDEX_OUTPUT)?;
+        if st == PIN_CONFIG_SUCCESS {
+            self.state.adat_input_clock_mode = mode;
+        }
+        Ok(st)
+    }
+
+    pub fn fetch_adat_input_status(&self) -> Result<InputLockStatus> {
+        let d = self.get_exact(REQ_GET_ADAT_INPUT_STATUS, 0, WINDEX_OUTPUT, 20, 20)?;
+        Ok(InputLockStatus {
+            state: d[0],
+            clock_mode: d[1],
+            detected_rate: read_u32_le(&d, 12),
+            measured_hz: read_u32_le(&d, 16),
+            rate_ok: d[4] != 0,
+        })
     }
 
     /// 0 = output config stored independently, 1 = saved with presets.

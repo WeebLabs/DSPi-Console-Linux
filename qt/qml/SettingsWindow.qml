@@ -50,10 +50,20 @@ AppWindow {
               source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid labels range center frequency" }
         ]},
         { title: "System", pages: [
+            { id: "overview", title: "Overview", icon: "pins", tint: "#636366", needsDevice: true,
+              source: "settings/pages/OverviewPage.qml", keywords: "gpio pins map assignments in use free" },
+            { id: "inputs", title: "Inputs", icon: "input", tint: "#04856f", needsDevice: true,
+              source: "settings/pages/InputsPage.qml", keywords: "spdif toslink receiver i2s adat clock slave master lock channels lg sound sync tv" },
             { id: "outputs", title: "Outputs", icon: "output", tint: "#34c759", needsDevice: true,
-              source: "settings/pages/OutputsPage.qml", keywords: "pins gpio spdif pdm sub reset" },
+              source: "settings/pages/OutputsPage.qml", keywords: "pins gpio spdif i2s pdm sub adat optical type reset" },
+            { id: "i2s", title: "I2S Configuration", icon: "clock", tint: "#ba3822", needsDevice: true,
+              source: "settings/pages/I2SPage.qml", keywords: "bck lrclk bit clock mck master clock multiplier sample rate split unified" },
             { id: "global", title: "Global Parameters", icon: "globe", tint: "#ff9f0a", needsDevice: true,
-              source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent" }
+              source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent dac mute amplifier pop" }
+        ]},
+        { title: "Control", pages: [
+            { id: "control", title: "Control Interfaces", icon: "chip", tint: "#8f60ad", needsDevice: true,
+              source: "settings/pages/ControlInterfacesPage.qml", keywords: "uart serial i2c target microcontroller baud address" }
         ]}
     ]
 
@@ -279,6 +289,7 @@ AppWindow {
         visible: height > 0
         clip: true
         Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        canRevert: ctx.draftDirty
         onSave: ctx.save()
         onRevert: ctx.revert()
     }

@@ -23,7 +23,7 @@ References (cloned for comparison):
 | 4 | Signal generator, statistics (buffer stats), interrupt monitor | Statistics window restyled with the data the core reads today; buffer / S/PDIF / ADAT stats, signal generator and interrupt monitor not started |
 | 5 | Spectrum analyser (RTA): engine, graph overlay, bar strip | Not started |
 | 6 | On-graph editing; phase graphing (core already computes phase curves) | Not started |
-| 7 | Settings: inputs (S/PDIF ×4, I2S multichannel, ADAT, clock modes), outputs (types, I2S/MCK, ADAT out), DAC hardware mute, LG Sound Sync, UART/I2C control | Not started |
+| 7 | Settings: inputs (S/PDIF ×4, I2S multichannel, ADAT, clock modes), outputs (types, I2S/MCK, ADAT out), DAC hardware mute, LG Sound Sync, UART/I2C control | Pages Overview (GPIO map by role), Inputs (S/PDIF count/pins + LG Sound Sync, I2S input clock mode with confirm/lock status/channels/data pins, ADAT input with free-running warning and lock status), Outputs (slot type + pin, ADAT output with state), I2S Configuration (BCK, unified/split, slave BCK, MCK on/pin/multiplier, input rate), Global Parameters gains External Mute Control (staged, read back, test pulse), Control Interfaces (UART/I2C drafts with Apply, live/inactive pills). Pin pickers list only free pins (`pinOwners`). Hardware edits in independent mode raise the save bar (Save = Save Output Config). Done, untested on hardware |
 | 8 | Control Surfaces + IR remote; presets "Copy to…", "Save as default", preset files | Preset right-click menu done (Save, Rename, Set as Default, Copy to, Clear, Clear All); control surfaces, IR remote and preset files not started |
 | 9 | Firmware updater (bootloader + UF2 install), onboarding, What's New | Not started |
 
@@ -50,6 +50,8 @@ References (cloned for comparison):
   (`encode_coverage` test guards that every decoded field is encoded). Echoes of our
   own writes (source HOST_SET) are ignored, which also ignores another host's EP0
   writes, as the Windows Console does.
+- **DAC mute and bulk SET.** A bulk SET re-applies (and saves) the DAC mute section, so the
+  core keeps `bulk_raw` and the state in step after every 0xEA read-back.
 - **System volume on Linux** reaches the DSPi only with the DSPi PipeWire card
   profile (DSPi repo `tools/linux-pipewire-card-profile`, PR 59). Without it PipeWire
   may pick the IEC958 profile with software volume and the DSPi never sees a change.

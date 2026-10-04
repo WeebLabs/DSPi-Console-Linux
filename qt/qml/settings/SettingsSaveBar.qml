@@ -4,6 +4,7 @@ import QtQuick.Controls 2.15
 // Shown while Settings holds changes not yet written to the device.
 Rectangle {
     id: bar
+    property bool canRevert: true     // hardware edits saved to RAM can't be undone
     signal save()
     signal revert()
 
@@ -25,6 +26,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8
         Button {
+            visible: bar.canRevert
             text: "Revert"
             onClicked: bar.revert()
         }

@@ -696,6 +696,19 @@ pub fn decode_bulk(data: &[u8], state: &mut DspState) -> Result<(), BulkError> {
     let ext_p1 = d[OFF_INPUT_CONFIG + 11];
     s.spdif_inputs_enabled = 0x01 | if ext_p1 > 0 { (ext_p1 - 1) << 1 } else { 0 };
     s.adat_input_enabled = d[OFF_INPUT_CONFIG + 14] == 2;
+    // Pins and modes. Extension bytes use 0 for "absent / keep".
+    let ic = |k: usize| d[OFF_INPUT_CONFIG + k];
+    s.spdif_rx_pins[0] = ic(1);
+    for k in 0..3 {
+        if ic(8 + k) != 0 { s.spdif_rx_pins[k + 1] = ic(8 + k); }
+        if ic(5 + k) != 0 { s.i2s_rx_pins[k + 1] = ic(5 + k); }
+    }
+    s.i2s_rx_pins[0] = ic(2);
+    s.i2s_input_rate = ic(3).min(2);
+    if ic(4) != 0 { s.i2s_input_channels = ic(4); }
+    s.i2s_clock_mode = ic(12).min(1);
+    s.adat_input_pin = if ic(13) == 0 { 0xFF } else { ic(13) };
+    if ic(15) != 0 { s.adat_input_clock_mode = (ic(15) - 1).min(1); }
 
     s.psybass_enabled = d[OFF_PSYBASS] != 0;
     s.psybass_output_mask = read_u16_le(d, OFF_PSYBASS + 2);
@@ -742,6 +755,28 @@ pub fn decode_bulk(data: &[u8], state: &mut DspState) -> Result<(), BulkError> {
 
     // LG Sound Sync (only `enabled` is honored on SET)
     s.lg_sound_sync_enabled = d[OFF_LG_SOUND_SYNC] != 0;
+
+    // Output types and clocks
+    s.output_types.copy_from_slice(&d[OFF_I2S..OFF_I2S + 4]);
+    s.i2s_bck_pin = d[OFF_I2S + 4];
+    s.mck_pin = d[OFF_I2S + 5];
+    s.mck_enabled = d[OFF_I2S + 6] != 0;
+    s.mck_multiplier = d[OFF_I2S + 7].min(1);
+    s.i2s_clock_pin_mode = d[OFF_I2S + 8].saturating_sub(1).min(1);   // +1 encoded, 0 = absent
+    if d[OFF_I2S + 9] != 0 {
+        s.i2s_bck_pin_slave = d[OFF_I2S + 9];
+    }
+    s.adat_out_enabled = d[OFF_ADAT] != 0;
+    if d[OFF_ADAT + 1] != 0 {
+        s.adat_out_pin = d[OFF_ADAT + 1];
+    }
+
+    // DAC hardware mute
+    s.dac_mute_enabled = d[OFF_DAC_HW_MUTE] != 0;
+    s.dac_mute_active_low = d[OFF_DAC_HW_MUTE + 1] != 0;
+    s.dac_mute_pin = d[OFF_DAC_HW_MUTE + 2];
+    s.dac_mute_hold_ms = read_u16_le(d, OFF_DAC_HW_MUTE + 4);
+    s.dac_mute_release_ms = read_u16_le(d, OFF_DAC_HW_MUTE + 6);
 
     // User volume / mute
     s.user_volume_db = read_f32_le(d, OFF_USER_VOLUME);
@@ -845,6 +880,22 @@ pub fn encode_bulk(state: &DspState) -> Vec<u8> {
 
     write_f32_le(&mut d, OFF_MASTER_VOLUME, s.master_volume_db);
     d[OFF_INPUT_CONFIG] = s.input_source;
+    {
+        let ic = OFF_INPUT_CONFIG;
+        d[ic + 1] = s.spdif_rx_pins[0];
+        d[ic + 2] = s.i2s_rx_pins[0];
+        d[ic + 3] = s.i2s_input_rate;
+        d[ic + 4] = s.i2s_input_channels;
+        for k in 0..3 {
+            d[ic + 5 + k] = s.i2s_rx_pins[k + 1];
+            d[ic + 8 + k] = s.spdif_rx_pins[k + 1];
+        }
+        d[ic + 11] = ((s.spdif_inputs_enabled >> 1) & 0x07) + 1;
+        d[ic + 12] = s.i2s_clock_mode;
+        d[ic + 13] = if s.adat_input_pin == 0xFF { 0 } else { s.adat_input_pin };
+        d[ic + 14] = if s.adat_input_enabled { 2 } else { 1 };
+        d[ic + 15] = s.adat_input_clock_mode + 1;
+    }
     d[OFF_PSYBASS] = s.psybass_enabled as u8;
     write_u16_le(&mut d, OFF_PSYBASS + 2, s.psybass_output_mask);
     write_f32_le(&mut d, OFF_PSYBASS + 4, s.psybass_cutoff_hz);
@@ -888,6 +939,31 @@ pub fn encode_bulk(state: &DspState) -> Vec<u8> {
         write_f32_le(&mut d, OFF_TUBE + 8 + i * 4, t[*idx as usize]);
     }
     d[OFF_LG_SOUND_SYNC] = s.lg_sound_sync_enabled as u8;
+
+    // Output types and clocks (absent fields stay as read)
+    d[OFF_I2S..OFF_I2S + 4].copy_from_slice(&s.output_types);
+    d[OFF_I2S + 4] = s.i2s_bck_pin;
+    d[OFF_I2S + 5] = s.mck_pin;
+    d[OFF_I2S + 6] = s.mck_enabled as u8;
+    d[OFF_I2S + 7] = s.mck_multiplier;
+    if d[OFF_I2S + 8] != 0 {
+        d[OFF_I2S + 8] = s.i2s_clock_pin_mode + 1;
+    }
+    if d[OFF_I2S + 9] != 0 {
+        d[OFF_I2S + 9] = s.i2s_bck_pin_slave;
+    }
+    d[OFF_ADAT] = s.adat_out_enabled as u8;
+    if d[OFF_ADAT + 1] != 0 {
+        d[OFF_ADAT + 1] = s.adat_out_pin;
+    }
+
+    // DAC hardware mute: a bulk SET validates this and saves it to flash, so
+    // it must carry the current config, never a stale one
+    d[OFF_DAC_HW_MUTE] = s.dac_mute_enabled as u8;
+    d[OFF_DAC_HW_MUTE + 1] = s.dac_mute_active_low as u8;
+    d[OFF_DAC_HW_MUTE + 2] = s.dac_mute_pin;
+    write_u16_le(&mut d, OFF_DAC_HW_MUTE + 4, s.dac_mute_hold_ms);
+    write_u16_le(&mut d, OFF_DAC_HW_MUTE + 6, s.dac_mute_release_ms);
     write_f32_le(&mut d, OFF_USER_VOLUME, s.user_volume_db);
     d[OFF_USER_VOLUME + 4] = s.user_mute as u8;
 

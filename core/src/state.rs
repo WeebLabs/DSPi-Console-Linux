@@ -122,6 +122,18 @@ pub struct DspState {
     /// Bit k: S/PDIF input k+1 is enabled (input 1 is always on).
     pub spdif_inputs_enabled: u8,
     pub adat_input_enabled: bool,
+    /// RX pin of each S/PDIF input (1-4).
+    pub spdif_rx_pins: [u8; 4],
+    /// Data pin of each I2S input pair; active pairs = channels / 2.
+    pub i2s_rx_pins: [u8; 4],
+    pub i2s_input_channels: u8,
+    /// Master-mode rate shared by I2S and ADAT: 0 = 44.1k, 1 = 48k, 2 = 96k.
+    pub i2s_input_rate: u8,
+    /// 0 = master (DSPi drives BCK/LRCLK), 1 = slave.
+    pub i2s_clock_mode: u8,
+    /// ADAT input data pin, 0xFF = not set (it ships unset).
+    pub adat_input_pin: u8,
+    pub adat_input_clock_mode: u8,
 
     // ── Psychoacoustic bass ─────────────────────────────────────────
     pub psybass_enabled: bool,
@@ -147,6 +159,37 @@ pub struct DspState {
     // ── Tube modeller ───────────────────────────────────────────────
     /// By `TUBE_PARAM_*` index; flags, mask and enums as whole numbers.
     pub tube: [f32; TUBE_PARAM_COUNT],
+
+    // ── Output types and clocks (i2s_config / adat_config sections) ─
+    /// Per S/PDIF-or-I2S slot: 0 = S/PDIF, 1 = I2S.
+    pub output_types: [u8; 4],
+    /// I2S bit clock (LRCLK is the next GPIO); the slave pair in split mode.
+    pub i2s_bck_pin: u8,
+    pub i2s_bck_pin_slave: u8,
+    /// 0 = master and slave share the clock pins, 1 = separate pins.
+    pub i2s_clock_pin_mode: u8,
+    pub mck_enabled: bool,
+    pub mck_pin: u8,
+    /// 0 = 128 x fs, 1 = 256 x fs.
+    pub mck_multiplier: u8,
+    /// ADAT optical output (RP2350).
+    pub adat_out_enabled: bool,
+    pub adat_out_pin: u8,
+
+    // ── DAC hardware mute (device-level; in the bulk image) ────────
+    pub dac_mute_supported: bool,
+    pub dac_mute_enabled: bool,
+    pub dac_mute_active_low: bool,
+    /// GPIO, 0xFF = none.
+    pub dac_mute_pin: u8,
+    pub dac_mute_hold_ms: u16,
+    pub dac_mute_release_ms: u16,
+
+    // ── UART / I2C control interfaces (flash directory, not bulk) ──
+    pub ctrl_iface_supported: bool,
+    pub uart: UartConfig,
+    pub i2c: I2cConfig,
+    pub ctrl_status: CtrlIfaceStatus,
 
     // ── Core 1 mode ─────────────────────────────────────────────────
     pub core1_mode: u8,
@@ -225,6 +268,13 @@ impl Default for DspState {
             lg_sound_sync_enabled: false,
             spdif_inputs_enabled: 0x01,
             adat_input_enabled: false,
+            spdif_rx_pins: [5, 20, 21, 22],
+            i2s_rx_pins: [1, 2, 3, 4],
+            i2s_input_channels: 2,
+            i2s_input_rate: 1,
+            i2s_clock_mode: 0,
+            adat_input_pin: 0xFF,
+            adat_input_clock_mode: 0,
             psybass_enabled: false,
             psybass_output_mask: 0,
             psybass_cutoff_hz: 80.0,
@@ -236,6 +286,25 @@ impl Default for DspState {
             subharm: SUBHARM_DEFAULTS,
             subharm_solo: false,
             tube: TUBE_DEFAULTS,
+            output_types: [0; 4],
+            i2s_bck_pin: 14,
+            i2s_bck_pin_slave: 26,
+            i2s_clock_pin_mode: 0,
+            mck_enabled: false,
+            mck_pin: 13,
+            mck_multiplier: 0,
+            adat_out_enabled: false,
+            adat_out_pin: 12,
+            dac_mute_supported: false,
+            dac_mute_enabled: false,
+            dac_mute_active_low: true,
+            dac_mute_pin: 11,
+            dac_mute_hold_ms: 5,
+            dac_mute_release_ms: 0,
+            ctrl_iface_supported: false,
+            uart: UartConfig::default(),
+            i2c: I2cConfig::default(),
+            ctrl_status: CtrlIfaceStatus::default(),
             core1_mode: 0,
             preset_occupied: 0,
             preset_names: [[0u8; CHANNEL_NAME_LEN]; MAX_PRESETS],
