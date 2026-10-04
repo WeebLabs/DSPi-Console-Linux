@@ -24,6 +24,36 @@ SettingsPage {
             onMoved: app.graphLineWidth = value
             onCommitted: app.graphLineWidth = value
         }
+        SettingsSwitchRow {
+            title: "Show Phase Response"
+            detail: "Overlay the selected channel's phase (degrees) as a dotted line."
+            checked: app ? app.graphShowPhase : false
+            onToggled: app.graphShowPhase = checked
+        }
+        SettingsSwitchRow {
+            title: "Unwrap Phase"
+            detail: "Show continuous phase instead of wrapping at ±180°."
+            enabled: app ? app.graphShowPhase : false
+            checked: app ? app.graphPhaseUnwrapped : false
+            onToggled: app.graphPhaseUnwrapped = checked
+        }
+    }
+
+    SettingsSection {
+        title: "Editing"
+        footnote: "Drag a band's dot to change it; Shift for fine steps, Alt to keep to one axis, Ctrl-drag or the wheel for its width. Double-click empty graph to add a band."
+        SettingsSwitchRow {
+            title: "Show Frequency Readout"
+            detail: "While editing bands, label the frequency under the pointer along the bottom of the graph."
+            checked: app ? app.graphFreqReadout : true
+            onToggled: app.graphFreqReadout = checked
+        }
+        SettingsSwitchRow {
+            title: "Show Gain Readout"
+            detail: "Label the level under the pointer along the left edge: the gain a new band takes there."
+            checked: app ? app.graphLevelReadout : true
+            onToggled: app.graphLevelReadout = checked
+        }
     }
 
     SettingsSection {

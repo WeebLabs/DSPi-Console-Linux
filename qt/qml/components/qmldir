@@ -38,3 +38,7 @@ SectionLabel 1.0 SectionLabel.qml
 MenuLink 1.0 MenuLink.qml
 TubeIllustration 1.0 TubeIllustration.qml
 SoundstageIllustration 1.0 SoundstageIllustration.qml
+PeqShapeGlyph 1.0 PeqShapeGlyph.qml
+PeqBandHud 1.0 PeqBandHud.qml
+PeqShapeCard 1.0 PeqShapeCard.qml
+PeqShapeChooser 1.0 PeqShapeChooser.qml

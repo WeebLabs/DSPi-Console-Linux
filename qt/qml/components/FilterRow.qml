@@ -15,6 +15,10 @@ Rectangle {
     property real filterGain: 0
     property real filterQ: 0.707
     property bool filterBypass: false
+    // Shared with the graph editor: selected there, or under its pointer
+    property bool linked: false
+    property bool selected: false
+    property bool graphHovered: false
 
     // Full names by firmware type (PEQ types 0..13), as on the macOS Console
     readonly property var typeNames: ["Off", "Peaking", "Low Shelf (12dB)", "High Shelf (12dB)",
@@ -33,6 +37,8 @@ Rectangle {
 
     signal filterChanged(int type, real freq, real gain, real q)
     signal bypassToggled(bool bypass)
+    signal numberClicked(int modifiers)
+    signal pointerOver(bool over)
 
     opacity: filterBypass ? 0.45 : 1.0
 
@@ -45,6 +51,27 @@ Rectangle {
         // Gain carries fp for the Linkwitz Transform, so never carry it across.
         var keepsGain = [1, 2, 3, 9, 10].indexOf(t) >= 0 && filterType !== 11
         filterRowRoot.filterChanged(t, filterFreq, keepsGain ? filterGain : 0, q)
+    }
+
+    // Tint while the band is selected or hovered on the graph
+    Rectangle {
+        anchors.fill: parent
+        color: bandColors[bandIndex % bandColors.length]
+        opacity: !linked || !isActive ? 0 : selected ? 0.13 : graphHovered ? 0.07 : 0
+        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+    }
+    Rectangle {
+        width: 2
+        height: parent.height
+        color: bandColors[bandIndex % bandColors.length]
+        opacity: linked && isActive && selected ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+    }
+
+    // The row under the pointer lights its band on the graph
+    HoverHandler {
+        enabled: linked && isActive
+        onHoveredChanged: filterRowRoot.pointerOver(hovered)
     }
 
     Row {
@@ -67,6 +94,14 @@ Rectangle {
             font.pixelSize: 13
             color: isActive ? "#e0e0e0" : "#888888"
             anchors.verticalCenter: parent.verticalCenter
+            // Selects the band, with the modifiers of a click on its dot
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -6
+                enabled: linked && isActive
+                cursorShape: Qt.PointingHandCursor
+                onClicked: filterRowRoot.numberClicked(mouse.modifiers)
+            }
         }
 
         // Type button: name and up/down chevrons; opens the type menu

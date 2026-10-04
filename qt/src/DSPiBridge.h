@@ -412,6 +412,19 @@ public:
 
     // Magnitude curve access for C++ BodePlotItem (app ids)
     void getMagnitudeCurve(int ch, double *out);
+    // Phase (degrees) of a channel's PEQ and crossover bands, 201 points
+    void getPhaseCurve(int ch, bool unwrap, double *out);
+
+    // ── On-graph editor support (C++ only) ──
+    // The channel's PEQ bands (BANDS_PER_CHANNEL) and, for an output, its
+    // crossover bands; false if the channel doesn't exist
+    bool channelBands(int ch, FilterParams *bands, FilterParams *xover, int *xoverCount) const;
+    // dB the graph adds to the channel's curve (an output's gain)
+    float channelGainOffset(int ch) const;
+    // Mid-drag: device (and linked partner) only, no signals
+    void sendBandLive(int ch, int band, const FilterParams &p);
+    // Release: write the bands once, then refresh everything
+    void commitBands(int ch, const QVector<int> &bands, const QVector<FilterParams> &params);
     bool isMagnitudeDirty(int ch) const;
     void clearMagnitudeDirty(int ch);
 

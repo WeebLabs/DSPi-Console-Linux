@@ -7,6 +7,8 @@ import "components"
 Column {
     id: filterResponseRoot
     spacing: 0
+    // The open channel's graph editor; the band list shares its selection
+    property alias peqEditor: editor
 
     // Gap below the titlebar
     Item { width: parent.width; height: 6 }
@@ -40,7 +42,73 @@ Column {
                 dbBottom: root.graphDbCenter - root.graphDbRange / 2
                 minFreq: root.graphMinFreq
                 maxFreq: root.graphMaxFreq
+                // The open channel is drawn (and edited) by the editor above
+                excludeChannel: editor.active ? editor.channel : -1
+                showPhase: root.graphShowPhase
+                phaseUnwrapped: root.graphPhaseUnwrapped
+                phaseChannel: root.openChannelId
                 Component.onCompleted: setBridge(bridge)
+            }
+
+            // Drag, select and create the open channel's bands on the graph
+            PeqEditorItem {
+                id: editor
+                anchors.fill: parent
+                channel: root.openChannelId
+                showGlow: root.graphShowGlow
+                lineWidth: root.graphLineWidth
+                dbTop: bodePlot.dbTop
+                dbBottom: bodePlot.dbBottom
+                minFreq: root.graphMinFreq
+                maxFreq: root.graphMaxFreq
+                showFreqReadout: root.graphFreqReadout
+                showLevelReadout: root.graphLevelReadout
+                backgroundColor: parent.color
+                Component.onCompleted: setBridge(bridge)
+                onContextMenuRequested: {
+                    var items = []
+                    if (band >= 0) {
+                        var info = editor.bandInfo(band)
+                        items.push({ key: "header", text: selectionCount > 1 ? selectionCount + " Bands" : "Band " + (band + 1), enabled: false })
+                        if (info.order > 0) {
+                            var labels = info.allPass ? ["180\u00b0", "360\u00b0"] : ["6 dB/oct", "12 dB/oct"]
+                            items.push({ key: "order1", text: labels[0], enabled: info.order !== 1 })
+                            items.push({ key: "order2", text: labels[1], enabled: info.order !== 2 })
+                        }
+                        items.push({ separator: true })
+                        items.push({ key: "bypass", text: info.bypass ? "Enable" : "Bypass" })
+                        if (info.hasGain) items.push({ key: "invert", text: "Invert Gain" })
+                        items.push({ separator: true })
+                        items.push({ key: "delete", text: selectionCount > 1 ? "Delete " + selectionCount + " Bands" : "Delete Band", danger: true })
+                    } else {
+                        items.push({ key: "all", text: "Select All Bands", shortcut: "Ctrl+A" })
+                        items.push({ key: "none", text: "Deselect All", shortcut: "Esc" })
+                        if (selectionCount > 0) {
+                            items.push({ separator: true })
+                            items.push({ key: "delete", text: selectionCount > 1 ? "Delete Selected Bands" : "Delete Selected Band", danger: true })
+                        }
+                    }
+                    graphMenu.items = items
+                    graphMenu.openAt(editor, x, y)
+                }
+                onShapeCardRequested: {
+                    shapeCard.createFreq = freq
+                    shapeCard.createGain = gain
+                    shapeCard.openBeside(x, y, boost)
+                }
+            }
+
+            // Ctrl-click: the new band's shape, placed in the graph
+            PeqShapeCard {
+                id: shapeCard
+                parent: editor
+                editor: editor
+            }
+
+            // The hovered or selected band's controls
+            PeqBandHud {
+                id: bandHud
+                editor: editor
             }
 
             // Scroll zone over dB axis labels for vertical zoom
@@ -97,6 +165,21 @@ Column {
                     plotContainer.height = Math.max(250, Math.min(350, newHeight))
                 }
             }
+        }
+    }
+
+
+    ActionMenu {
+        id: graphMenu
+        parent: Overlay.overlay
+        onTriggered: {
+            if (key === "delete") editor.deleteSelection()
+            else if (key === "bypass") editor.toggleBypassSelection()
+            else if (key === "invert") editor.invertGainSelection()
+            else if (key === "order1") editor.setOrderSelection(1)
+            else if (key === "order2") editor.setOrderSelection(2)
+            else if (key === "all") editor.selectAll()
+            else if (key === "none") editor.deselectAll()
         }
     }
 }

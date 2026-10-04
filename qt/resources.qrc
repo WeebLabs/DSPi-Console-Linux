@@ -101,6 +101,10 @@
         <file>qml/components/MenuLink.qml</file>
         <file>qml/components/TubeIllustration.qml</file>
         <file>qml/components/SoundstageIllustration.qml</file>
+        <file>qml/components/PeqShapeGlyph.qml</file>
+        <file>qml/components/PeqBandHud.qml</file>
+        <file>qml/components/PeqShapeCard.qml</file>
+        <file>qml/components/PeqShapeChooser.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>
 </RCC>

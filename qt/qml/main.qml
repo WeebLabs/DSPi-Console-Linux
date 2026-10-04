@@ -47,6 +47,10 @@ ApplicationWindow {
     property real graphDbCenter: 0.0
     property real graphMinFreq: 15.0
     property real graphMaxFreq: 20000.0
+    property bool graphShowPhase: false
+    property bool graphPhaseUnwrapped: false
+    property bool graphFreqReadout: true
+    property bool graphLevelReadout: true
 
     // Graph preferences persist between sessions
     Settings {
@@ -61,6 +65,10 @@ ApplicationWindow {
         property alias dbCenter: root.graphDbCenter
         property alias minFreq: root.graphMinFreq
         property alias maxFreq: root.graphMaxFreq
+        property alias showPhase: root.graphShowPhase
+        property alias phaseUnwrapped: root.graphPhaseUnwrapped
+        property alias freqReadout: root.graphFreqReadout
+        property alias levelReadout: root.graphLevelReadout
     }
 
     // Selection state: "overview", "channel:N", "output:N"
@@ -320,6 +328,7 @@ ApplicationWindow {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 16      // same as the side margins
                 channelId: root.selectedOutput >= 0 ? root.selectedOutput + 2 : root.selectedChannel
+                editor: filterResponse.peqEditor
             }
         }
     }

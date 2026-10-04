@@ -16,6 +16,7 @@
 
 #include "DSPiBridge.h"
 #include "BodePlotItem.h"
+#include "PeqEditorItem.h"
 #include "MeterItem.h"
 #include "WindowEffects.h"
 #include "TextFocusReleaser.h"
@@ -166,6 +167,7 @@ int main(int argc, char *argv[])
 
     // Register QML types
     qmlRegisterType<BodePlotItem>("DSPi", 1, 0, "BodePlotItem");
+    qmlRegisterType<PeqEditorItem>("DSPi", 1, 0, "PeqEditorItem");
     qmlRegisterType<MeterItem>("DSPi", 1, 0, "MeterItem");
 
     // Create bridge

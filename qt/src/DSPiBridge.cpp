@@ -509,6 +509,49 @@ QVariantList DSPiBridge::magnitudeCurve(int ch) {
     return result;
 }
 
+void DSPiBridge::getPhaseCurve(int ch, bool unwrap, double *out) {
+    FilterParams bands[BANDS_PER_CHANNEL + MAX_XOVER_BANDS];
+    int n = 0;
+    int w = wire(ch);
+    if (w >= 0) {
+        auto *s = state();
+        for (int b = 0; b < BANDS_PER_CHANNEL; b++) bands[n++] = s->filters[w][b];
+        if (outputOf(ch) >= 0)
+            for (int b = 0; b < MAX_XOVER_BANDS; b++) bands[n++] = s->xover[w][b];
+    }
+    dspi_compute_phase_curve(bands, n, unwrap, out);
+}
+
+bool DSPiBridge::channelBands(int ch, FilterParams *bands, FilterParams *xover, int *xoverCount) const {
+    int w = wire(ch);
+    *xoverCount = 0;
+    if (w < 0) return false;
+    auto *s = state();
+    for (int b = 0; b < BANDS_PER_CHANNEL; b++) bands[b] = s->filters[w][b];
+    if (outputOf(ch) >= 0) {
+        for (int b = 0; b < MAX_XOVER_BANDS; b++) xover[b] = s->xover[w][b];
+        *xoverCount = MAX_XOVER_BANDS;
+    }
+    return true;
+}
+
+float DSPiBridge::channelGainOffset(int ch) const {
+    int out = outputOf(ch);
+    return out >= 0 ? state()->output_gain_db[out] : 0.0f;
+}
+
+void DSPiBridge::sendBandLive(int ch, int band, const FilterParams &p) {
+    if (band < 0 || band >= BANDS_PER_CHANNEL) return;
+    applyFilter(ch, band, p);
+}
+
+void DSPiBridge::commitBands(int ch, const QVector<int> &bands, const QVector<FilterParams> &params) {
+    for (int i = 0; i < bands.size() && i < params.size(); i++)
+        if (bands[i] >= 0 && bands[i] < BANDS_PER_CHANNEL) applyFilter(ch, bands[i], params[i]);
+    emit stateChanged();
+    emit magnitudesChanged();
+}
+
 void DSPiBridge::getMagnitudeCurve(int ch, double *out) {
     if (ch < 0 || ch >= kAppChannelCount) return;
     if (m_magnitudeDirty[ch] || !m_magnitudeValid[ch]) computeCurve(ch);

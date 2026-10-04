@@ -11,8 +11,50 @@ Item {
     readonly property bool xo: isOutput && showCrossover
     property int rev: 0
 
+    // The graph editor: PEQ rows share its selection and hover
+    property var editor: null
+    readonly property bool linked: editor !== null && editor.active && !xo && editor.channel === channelId
+    readonly property var selectedBands: linked ? editor.selectedBands : []
+    readonly property int graphHovered: linked ? editor.hoveredBand : -1
+    property var previousSelection: []
+    property string madeByList: ""      // the selection the list last made; it doesn't scroll for it
+
     onChannelIdChanged: showCrossover = false
+    onLinkedChanged: {
+        previousSelection = linked ? editor.selectedBands : []
+        if (!linked && editor && editor.listHovered >= 0) editor.listHovered = -1
+    }
     Connections { target: bridge; function onStateChanged() { filterListRoot.rev++ } }
+
+    // A band newly selected on the graph, or one the pointer rests on there,
+    // scrolls its row into view; a row already in view does not move
+    Connections {
+        target: filterListRoot.linked ? filterListRoot.editor : null
+        function onSelectionChanged() {
+            var now = filterListRoot.editor.selectedBands
+            var added = now.filter(function (b) { return filterListRoot.previousSelection.indexOf(b) < 0 })
+            filterListRoot.previousSelection = now
+            if (now.join(",") === filterListRoot.madeByList) return
+            filterListRoot.madeByList = ""
+            if (added.length) filterListRoot.reveal(Math.min.apply(null, added))
+        }
+        function onRevealRow(band) { filterListRoot.reveal(band) }
+    }
+
+    function reveal(band) {
+        var top = band * 36, bottom = top + 36
+        var to = bandList.contentY
+        if (top < to) to = top
+        else if (bottom > to + bandList.height) to = bottom - bandList.height
+        if (to === bandList.contentY) return
+        revealAnim.to = Math.max(0, Math.min(to, bandList.contentHeight - bandList.height))
+        revealAnim.restart()
+    }
+
+    function listClick(band, modifiers) {
+        editor.listClick(band, (modifiers & Qt.ControlModifier) !== 0, (modifiers & Qt.ShiftModifier) !== 0)
+        madeByList = editor.selectedBands.join(",")
+    }
 
     component HeaderText: Text {
         font.pixelSize: 10
@@ -89,6 +131,7 @@ Item {
         Rectangle { id: sep; anchors.top: header.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
 
         Flickable {
+            id: bandList
             anchors.top: sep.bottom
             anchors.bottom: footer.top
             width: parent.width
@@ -96,6 +139,7 @@ Item {
             contentHeight: bands.height
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {}
+            NumberAnimation { id: revealAnim; target: bandList; property: "contentY"; duration: 250; easing.type: Easing.InOutQuad }
 
             Column {
                 id: bands
@@ -114,7 +158,15 @@ Item {
                         filterGain: { filterListRoot.rev; return bridge.filterGain(filterListRoot.channelId, index) }
                         filterQ: { filterListRoot.rev; return bridge.filterQ(filterListRoot.channelId, index) }
                         filterBypass: { filterListRoot.rev; return bridge.filterBypass(filterListRoot.channelId, index) }
+                        linked: filterListRoot.linked
+                        selected: filterListRoot.selectedBands.indexOf(index) >= 0
+                        graphHovered: filterListRoot.graphHovered === index
 
+                        onNumberClicked: filterListRoot.listClick(bandIndex, modifiers)
+                        onPointerOver: function (over) {
+                            if (over) filterListRoot.editor.listHovered = bandIndex
+                            else if (filterListRoot.editor.listHovered === bandIndex) filterListRoot.editor.listHovered = -1
+                        }
                         onFilterChanged: bridge.setFilter(filterListRoot.channelId, bandIndex, type, freq, gain, q)
                         onBypassToggled: bridge.setBandBypass(filterListRoot.channelId, bandIndex, bypass)
                     }

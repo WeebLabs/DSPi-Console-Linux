@@ -31,6 +31,10 @@ Row {
 
     signal valueEdited(real newValue)
 
+    // Start typing in the field, its value selected
+    function beginEdit() { textField.forceActiveFocus() }
+    readonly property bool editing: textField.activeFocus
+
     TextField {
         id: textField
         width: fieldWidth

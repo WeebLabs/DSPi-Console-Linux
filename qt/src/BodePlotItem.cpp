@@ -35,6 +35,7 @@ QVector<ChannelCurve> BodePlotItem::buildCurves() const {
     QVector<ChannelCurve> curves;
     for (int eqCh = 0; eqCh < kAppChannelCount; eqCh++) {
         if (!m_bridge->channelExists(eqCh) || !m_bridge->channelVisible(eqCh)) continue;
+        if (eqCh == m_excludeChannel) continue;     // drawn by the editor
 
         ChannelCurve curve;
         curve.color = QColor(m_bridge->channelColor(eqCh));
@@ -81,6 +82,7 @@ QVector<ChannelCurve> BodePlotItem::shownCurves() const {
 // nothing — no animation, no repaint — unless a curve actually changed.
 void BodePlotItem::refresh() {
     if (!m_bridge) return;
+    updatePhase();
     QVector<ChannelCurve> next = buildCurves();
     if (sameCurves(next, m_targetCurves)) return;
 
@@ -114,6 +116,7 @@ void BodePlotItem::paint(QPainter *painter) {
 
     drawGrid(painter, rect);
     drawCurves(painter, rect);
+    drawPhase(painter, rect);
     drawLabels(painter, rect);
 }
 
@@ -340,3 +343,47 @@ void BodePlotItem::setShowDbGrid(bool v) { if (m_showDbGrid != v) { m_showDbGrid
 void BodePlotItem::setShowFreqLabels(bool v) { if (m_showFreqLabels != v) { m_showFreqLabels = v; emit settingsChanged(); update(); } }
 void BodePlotItem::setShowDbLabels(bool v) { if (m_showDbLabels != v) { m_showDbLabels = v; emit settingsChanged(); update(); } }
 void BodePlotItem::setLineWidth(float v) { if (m_lineWidth != v) { m_lineWidth = v; emit settingsChanged(); update(); } }
+
+void BodePlotItem::setExcludeChannel(int ch) { if (m_excludeChannel != ch) { m_excludeChannel = ch; emit settingsChanged(); refreshNow(); } }
+void BodePlotItem::setShowPhase(bool v) { if (m_showPhase != v) { m_showPhase = v; emit settingsChanged(); updatePhase(); update(); } }
+void BodePlotItem::setPhaseUnwrapped(bool v) { if (m_phaseUnwrapped != v) { m_phaseUnwrapped = v; emit settingsChanged(); updatePhase(); update(); } }
+void BodePlotItem::setPhaseChannel(int ch) { if (m_phaseChannel != ch) { m_phaseChannel = ch; emit settingsChanged(); updatePhase(); update(); } }
+
+// The phase trace follows committed changes (not a drag in progress)
+void BodePlotItem::updatePhase() {
+    QVector<double> next;
+    if (m_bridge && m_showPhase && m_phaseChannel >= 0 && m_bridge->channelExists(m_phaseChannel)
+        && m_bridge->channelVisible(m_phaseChannel)) {
+        next.resize(MAGNITUDE_POINTS);
+        m_bridge->getPhaseCurve(m_phaseChannel, m_phaseUnwrapped, next.data());
+    }
+    if (next != m_phase) { m_phase = next; update(); }
+}
+
+// Dotted phase trace and its degree axis on the right. The axis scales with
+// the dB range, as on macOS: +-180 degrees at the default 50 dB.
+void BodePlotItem::drawPhase(QPainter *painter, const QRectF &rect) {
+    if (m_phase.isEmpty()) return;
+    double top = 180.0 * (m_dbTop - m_dbBottom) / 50.0;
+    // Map degrees onto the dB scale, centred on the middle of the view
+    double mid = (m_dbTop + m_dbBottom) / 2.0, half = (m_dbTop - m_dbBottom) / 2.0;
+    QVector<double> asDb(m_phase.size());
+    for (int i = 0; i < m_phase.size(); i++) asDb[i] = mid + m_phase[i] / top * half;
+    QPainterPath path = buildCurvePath(asDb, rect);
+    QPen pen(QColor(237, 237, 237), m_lineWidth * 0.9, Qt::CustomDashLine, Qt::RoundCap);
+    pen.setDashPattern({0.1, 3.0});
+    painter->setPen(pen);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawPath(path);
+
+    QFont font = painter->font();
+    font.setPixelSize(9);
+    font.setWeight(QFont::Medium);
+    painter->setFont(font);
+    painter->setPen(QColor(237, 237, 237, 140));
+    for (double deg : {top, top / 2, 0.0, -top / 2, -top}) {
+        qreal y = yForDb(float(mid + deg / top * half), rect.height());
+        QString t = deg == 0 ? QString("0\u00b0") : QString::asprintf("%+.0f\u00b0", deg);
+        painter->drawText(QRectF(rect.width() - 64, y - 7, 60, 14), Qt::AlignRight | Qt::AlignVCenter, t);
+    }
+}

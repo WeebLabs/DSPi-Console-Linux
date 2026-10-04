@@ -30,6 +30,12 @@ class BodePlotItem : public QQuickPaintedItem
     Q_PROPERTY(bool showFreqLabels READ showFreqLabels WRITE setShowFreqLabels NOTIFY settingsChanged)
     Q_PROPERTY(bool showDbLabels READ showDbLabels WRITE setShowDbLabels NOTIFY settingsChanged)
     Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth NOTIFY settingsChanged)
+    // The channel the on-graph editor draws itself (-1 = none)
+    Q_PROPERTY(int excludeChannel READ excludeChannel WRITE setExcludeChannel NOTIFY settingsChanged)
+    // Dotted phase trace of one channel, on a degree axis at the right
+    Q_PROPERTY(bool showPhase READ showPhase WRITE setShowPhase NOTIFY settingsChanged)
+    Q_PROPERTY(bool phaseUnwrapped READ phaseUnwrapped WRITE setPhaseUnwrapped NOTIFY settingsChanged)
+    Q_PROPERTY(int phaseChannel READ phaseChannel WRITE setPhaseChannel NOTIFY settingsChanged)
 
 public:
     explicit BodePlotItem(QQuickItem *parent = nullptr);
@@ -46,6 +52,14 @@ public:
     bool showFreqLabels() const { return m_showFreqLabels; }
     bool showDbLabels() const { return m_showDbLabels; }
     float lineWidth() const { return m_lineWidth; }
+    int excludeChannel() const { return m_excludeChannel; }
+    bool showPhase() const { return m_showPhase; }
+    bool phaseUnwrapped() const { return m_phaseUnwrapped; }
+    int phaseChannel() const { return m_phaseChannel; }
+    void setExcludeChannel(int ch);
+    void setShowPhase(bool v);
+    void setPhaseUnwrapped(bool v);
+    void setPhaseChannel(int ch);
 
     void setDbTop(float v);
     void setDbBottom(float v);
@@ -72,6 +86,8 @@ private:
     void drawGrid(QPainter *painter, const QRectF &rect);
     void drawCurves(QPainter *painter, const QRectF &rect);
     void drawLabels(QPainter *painter, const QRectF &rect);
+    void drawPhase(QPainter *painter, const QRectF &rect);
+    void updatePhase();
     QPainterPath buildCurvePath(const QVector<double> &magnitudes, const QRectF &rect);
 
     qreal xForFreq(float freq, qreal width) const;
@@ -87,6 +103,11 @@ private:
     bool m_showFreqLabels = true;
     bool m_showDbLabels = true;
     float m_lineWidth = 2.0f;
+    int m_excludeChannel = -1;
+    bool m_showPhase = false;
+    bool m_phaseUnwrapped = false;
+    int m_phaseChannel = -1;
+    QVector<double> m_phase;            // degrees, empty when not shown
 
     DSPiBridge *m_bridge = nullptr;
 
