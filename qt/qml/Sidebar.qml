@@ -331,7 +331,7 @@ Rectangle {
                     ValueField {
                         fieldWidth: 64
                         textColor: "#cccccc"
-                        value: volumeSlider.pressed ? volumeSlider.value
+                        value: volumeSlider.pressed ? volumeSlider.dbAt(volumeSlider.value)
                              : volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                         suffix: "dB"
                         decimals: 1
@@ -354,18 +354,52 @@ Rectangle {
                     height: 20
                     topPadding: 0
                     bottomPadding: 0
-                    from: volumeSettings.showMaster ? -128 : -60
-                    to: 0
-                    stepSize: 0.5
+                    // The slider runs over a 0..1 position with the macOS
+                    // Console's tapers, so most of the travel covers useful
+                    // levels: user volume a square-root taper over -60..0 dB;
+                    // master volume the firmware's step regions (0.1 dB steps
+                    // to -10, 0.5 dB to -40, 1 dB to -128 = mute)
+                    from: 0
+                    to: 1
                     enabled: bridge.connected
-                    value: volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
+                    value: posAt(volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB)
+
+                    readonly property real masterUnits: 248
+                    readonly property real masterBreak1: 1 - 100 / masterUnits   // -10 dB
+                    readonly property real masterBreak2: masterBreak1 - 60 / masterUnits   // -40 dB
+                    function dbAt(pos) {
+                        if (!volumeSettings.showMaster)
+                            return pos <= 0 ? -60 : -60 + 60 * Math.sqrt(Math.min(1, pos))
+                        var db
+                        if (pos <= 0) return -128
+                        if (pos >= 1) return 0
+                        if (pos > masterBreak1) db = -(1 - pos) * masterUnits * 0.1
+                        else if (pos > masterBreak2) db = -10 - (masterBreak1 - pos) * masterUnits * 0.5
+                        else db = -40 - (masterBreak2 - pos) * masterUnits
+                        // Snap to the step the firmware applies in each region
+                        var step = db > -10 ? 0.1 : db > -40 ? 0.5 : 1
+                        return Math.round(db / step) * step
+                    }
+                    function posAt(db) {
+                        if (!volumeSettings.showMaster) {
+                            if (db <= -60) return 0
+                            var f = Math.min(1, (db + 60) / 60)
+                            return f * f
+                        }
+                        if (db <= -128) return 0
+                        if (db >= 0) return 1
+                        if (db > -10) return 1 - (-db / 0.1) / masterUnits
+                        if (db > -40) return masterBreak1 - ((-db - 10) / 0.5) / masterUnits
+                        return masterBreak2 - (-db - 40) / masterUnits
+                    }
+
                     // The value follows the drag; the device gets live updates
-                    onMoved: volumeLive.push(value)
+                    onMoved: volumeLive.push(dbAt(value))
                     onPressedChanged: {
                         if (pressed) return
                         volumeLive.cancel()
-                        if (volumeSettings.showMaster) bridge.setMasterVolume(value)
-                        else bridge.setUserVolume(value)
+                        if (volumeSettings.showMaster) bridge.setMasterVolume(dbAt(value))
+                        else bridge.setUserVolume(dbAt(value))
                     }
                     Throttle {
                         id: volumeLive
@@ -373,7 +407,7 @@ Rectangle {
                                                           : bridge.setUserVolume(value, true)
                     }
                     function refresh() {
-                        if (!pressed) value = volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
+                        if (!pressed) value = posAt(volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB)
                     }
                     Connections { target: bridge; function onStateChanged() { volumeSlider.refresh() } }
                     Connections { target: volumeSettings; function onShowMasterChanged() { volumeSlider.refresh() } }

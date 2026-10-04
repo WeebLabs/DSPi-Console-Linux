@@ -13,12 +13,14 @@ void MeterItem::paint(QPainter *painter) {
     qreal h = height();
     qreal radius = 2.0;
 
-    // Level fill in the channel colour; at silence it shrinks to a dot so
-    // every channel still shows its colour (as on the macOS Console).
-    qreal fillWidth = qMax(h, w * qBound(0.0f, m_level, 1.0f));
-    QPainterPath fillPath;
-    fillPath.addRoundedRect(QRectF(0, 0, fillWidth, h), radius, radius);
-    painter->fillPath(fillPath, m_barColor);
+    // Level fill in the channel colour, as on the macOS Console: the bar is
+    // level x width, and silence draws nothing
+    qreal fillWidth = w * qBound(0.0f, m_level, 1.0f);
+    if (fillWidth >= 0.5) {
+        QPainterPath fillPath;
+        fillPath.addRoundedRect(QRectF(0, 0, fillWidth, h), qMin(radius, fillWidth / 2), radius);
+        painter->fillPath(fillPath, m_barColor);
+    }
 
     // Clip marker at the right end of the meter
     if (m_clipping) {
