@@ -1,10 +1,12 @@
 //! Device enumeration, selection, and hot-plug detection.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use log::{info, warn};
 use rusb::{Device, GlobalContext};
 
+use crate::notify::{NotifyHub, NotifyListener};
 use crate::protocol::{LEGACY_VENDOR_ID, PRODUCT_ID, VENDOR_ID};
 use crate::types::DeviceInfo;
 use crate::usb::{UsbConnection, UsbError};
@@ -19,6 +21,11 @@ pub struct DeviceManager {
     connection: Option<UsbConnection>,
     /// Vendor ID of the connected device (current or legacy firmware).
     connected_vid: Option<u16>,
+    /// Notification packets from the connected device.
+    notify_hub: Arc<NotifyHub>,
+    /// Reads the notification endpoint while connected (holds its own
+    /// reference to the device handle).
+    notify_listener: Option<NotifyListener>,
 }
 
 /// True for a DSPi running current or pre-May-2026 firmware.
@@ -33,7 +40,14 @@ impl DeviceManager {
             selected_serial: None,
             connection: None,
             connected_vid: None,
+            notify_hub: Arc::new(NotifyHub::default()),
+            notify_listener: None,
         }
+    }
+
+    /// The queue the notification listener fills.
+    pub fn notify_hub(&self) -> Arc<NotifyHub> {
+        Arc::clone(&self.notify_hub)
     }
 
     /// Scan for all connected DSPi devices (VID/PID match).
@@ -107,7 +121,10 @@ impl DeviceManager {
             };
             if dev_serial == serial {
                 let _ = handle.claim_interface(crate::protocol::VENDOR_INTERFACE);
-                self.connection = Some(UsbConnection::new(handle));
+                let connection = UsbConnection::new(handle);
+                self.notify_listener =
+                    Some(NotifyListener::start(connection.shared_handle(), Arc::clone(&self.notify_hub)));
+                self.connection = Some(connection);
                 self.connected_vid = Some(desc.vendor_id());
                 self.selected_serial = Some(serial.to_owned());
                 info!("Connected to DSPi device: {serial}");
@@ -123,6 +140,7 @@ impl DeviceManager {
         if let Some(serial) = &self.selected_serial {
             info!("Disconnected from DSPi device: {serial}");
         }
+        self.notify_listener = None;
         self.connection = None;
         self.connected_vid = None;
         // Retain selected_serial for auto-reconnect
@@ -197,6 +215,7 @@ impl DeviceManager {
         for dep in &departures {
             if Some(dep.as_str()) == self.selected_serial.as_deref() && self.connection.is_some() {
                 info!("Selected device departed: {dep}");
+                self.notify_listener = None;
                 self.connection = None;
                 self.connected_vid = None;
             }

@@ -55,6 +55,12 @@ DSPiBridge::DSPiBridge(QObject *parent)
     dspi_set_hotplug_callback(m_core, &DSPiBridge::hotplugCallback, this);
     m_hotplugTimer->start();
 
+    m_notifyTimer = new QTimer(this);
+    m_notifyTimer->setSingleShot(true);
+    connect(m_notifyTimer, &QTimer::timeout, this, &DSPiBridge::processNotifications);
+    m_lastNotify.start();
+    dspi_set_notify_callback(m_core, &DSPiBridge::notifyCallback, this);
+
     scanDevices();
 }
 
@@ -160,6 +166,43 @@ void DSPiBridge::hotplugCallback(uint8_t event, const char *serial, void *userDa
             emit self->deviceDeparted(ser);
         }, Qt::QueuedConnection);
     }
+}
+
+// ── Device notifications ──
+
+// Called on the core's listener thread when notifications are queued
+void DSPiBridge::notifyCallback(void *userData)
+{
+    auto *self = static_cast<DSPiBridge *>(userData);
+    QMetaObject::invokeMethod(self, [self]() { self->scheduleNotifications(); }, Qt::QueuedConnection);
+}
+
+void DSPiBridge::scheduleNotifications()
+{
+    if (m_notifyTimer->isActive()) return;
+    qint64 wait = 30 - m_lastNotify.elapsed();
+    m_notifyTimer->start(wait > 0 ? int(wait) : 0);
+}
+
+// Apply what another source changed on the device (hardware controls, the OS
+// volume, another host, a preset load); our own writes are not echoed back
+void DSPiBridge::processNotifications()
+{
+    m_lastNotify.restart();
+    NotifyResult r = {};
+    dspi_process_notifications(m_core, &r);
+    if (!(r.flags & NOTIFY_STATE)) return;
+
+    if (r.flags & NOTIFY_REFRESHED) {
+        markAllDirty();
+    } else {
+        for (int w = 0; w < MAX_CHANNELS; w++)
+            if ((r.filter_channels >> w) & 1u) markDirty(appId(w));
+    }
+    if (r.flags & NOTIFY_INPUT_FORMAT) pollStatus();
+
+    emit stateChanged();
+    if (r.flags & NOTIFY_CURVES) emit magnitudesChanged();
 }
 
 // ── Timers ──

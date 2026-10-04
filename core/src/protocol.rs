@@ -444,7 +444,7 @@ pub const OFF_SUBHARM: usize = 5944;
 pub const OFF_TUBE: usize = 5980;
 pub const OFF_LIMITER: usize = 6028;
 
-const BAND_SIZE: usize = 16;
+pub(crate) const BAND_SIZE: usize = 16;
 const CROSSPOINT_SIZE: usize = 8;
 const OUTPUT_SIZE: usize = 12;
 const LIMITER_OUTPUT_SIZE: usize = 12;
@@ -993,5 +993,48 @@ mod tests {
         assert_eq!((p.platform_id, p.fw_major, p.fw_minor, p.fw_patch, p.fw_beta), (1, 1, 1, 6, 4));
         let p = parse_platform(&[0, 1, 0x15, 5]).unwrap();
         assert_eq!((p.fw_minor, p.fw_patch, p.num_output_channels), (1, 5, 5));
+    }
+}
+
+#[cfg(test)]
+mod encode_coverage {
+    use super::*;
+
+    fn image(seed: u32) -> Vec<u8> {
+        // Bytes 0x01..0x3F keep every f32 finite.
+        let mut x = seed;
+        let mut d: Vec<u8> = (0..BULK_PARAMS_SIZE)
+            .map(|_| { x = x.wrapping_mul(1664525).wrapping_add(1013904223); 1 + ((x >> 24) as u8 % 0x3F) })
+            .collect();
+        d[0] = WIRE_FORMAT_VERSION; d[1] = 1; d[2] = 17; d[3] = 9; d[4] = 8; d[5] = 12;
+        write_u16_le(&mut d, 6, BULK_PARAMS_SIZE as u16);
+        // Peaking bands: a random Linkwitz Qp would be clamped, not lost.
+        for band in 0..17 * FIRMWARE_BANDS_PER_CHANNEL { d[OFF_EQ + band * BAND_SIZE] = 1; }
+        for band in 0..17 * MAX_XOVER_BANDS { d[OFF_CROSSOVER + band * BAND_SIZE] = 1; }
+        d
+    }
+
+    /// Notifications patch `encode_bulk(state)` and decode the result, so a
+    /// field that is decoded but not encoded would snap back to a stale value.
+    #[test]
+    fn every_decoded_field_is_encoded() {
+        let a = image(1);
+        let mut b = image(2);
+        b[..OFF_GLOBAL].copy_from_slice(&a[..OFF_GLOBAL]);
+        // Read-only here (no setter yet): derived from the raw image, never stale.
+        b[OFF_INPUT_CONFIG + 11] = a[OFF_INPUT_CONFIG + 11];
+        let mut s1: DspState = unsafe { std::mem::zeroed() };
+        decode_bulk(&a, &mut s1).unwrap();
+        s1.bulk_raw.copy_from_slice(&b);
+        let e = encode_bulk(&s1);
+        let mut s3: DspState = unsafe { std::mem::zeroed() };
+        decode_bulk(&e, &mut s3).unwrap();
+        s1.bulk_raw = [0; BULK_PARAMS_SIZE];
+        s3.bulk_raw = [0; BULK_PARAMS_SIZE];
+        let n = std::mem::size_of::<DspState>();
+        let p1 = unsafe { std::slice::from_raw_parts(&s1 as *const _ as *const u8, n) };
+        let p3 = unsafe { std::slice::from_raw_parts(&s3 as *const _ as *const u8, n) };
+        let diff: Vec<usize> = (0..n).filter(|&i| p1[i] != p3[i]).collect();
+        assert!(diff.is_empty(), "state bytes differ at {:?}", &diff[..diff.len().min(40)]);
     }
 }

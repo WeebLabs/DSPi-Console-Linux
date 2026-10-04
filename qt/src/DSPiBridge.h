@@ -1,6 +1,7 @@
 #ifndef DSPIBRIDGE_H
 #define DSPIBRIDGE_H
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QTimer>
 #include <QVariantList>
@@ -367,6 +368,7 @@ signals:
 private slots:
     void pollStatus();
     void pollHotplug();
+    void processNotifications();
 
 private:
     FfiCore *m_core = nullptr;
@@ -375,6 +377,10 @@ private:
     QStringList m_availableSerials;
     QTimer *m_statusTimer = nullptr;
     QTimer *m_hotplugTimer = nullptr;
+    // Device notifications are applied at most every 30 ms (a turning
+    // hardware knob sends many), each batch with one stateChanged
+    QTimer *m_notifyTimer = nullptr;
+    QElapsedTimer m_lastNotify;
 
     // Magnitude caching (app ids)
     bool m_magnitudeDirty[kAppChannelCount] = {};
@@ -414,6 +420,8 @@ private:
     } m_clip;
 
     static void hotplugCallback(uint8_t event, const char *serial, void *userData);
+    static void notifyCallback(void *userData);
+    void scheduleNotifications();
 };
 
 #endif // DSPIBRIDGE_H

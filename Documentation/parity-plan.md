@@ -18,7 +18,7 @@ References (cloned for comparison):
 | 0 | Core protocol V32: new USB VID 0x2E8B, 17-channel unified model, chunked bulk get/set, 7-byte platform reply, 41-byte status, 5-bit EQ band wValue, all PEQ types (0-13) incl. Linkwitz Transform, crossover types (32-63) and their response math, band bypass, per-input preamp, master/user volume, output-config and master-volume modes, deferred preset load/save/delete, firmware compatibility check. Bridge maps app ids to wire channels; sidebar/matrix show active inputs; filter rows offer all PEQ types and band bypass | Done, untested on hardware |
 | 1 | Channel pages: input header (Link n/n+1 with keep-which dialog, per-device links, preamp, Clear PEQ), output card (routing preview for inputs 1-2, gain, delay, mute, limiter button + settings popup with gain-reduction indicator), band list (bypass dots, per-band colours, Enable/Bypass All, Clear All, PEQ/XO tabs, crossover rows), type menu with slope submenus, Linkwitz Transform editor (outputs only), User/Master volume in the sidebar, Copy/Paste Parameters (sidebar right-click, Ctrl+C/V), Ctrl+scroll value stepping | Done, untested on hardware |
 | UI | Sidebar to the macOS layout (meters, pills toggle curves, quick-access icons, Preset/Source/Volume), matrix mixer rebuilt to the macOS layout, client-side titlebar with menu button, KDE shadow (focused only) and sidebar blur via KWindowEffects, graph legend pills removed | Done |
-| 2 | Interrupt endpoint notifications (param changes from other hosts and hardware controls, preset/bulk invalidation) | Not started |
+| 2 | Device notifications (bulk IN EP 0x83, protocol v2): listener thread in the core, PARAM_CHANGED patched into the state by bulk offset (own HOST_SET echoes ignored), BULK_INVALIDATED / sequence gap / overflow re-read everything, PRESET_LOADED updates the active slot, INPUT_FORMAT re-polls status. The bridge applies a batch at most every 30 ms with one stateChanged, recomputing only the curves of channels whose bands changed. Siggen, ADAT, I2S-slave, IR-learn and aux events are left for the phases that add those features | Done; verified on hardware (OS volume → UAC1 user volume, own-write echoes, reconnect after reflash) |
 | 3 | Tool windows: volume leveller, loudness/crossfeed output masks, psychoacoustic bass, subharmonic synth, tube modeller, stereo upmixer, output limiter | Leveller, Psychoacoustic Bass, Crossfeed (with output pairs) and Loudness (ISO 226 curve, output mask) windows done on the shared ToolHeader / ParamRow / ChannelChips components; subharmonic synth, tube modeller and upmixer not started |
 | 4 | Signal generator, statistics (buffer stats), interrupt monitor | Statistics window restyled with the data the core reads today; buffer / S/PDIF / ADAT stats, signal generator and interrupt monitor not started |
 | 5 | Spectrum analyser (RTA): engine, graph overlay, bar strip | Not started |
@@ -45,4 +45,14 @@ References (cloned for comparison):
 - **KDE effects on Wayland** need `kwayland-integration` (KF5 KWindowSystem Wayland
   plugin). KWin reports effects asynchronously, so blur is enabled by polling after
   startup.
+- **Notifications vs. local edits.** Setters change the state, not `bulk_raw`, so a
+  notification is applied to `encode_bulk(state)`, never to the stale raw image
+  (`encode_coverage` test guards that every decoded field is encoded). Echoes of our
+  own writes (source HOST_SET) are ignored, which also ignores another host's EP0
+  writes, as the Windows Console does.
+- **System volume on Linux** reaches the DSPi only with the DSPi PipeWire card
+  profile (DSPi repo `tools/linux-pipewire-card-profile`, PR 59). Without it PipeWire
+  may pick the IEC958 profile with software volume and the DSPi never sees a change.
+  Firmware before the `audio_set_volume()` return fix applied UAC1 volume without
+  notifying it.
 - `Documentation/core_spec.md` describes the pre-V32 core API and is out of date.

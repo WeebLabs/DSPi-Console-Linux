@@ -84,6 +84,11 @@ impl DspiCore {
             }
         }
 
+        let st = &self.state;
+        log::debug!(
+            "Firmware {}.{}.{} on {}, input source {}, user volume {} dB",
+            st.fw_major, st.fw_minor, st.fw_patch, st.platform_name(), st.input_source, st.user_volume_db
+        );
         self.fetch_core1_mode_internal();
         self.fetch_preset_directory_internal();
         for slot in 0..MAX_PRESETS as u8 {

@@ -12,6 +12,7 @@
 pub mod commands;
 pub mod device;
 pub mod dsp_math;
+pub mod notify;
 pub mod preset;
 pub mod protocol;
 pub mod state;
@@ -740,5 +741,32 @@ pub extern "C" fn dspi_poll_hotplug(core: *mut FfiCore) {
     });
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Device notifications
+// ═══════════════════════════════════════════════════════════════════
+
+/// Register the callback the notification listener thread calls when
+/// packets are waiting. It runs on that thread: it must only schedule
+/// `dspi_process_notifications` on the GUI thread.
+#[no_mangle]
+pub extern "C" fn dspi_set_notify_callback(
+    core: *mut FfiCore,
+    callback: notify::NotifyCallback,
+    user_data: *mut c_void,
+) {
+    with_core(core, |c| c.device_manager.notify_hub().set_waker(callback, user_data));
+}
+
+/// Apply the queued device notifications to the state. `out` receives what
+/// changed (`NOTIFY_*` flags and the wire channels whose filters changed).
+#[no_mangle]
+pub extern "C" fn dspi_process_notifications(core: *mut FfiCore, out: *mut notify::NotifyResult) {
+    let r = with_core(core, |c| c.process_notifications());
+    if !out.is_null() {
+        unsafe { *out = r };
+    }
+}
+
 // Re-export constants that C consumers need
 pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};
+pub use notify::{NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_STATE};

@@ -1,5 +1,6 @@
 //! Low-level USB communication via libusb (rusb crate).
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use rusb::{DeviceHandle, GlobalContext};
@@ -24,15 +25,21 @@ pub enum UsbError {
 
 pub type Result<T> = std::result::Result<T, UsbError>;
 
-/// Wraps a rusb DeviceHandle for USB control transfers.
+/// Wraps a rusb DeviceHandle for USB control transfers. The handle is shared
+/// with the notification listener thread (libusb allows concurrent transfers).
 pub struct UsbConnection {
-    handle: DeviceHandle<GlobalContext>,
+    handle: Arc<DeviceHandle<GlobalContext>>,
 }
 
 impl UsbConnection {
     /// Create a new connection from an already-opened device handle.
     pub fn new(handle: DeviceHandle<GlobalContext>) -> Self {
-        Self { handle }
+        Self { handle: Arc::new(handle) }
+    }
+
+    /// The shared device handle, for the notification listener.
+    pub fn shared_handle(&self) -> Arc<DeviceHandle<GlobalContext>> {
+        Arc::clone(&self.handle)
     }
 
     /// Send a vendor control transfer (Host→Device, fire-and-forget).
