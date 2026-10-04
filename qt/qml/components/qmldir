@@ -37,3 +37,4 @@ SegmentedControl 1.0 SegmentedControl.qml
 SectionLabel 1.0 SectionLabel.qml
 MenuLink 1.0 MenuLink.qml
 TubeIllustration 1.0 TubeIllustration.qml
+SoundstageIllustration 1.0 SoundstageIllustration.qml

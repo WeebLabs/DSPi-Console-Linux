@@ -90,6 +90,7 @@
         <file>qml/components/SectionLabel.qml</file>
         <file>qml/components/MenuLink.qml</file>
         <file>qml/components/TubeIllustration.qml</file>
+        <file>qml/components/SoundstageIllustration.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>
 </RCC>
