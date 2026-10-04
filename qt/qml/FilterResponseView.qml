@@ -8,45 +8,8 @@ Column {
     id: filterResponseRoot
     spacing: 0
 
-    // Header
-    Item {
-        width: parent.width
-        height: 40
-
-        Text {
-            text: "Filter Response"
-            font.pixelSize: 14
-            font.weight: Font.DemiBold
-            color: "white"
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        // Connection status
-        Row {
-            spacing: 6
-            anchors.right: parent.right
-            anchors.rightMargin: 16
-            anchors.verticalCenter: parent.verticalCenter
-
-            Rectangle {
-                width: 6; height: 6; radius: 3
-                color: bridge.connected ? "#4caf50" : "#f44336"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                text: {
-                    if (bridge.availableSerials.length === 0) return "No Devices"
-                    return bridge.selectedSerial || "No Device"
-                }
-                font.pixelSize: 11
-                color: bridge.connected ? Qt.rgba(1, 1, 1, 0.7) : "#f44336"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
+    // Gap below the titlebar
+    Item { width: parent.width; height: 6 }
 
     // Bode plot
     Item {
