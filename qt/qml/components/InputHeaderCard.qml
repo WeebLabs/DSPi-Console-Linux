@@ -30,6 +30,12 @@ Rectangle {
         return a + "/" + (a + 1)
     }
 
+    // As on Windows: "Link 3/4" on the numbered sources (USB, ADAT), else "Link Pair"
+    function linkLabel() {
+        var numbered = bridge.inputSource === 0 || bridge.inputSource === 3   // USB, ADAT
+        return inputIndex < 2 || !numbered ? "Link Pair" : "Link " + pairLabel()
+    }
+
     function refresh() {
         linked = bridge.isInputLinked(channelId)
         pairLive = bridge.pairAvailable(channelId)
@@ -48,6 +54,7 @@ Rectangle {
         property string text: ""
         property string icon: ""
         property bool active: false
+        property int fontSize: 13
         signal clicked()
         implicitWidth: cbRow.implicitWidth + 28
         implicitHeight: 32
@@ -64,14 +71,13 @@ Rectangle {
                 visible: cb.icon !== ""
                 name: cb.icon
                 size: 15
-                color: cb.active ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                color: cb.active ? "white" : "#cccccc"
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 text: cb.text
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
-                color: cb.active ? "white" : Qt.rgba(1, 1, 1, 0.85)
+                font.pixelSize: cb.fontSize
+                color: cb.active ? "white" : "#cccccc"   // Windows Console secondary text
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -101,7 +107,8 @@ Rectangle {
             Layout.leftMargin: 14
             Layout.rightMargin: 14
             icon: "link"
-            text: "Link " + pairLabel()
+            fontSize: 12
+            text: linkLabel()
             active: linked
             onClicked: {
                 if (linked) bridge.setInputLinked(channelId, false, -1)
@@ -161,6 +168,7 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
             Layout.leftMargin: 14
             Layout.rightMargin: 14
+            fontSize: 14
             text: linked ? "Clear " + pairLabel() + " PEQ" : "Clear PEQ"
             onClicked: bridge.clearPeq(channelId)
         }

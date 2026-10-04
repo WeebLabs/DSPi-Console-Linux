@@ -53,7 +53,7 @@ Item {
                 elide: Text.ElideRight
                 text: picker.valueText
                 font.pixelSize: 13
-                color: picker.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+                color: picker.enabled ? "#cccccc" : Qt.rgba(1, 1, 1, 0.4)   // Windows Console secondary text
                 anchors.verticalCenter: parent.verticalCenter
             }
             Icon {

@@ -64,8 +64,8 @@ Rectangle {
         Text {
             width: 24
             text: (bandIndex + 1).toString()
-            font.pixelSize: 12
-            color: isActive ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.3)
+            font.pixelSize: 13
+            color: isActive ? "#e0e0e0" : "#888888"
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -87,8 +87,8 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideRight
                 text: typeNames[filterType] || "Unknown"
-                font.pixelSize: 13
-                color: isActive ? Qt.rgba(1, 1, 1, 0.92) : Qt.rgba(1, 1, 1, 0.4)
+                font.pixelSize: 14
+                color: "#cccccc"
             }
             Column {
                 id: typeChevrons
@@ -130,7 +130,7 @@ Rectangle {
                 leftPadding: 10
                 verticalAlignment: Text.AlignVCenter
                 font.pixelSize: 13
-                color: Qt.rgba(1, 1, 1, 0.9)
+                color: "#cccccc"
                 text: "⚙  f0 " + filterFreq.toFixed(0) + " Hz → fp " + filterGain.toFixed(0) + " Hz"
             }
             MouseArea {
@@ -150,6 +150,7 @@ Rectangle {
             height: parent.height
             ValueField {
                 anchors.verticalCenter: parent.verticalCenter
+                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
                 fieldWidth: 70; height: 28; suffix: "Hz"; decimals: 1; wheelStep: 10; minValue: 10; maxValue: 20000
                 value: filterFreq
                 onValueEdited: filterRowRoot.filterChanged(filterType, newValue, filterGain, filterQ)
@@ -164,6 +165,7 @@ Rectangle {
             ValueField {
                 visible: hasGain
                 anchors.verticalCenter: parent.verticalCenter
+                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
                 fieldWidth: 60; height: 28; suffix: "dB"; decimals: 1; minValue: -30; maxValue: 30
                 value: filterGain
                 onValueEdited: filterRowRoot.filterChanged(filterType, filterFreq, newValue, filterQ)
@@ -178,6 +180,7 @@ Rectangle {
             ValueField {
                 visible: hasQ
                 anchors.verticalCenter: parent.verticalCenter
+                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
                 fieldWidth: 56; height: 28; suffix: "Q"; decimals: 3; wheelStep: 0.1; minValue: 0.1; maxValue: 20
                 value: filterQ
                 onValueEdited: filterRowRoot.filterChanged(filterType, filterFreq, filterGain, newValue)

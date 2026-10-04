@@ -66,8 +66,8 @@ Rectangle {
         // Name column as on macOS (72 + 4 gap), so meters line up close to the names
         width: 72
         elide: Text.ElideRight
-        font.pixelSize: 13
-        color: isMuted ? Qt.rgba(1, 1, 1, 0.35) : "white"
+        font.pixelSize: 14
+        color: isMuted ? Qt.rgba(1, 1, 1, 0.35) : "#d6d6d6"
         anchors.left: parent.left
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
@@ -77,7 +77,7 @@ Rectangle {
         visible: renaming
         width: 150
         height: 24
-        font.pixelSize: 13
+        font.pixelSize: 14
         maximumLength: 31
         anchors.left: parent.left
         anchors.leftMargin: 10

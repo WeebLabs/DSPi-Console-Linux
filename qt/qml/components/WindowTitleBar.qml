@@ -12,6 +12,7 @@ Item {
     property bool showMenuButton: true
     property bool showMinMax: true
     property string titleText: window ? window.title : ""
+    property bool showTitle: true
     // Back / Forward arrows just right of the sidebar (Settings)
     property bool showNav: false
     property bool canGoBack: false
@@ -87,6 +88,7 @@ Item {
     }
 
     Text {
+        visible: bar.showTitle
         // Centred over the content area, like the KDE title
         x: bar.sidebarWidth + (bar.width - bar.sidebarWidth - width) / 2
         anchors.verticalCenter: parent.verticalCenter

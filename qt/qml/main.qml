@@ -350,6 +350,7 @@ ApplicationWindow {
         height: root.titlebarHeight
         window: root
         sidebarWidth: sidebar.width
+        showTitle: false
         onMenuRequested: appMenu.toggleAt(anchorItem)
     }
 

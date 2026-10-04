@@ -27,7 +27,7 @@ Rectangle {
     component SectionHeader: Text {
         font.pixelSize: 12
         font.weight: Font.DemiBold
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: "#666666"   // as on Windows: headers at 12 px from the edge, names at 22 px
         leftPadding: 16
         topPadding: 10
         bottomPadding: 4
@@ -93,7 +93,7 @@ Rectangle {
                 width: parent.width - 16
                 spacing: 2
 
-                SectionHeader { text: "INPUTS"; leftPadding: 8 }
+                SectionHeader { text: "INPUTS"; leftPadding: 4 }
 
                 // Inputs carrying audio right now (at least the stereo pair)
                 Repeater {
@@ -126,7 +126,7 @@ Rectangle {
                     }
                 }
 
-                SectionHeader { text: "OUTPUTS"; leftPadding: 8; topPadding: 14 }
+                SectionHeader { text: "OUTPUTS"; leftPadding: 4; topPadding: 14 }
 
                 // Enabled outputs only (outputs are enabled in the Matrix Mixer)
                 Repeater {
@@ -330,6 +330,7 @@ Rectangle {
                     }
                     ValueField {
                         fieldWidth: 64
+                        textColor: "#cccccc"
                         value: volumeSlider.pressed ? volumeSlider.value
                              : volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                         suffix: "dB"

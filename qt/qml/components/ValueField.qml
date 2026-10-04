@@ -17,6 +17,8 @@ Row {
     property int fieldWidth: 60
     property int fontSize: 13
     property color textColor: Qt.rgba(1, 1, 1, 0.9)
+    property color unitColor: Qt.rgba(1, 1, 1, 0.45)
+    property int unitSize: Math.max(10, fontSize - 2)
     // Values at or below this read as -∞ (e.g. the master volume mute sentinel)
     property real infinityAt: -1e9
     // Compact fields (Matrix Mixer) adjust on plain scrolling; otherwise
@@ -101,8 +103,8 @@ Row {
 
     Text {
         text: suffix
-        font.pixelSize: Math.max(10, valueFieldRoot.fontSize - 2)
-        color: Qt.rgba(1, 1, 1, 0.45)
+        font.pixelSize: valueFieldRoot.unitSize
+        color: valueFieldRoot.unitColor
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(20, implicitWidth)   // room for longer units (dBFS)
         visible: suffix !== ""
