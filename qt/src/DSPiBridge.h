@@ -38,6 +38,8 @@ class DSPiBridge : public QObject
     Q_PROPERTY(QString connectionError READ connectionError NOTIFY statusChanged)
     Q_PROPERTY(QString selectedSerial READ selectedSerial NOTIFY stateChanged)
     Q_PROPERTY(QStringList availableSerials READ availableSerials NOTIFY devicesChanged)
+    // DSPis on the bus this user can't open (the udev rule is missing)
+    Q_PROPERTY(int inaccessibleDevices READ inaccessibleDevices NOTIFY inaccessibleDevicesChanged)
     Q_PROPERTY(QString platformName READ platformName NOTIFY stateChanged)
     Q_PROPERTY(int numChannels READ numChannels NOTIFY stateChanged)
     Q_PROPERTY(int numInputChannels READ numInputChannels NOTIFY stateChanged)
@@ -132,6 +134,7 @@ public:
     bool connected() const;
     QString selectedSerial() const;
     QStringList availableSerials() const;
+    int inaccessibleDevices() const { return m_inaccessible; }
     QString platformName() const;
     int numChannels() const;
     int numInputChannels() const;
@@ -293,6 +296,9 @@ public:
     // Drop the connection, rescan USB and reconnect (the same device if it's
     // still there)
     Q_INVOKABLE void rescan();
+    // Install the udev rule through pkexec (asks for a password); answers
+    // with udevRuleInstalled. The hot-plug poll then finds the device.
+    Q_INVOKABLE void installUdevRule();
     // What differs from the active preset, one sentence each
     Q_INVOKABLE QStringList presetChanges() const;
     Q_INVOKABLE int loadPreset(int slot);
@@ -457,6 +463,8 @@ signals:
     void stateChanged();
     void statusChanged();
     void devicesChanged();
+    void inaccessibleDevicesChanged();
+    void udevRuleInstalled(bool ok, const QString &message);
     // The signal generator started or stopped (on the device or elsewhere)
     void siggenNotified();
     void presetDirtyChanged();
@@ -483,6 +491,8 @@ private:
     SystemStatus m_status = {};
     QString m_selectedSerial;
     QStringList m_availableSerials;
+    int m_inaccessible = 0;
+    void updateInaccessible();
     QTimer *m_statusTimer = nullptr;
     QTimer *m_hotplugTimer = nullptr;
     // Device notifications are applied at most every 30 ms (a turning

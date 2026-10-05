@@ -15,6 +15,8 @@ Item {
     signal contextMenuRequested(real x, real y)
 
     height: 26
+    // Room the value may take: all but the label and a gap
+    readonly property real valueRoom: picker.width - labelText.implicitWidth - 12
 
     MouseArea {
         anchors.fill: parent
@@ -24,6 +26,7 @@ Item {
     }
 
     Text {
+        id: labelText
         text: picker.label
         font.pixelSize: 12
         font.weight: Font.Medium
@@ -35,7 +38,7 @@ Item {
         id: valueButton
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.min(valueRow.implicitWidth + 16, picker.width - 70)
+        width: Math.min(valueRow.implicitWidth + 16, picker.valueRoom)
         height: 24
         radius: 6
         color: !picker.enabled ? "transparent"
@@ -49,7 +52,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5
             Text {
-                width: Math.min(implicitWidth, picker.width - 100)
+                width: Math.min(implicitWidth, picker.valueRoom - 33)
                 elide: Text.ElideRight
                 text: picker.valueText
                 font.pixelSize: 13

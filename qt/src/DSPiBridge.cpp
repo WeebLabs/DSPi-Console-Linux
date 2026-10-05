@@ -4,6 +4,10 @@
 #include <QDebug>
 #include <QSettings>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QProcess>
+#include <QTemporaryFile>
 #include <cstring>
 #include <cmath>
 
@@ -260,6 +264,7 @@ void DSPiBridge::pollHotplug()
     // before USB enumeration finished.
     if (!connected())
         scanDevices();
+    updateInaccessible();
 }
 
 // ── Property getters ──
@@ -974,8 +979,57 @@ void DSPiBridge::scanDevices() {
         emit devicesChanged();
     }
 
+    updateInaccessible();
     if (!connected() && !m_availableSerials.isEmpty())
         selectDevice(m_availableSerials.first());
+}
+
+void DSPiBridge::updateInaccessible() {
+    const int n = int(dspi_inaccessible_devices(m_core));
+    if (n == m_inaccessible) return;
+    m_inaccessible = n;
+    emit inaccessibleDevicesChanged();
+}
+
+void DSPiBridge::installUdevRule() {
+    // The rule the packages install, written to a file root can read
+    QFile rule(":/70-dspi.rules");
+    auto *tmp = new QTemporaryFile(QDir::tempPath() + "/dspi-udev-XXXXXX.rules", this);
+    if (!rule.open(QIODevice::ReadOnly) || !tmp->open()) {
+        delete tmp;
+        emit udevRuleInstalled(false, "The rule could not be prepared.");
+        return;
+    }
+    tmp->write(rule.readAll());
+    tmp->flush();
+    tmp->setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadGroup | QFileDevice::ReadOther);
+
+    auto *proc = new QProcess(this);
+    connect(proc, &QProcess::errorOccurred, this, [this, proc, tmp](QProcess::ProcessError e) {
+        if (e != QProcess::FailedToStart) return;
+        emit udevRuleInstalled(false, "pkexec, which asks for the administrator password, isn't available.");
+        proc->deleteLater();
+        tmp->deleteLater();
+    });
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            [this, proc, tmp](int code, QProcess::ExitStatus status) {
+        const bool ok = status == QProcess::NormalExit && code == 0;
+        QString message;
+        if (!ok) {
+            if (code == 126) message = "The password prompt was dismissed.";   // pkexec: not authorised
+            else if (code == 127) message = "Authorisation failed.";
+            else message = QString::fromLocal8Bit(proc->readAllStandardError()).trimmed();
+            if (message.isEmpty()) message = "The rule could not be installed.";
+        }
+        emit udevRuleInstalled(ok, message);
+        proc->deleteLater();
+        tmp->deleteLater();
+    });
+    const QString script = QStringLiteral(
+        "install -D -m 644 \"$1\" /etc/udev/rules.d/70-dspi.rules"
+        " && udevadm control --reload-rules"
+        " && udevadm trigger --subsystem-match=usb --attr-match=idProduct=feaa");
+    proc->start("pkexec", { "/bin/sh", "-c", script, "sh", tmp->fileName() });
 }
 
 void DSPiBridge::selectDevice(const QString &serial) {
@@ -1035,6 +1089,7 @@ void DSPiBridge::rescan() {
         serials.append(QString::fromUtf8(reinterpret_cast<const char *>(devices[i].serial), devices[i].serial_len));
     m_availableSerials = serials;
     emit devicesChanged();
+    updateInaccessible();
     if (serials.contains(previous)) selectDevice(previous);
     else if (!serials.isEmpty()) selectDevice(serials.first());
 }

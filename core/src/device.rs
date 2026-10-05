@@ -24,6 +24,9 @@ pub struct DeviceManager {
     connected_vid: Option<u16>,
     /// Notification packets from the connected device.
     notify_hub: Arc<NotifyHub>,
+    /// DSPis on the bus that couldn't be opened (no permission: the udev
+    /// rule is missing), as of the last scan or poll.
+    inaccessible: u32,
     /// Reads the notification endpoint while connected (holds its own
     /// reference to the device handle).
     notify_listener: Option<NotifyListener>,
@@ -31,6 +34,14 @@ pub struct DeviceManager {
     rta_hub: Arc<RtaHub>,
     /// Polls the analyser while connected, once started.
     rta_worker: Option<RtaWorker>,
+}
+
+/// What a USB device turned out to be.
+enum Probe {
+    Dspi(DeviceInfo),
+    /// A DSPi this user isn't allowed to open
+    NoAccess,
+    Other,
 }
 
 /// True for a DSPi running current or pre-May-2026 firmware.
@@ -47,6 +58,7 @@ impl DeviceManager {
             connected_vid: None,
             notify_hub: Arc::new(NotifyHub::default()),
             notify_listener: None,
+            inaccessible: 0,
             rta_hub: Arc::new(RtaHub::default()),
             rta_worker: None,
         }
@@ -83,29 +95,43 @@ impl DeviceManager {
             return Vec::new();
         };
 
+        self.inaccessible = 0;
         for device in device_list.iter() {
-            if let Some(info) = Self::probe_device(&device) {
-                self.devices.insert(info.serial_str().to_owned(), info);
+            match Self::probe_device(&device) {
+                Probe::Dspi(info) => { self.devices.insert(info.serial_str().to_owned(), info); }
+                Probe::NoAccess => self.inaccessible += 1,
+                Probe::Other => {}
             }
         }
 
         self.devices.values().cloned().collect()
     }
 
+    /// DSPis found by the last scan or poll that couldn't be opened for
+    /// want of permission.
+    pub fn inaccessible(&self) -> u32 {
+        self.inaccessible
+    }
+
     /// Probe a single USB device to check if it's a DSPi device.
-    fn probe_device(device: &Device<GlobalContext>) -> Option<DeviceInfo> {
-        let desc = device.device_descriptor().ok()?;
+    fn probe_device(device: &Device<GlobalContext>) -> Probe {
+        let Ok(desc) = device.device_descriptor() else { return Probe::Other };
         if !is_dspi(desc.vendor_id(), desc.product_id()) {
-            return None;
+            return Probe::Other;
         }
 
-        let handle = device.open().ok()?;
+        let handle = match device.open() {
+            Ok(h) => h,
+            // Listed by the kernel but not ours to open: no udev rule
+            Err(rusb::Error::Access) => return Probe::NoAccess,
+            Err(_) => return Probe::Other,
+        };
         let serial = handle
             .read_serial_number_string_ascii(&desc)
             .unwrap_or_default();
 
         if serial.is_empty() {
-            return None;
+            return Probe::Other;
         }
 
         let mut info = DeviceInfo {
@@ -117,7 +143,7 @@ impl DeviceManager {
         let len = info.serial_len as usize;
         info.serial[..len].copy_from_slice(&serial.as_bytes()[..len]);
 
-        Some(info)
+        Probe::Dspi(info)
     }
 
     /// Select and open a specific device by serial number.
@@ -203,9 +229,12 @@ impl DeviceManager {
         };
 
         let mut current_serials: HashMap<String, DeviceInfo> = HashMap::new();
+        self.inaccessible = 0;
         for device in device_list.iter() {
-            if let Some(info) = Self::probe_device(&device) {
-                current_serials.insert(info.serial_str().to_owned(), info);
+            match Self::probe_device(&device) {
+                Probe::Dspi(info) => { current_serials.insert(info.serial_str().to_owned(), info); }
+                Probe::NoAccess => self.inaccessible += 1,
+                Probe::Other => {}
             }
         }
 

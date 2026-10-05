@@ -241,30 +241,72 @@ Rectangle {
                 bottomPadding: 12
                 spacing: 8
 
-                SidebarPicker {
-                    id: presetPicker
+                // Preset picker; with unsaved changes a save icon at the right
+                // writes them to the active preset, as on Windows. The picker
+                // slides aside as the icon fades and slides in.
+                Item {
+                    id: presetRow
                     width: parent.width
-                    label: "Preset"
-                    enabled: bridge.connected
-                    readonly property var slots: {
-                        bridge.presetOccupied; bridge.activePresetSlot
-                        var o = []
-                        for (var i = 0; i < 10; i++) {
-                            var name = bridge.presetName(i)
-                            var occupied = bridge.isPresetOccupied(i)
-                            // An empty slot loads factory defaults, as on macOS
-                            o.push({ value: i, prefix: String(i + 1),
-                                     text: occupied ? (name === "" ? "Preset " + (i + 1) : name) : "Empty" })
+                    height: presetPicker.height
+                    readonly property bool showSave: bridge.connected && bridge.presetDirty
+                    property real reveal: showSave ? 1 : 0
+                    Behavior on reveal { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+                    SidebarPicker {
+                        id: presetPicker
+                        width: parent.width - presetRow.reveal * (presetSave.width + 2)
+                        label: "Preset"
+                        enabled: bridge.connected
+                        readonly property var slots: {
+                            bridge.presetOccupied; bridge.activePresetSlot
+                            var o = []
+                            for (var i = 0; i < 10; i++) {
+                                var name = bridge.presetName(i)
+                                var occupied = bridge.isPresetOccupied(i)
+                                // An empty slot loads factory defaults, as on macOS
+                                o.push({ value: i, prefix: String(i + 1),
+                                         text: occupied ? (name === "" ? "Preset " + (i + 1) : name) : "Empty" })
+                            }
+                            return o
                         }
-                        return o
+                        options: slots
+                        currentValue: bridge.activePresetSlot
+                        valueText: bridge.connected && slots[bridge.activePresetSlot]
+                                   ? slots[bridge.activePresetSlot].text : "—"
+                        onChosen: if (value !== bridge.activePresetSlot) root.switchPreset(value)
+                        onContextMenuRequested: presetMenu.openAt(presetPicker, x, y)
                     }
-                    options: slots
-                    currentValue: bridge.activePresetSlot
-                    // A `*` marks settings that differ from the saved preset
-                    valueText: bridge.connected && slots[bridge.activePresetSlot]
-                               ? slots[bridge.activePresetSlot].text + (bridge.presetDirty ? " *" : "") : "—"
-                    onChosen: if (value !== bridge.activePresetSlot) root.switchPreset(value)
-                    onContextMenuRequested: presetMenu.openAt(presetPicker, x, y)
+
+                    Rectangle {
+                        id: presetSave
+                        visible: presetRow.reveal > 0
+                        // Fades in once the picker has made room, sliding
+                        // forward into place
+                        opacity: Math.max(0, (presetRow.reveal - 0.5) * 2)
+                        x: parent.width - width - (1 - presetRow.reveal) * 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 20
+                        height: 20
+                        radius: 5
+                        color: saveMouse.pressed ? Qt.rgba(1, 1, 1, 0.14)
+                             : saveMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        Icon {
+                            anchors.centerIn: parent
+                            name: "floppy"
+                            size: 14
+                            color: saveMouse.containsMouse ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.55)
+                        }
+                        MouseArea {
+                            id: saveMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.quickSavePreset()
+                        }
+                        ToolTip.text: "Save changes to preset " + (bridge.activePresetSlot + 1)
+                        ToolTip.visible: saveMouse.containsMouse
+                        ToolTip.delay: 600
+                    }
                 }
 
                 PresetMenu { id: presetMenu; anchorItem: presetPicker; width: 0; height: 0 }

@@ -212,7 +212,7 @@ ApplicationWindow {
         rtaPageSource = rtaChannelPagesShowSpectrum ? own : own.slice(0, own.indexOf(":") + 1)
         rtaPageOtherSide = ""
     }
-    Component.onCompleted: { rtaRefreshAvailable(); startOnboarding() }
+    Component.onCompleted: { rtaRefreshAvailable(); startOnboarding(); Qt.callLater(offerUdevRule) }
 
     // Selection state: "overview", "channel:N", "output:N"
     property string selection: "overview"
@@ -784,6 +784,43 @@ ApplicationWindow {
         }
     }
 
+    // ── A DSPi this user can't open (no udev rule, e.g. the bare AppImage) ──
+    // Offered once a session by itself, and from the footer's "No Permission"
+    property bool udevOffered: false
+    function showUdevHelp() { udevOffered = true; udevDialog.open() }
+    readonly property bool deviceNoAccess: !bridge.connected && bridge.availableSerials.length === 0 && bridge.inaccessibleDevices > 0
+    function offerUdevRule() { if (deviceNoAccess && !udevOffered && !showWizard) showUdevHelp() }
+    onDeviceNoAccessChanged: offerUdevRule()
+    onShowWizardChanged: offerUdevRule()
+    AppDialog {
+        id: udevDialog
+        icon: "plug"
+        iconTint: "#ff9f0a"
+        title: "DSPi Needs Permission"
+        message: "A DSPi is connected, but Linux only lets programs open it once a udev rule allows it. "
+                 + "Install the rule now? You'll be asked for your password."
+        buttons: [{ key: "cancel", text: "Not Now" }, { key: "install", text: "Install Rule", role: "primary" }]
+        onChosen: if (key === "install") bridge.installUdevRule()
+    }
+    AppDialog {
+        id: udevFailed
+        icon: "warning"
+        iconTint: "#ff9f0a"
+        title: "Rule Not Installed"
+        details: [{ text: "Install the dspi-console .deb or .rpm package, or copy" },
+                  { text: "70-dspi.rules from the release to /etc/udev/rules.d/," },
+                  { text: "then unplug the DSPi and plug it in again." }]
+        buttons: [{ key: "ok", text: "OK", role: "primary" }]
+    }
+    Connections {
+        target: bridge
+        function onUdevRuleInstalled(ok, message) {
+            if (ok) return              // the hot-plug poll connects within a second
+            udevFailed.message = message
+            udevFailed.open()
+        }
+    }
+
     AppDialog {
         id: fileChoice
         property string mode: ""
@@ -826,6 +863,11 @@ ApplicationWindow {
         var slot = bridge.activePresetSlot
         if (bridge.presetName(slot) === "") bridge.setPresetName(slot, "Preset " + (slot + 1))
         return bridge.savePreset(slot)
+    }
+    // The sidebar's Save: straight to the active preset, reporting only a failure
+    function quickSavePreset() {
+        var status = saveActivePreset()
+        if (status !== 0) showFileResult("Error", ["Failed to save preset (error " + status + ")"], false)
     }
     function switchPreset(slot) {
         withUnsaved(function (choice) {

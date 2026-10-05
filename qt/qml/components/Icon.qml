@@ -21,6 +21,7 @@ Item {
         "win-max": '<rect x="6" y="6" width="12" height="12" rx="1"/>',
         "win-restore": '<rect x="5" y="8.5" width="10.5" height="10.5" rx="1"/><path d="M8.5 8.5V6a1 1 0 0 1 1-1H18a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-2.5"/>',
         "win-close": '<line x1="7" y1="7" x2="17" y2="17"/><line x1="17" y1="7" x2="7" y2="17"/>',
+        "floppy": '<path d="M4.5 3.5h12l4 4v12a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M7.5 3.5v4.5h8v-4.5"/><path d="M7 20.5v-6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 .5.5v6"/>',
         "save": '<path d="M12 4v11"/><polyline points="7.5,10.5 12,15 16.5,10.5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/>',
         "revert": '<path d="M4 10a8 8 0 1 1 2.3 6.2"/><polyline points="4,4 4,10 10,10"/>',
         "chip": '<rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2.5" x2="9" y2="6"/><line x1="15" y1="2.5" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="21.5"/><line x1="15" y1="18" x2="15" y2="21.5"/><line x1="2.5" y1="9" x2="6" y2="9"/><line x1="2.5" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="21.5" y2="9"/><line x1="18" y1="15" x2="21.5" y2="15"/>',

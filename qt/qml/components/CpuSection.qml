@@ -10,6 +10,8 @@ Item {
     property int cpu1: 0
     readonly property int load: Math.max(cpu0, cpu1)
     readonly property bool connected: bridge.connected
+    // A DSPi is plugged in but this user may not open it (no udev rule)
+    readonly property bool noAccess: !connected && bridge.availableSerials.length === 0 && bridge.inaccessibleDevices > 0
 
     // Space left of the status for label, bar (28-44 px) and value; the bar gives
     // up width first, then the name drops its "DSPi" prefix.
@@ -94,7 +96,8 @@ Item {
             // Short device name, as in the Windows Console: "DSPi (last 8 of the serial)"
             text: {
                 if (!cpuRoot.connected)
-                    return bridge.availableSerials.length === 0 ? "No Devices" : "Disconnected"
+                    return bridge.availableSerials.length > 0 ? "Disconnected"
+                         : cpuRoot.noAccess ? "No Permission" : "No Devices"
                 var room = cpuRoot.width - cpuRoot.fixedLeft - 28 - 18
                 return fullNameMetrics.advanceWidth <= room || cpuRoot.serialTail === "" ? cpuRoot.fullName : cpuRoot.serialTail
             }
@@ -108,6 +111,7 @@ Item {
         ToolTip.text: cpuRoot.connected
                       ? "Connected · Serial " + bridge.selectedSerial
                         + (bridge.availableSerials.length > 1 ? "\nClick to switch device. Right-click to reconnect." : "\nRight-click to reconnect.")
+                      : cpuRoot.noAccess ? "A DSPi is connected, but this app isn't allowed to open it.\nClick to install its udev rule."
                       : (bridge.connectionError || "Not connected. Right-click the device name to retry.")
     }
 
@@ -118,9 +122,10 @@ Item {
         anchors.margins: -4
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: bridge.availableSerials.length > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+        cursorShape: bridge.availableSerials.length > 1 || cpuRoot.noAccess ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: {
             if (mouse.button === Qt.RightButton) { bridge.rescan(); return }
+            if (cpuRoot.noAccess) { root.showUdevHelp(); return }
             if (bridge.availableSerials.length > 1) deviceMenu.toggleAt(status)
         }
     }

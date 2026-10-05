@@ -17,6 +17,7 @@
         <file>qml/GettingStartedView.qml</file>
         <file>whatsnew.json</file>
         <file>dspi-console.svg</file>
+        <file alias="70-dspi.rules">../packaging/linux/70-dspi.rules</file>
         <file>autoeq/autoeq_database.json</file>
         <file>qml/components/Spinner.qml</file>
         <file>qml/components/DashboardLayoutPopup.qml</file>
@@ -71,6 +72,7 @@
         <file>icons/sparkles.svg</file>
         <file>icons/spinner.svg</file>
         <file>icons/drive.svg</file>
+        <file>icons/floppy.svg</file>
         <file>icons/plug.svg</file>
         <file>icons/check-circle.svg</file>
         <file>icons/question-circle.svg</file>

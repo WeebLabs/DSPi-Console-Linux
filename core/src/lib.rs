@@ -168,6 +168,13 @@ pub extern "C" fn dspi_scan_devices(core: *mut FfiCore, out_devices: *mut Device
     })
 }
 
+/// DSPis seen on the bus by the last scan or hot-plug poll that couldn't be
+/// opened for want of permission (the udev rule is missing).
+#[no_mangle]
+pub extern "C" fn dspi_inaccessible_devices(core: *mut FfiCore) -> u32 {
+    with_core(core, |c| c.device_manager.inaccessible())
+}
+
 /// Select and open a device by serial number. Returns true on success.
 #[no_mangle]
 pub extern "C" fn dspi_select_device(core: *mut FfiCore, serial: *const c_char) -> bool {
