@@ -1190,7 +1190,7 @@ void DSPiBridge::refreshAll() {
 
 void DSPiBridge::loadLinks() {
     QSettings settings;
-    m_links = static_cast<uint8_t>(settings.value("inputLinks/" + m_selectedSerial, 0x01).toUInt());
+    m_links = static_cast<uint8_t>(settings.value("inputLinks/" + m_selectedSerial, 0x00).toUInt());
 }
 
 void DSPiBridge::saveLinks() {

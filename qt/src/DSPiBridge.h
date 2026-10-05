@@ -393,8 +393,8 @@ public:
     Q_INVOKABLE void enableOutputResolvingConflict(int output);
 
     // Input stereo-pair links (IN1/2, IN3/4, ...). A linked pair mirrors
-    // preamp and filter edits. Links are remembered per device and pause
-    // while fewer inputs are live.
+    // preamp and filter edits. Every pair starts unlinked; links are
+    // remembered per device and pause while fewer inputs are live.
     Q_INVOKABLE int liveInputCount() const;
     Q_INVOKABLE int pairPartner(int ch) const;     // the other input of ch's pair, or -1
     Q_INVOKABLE bool pairAvailable(int ch) const;  // both inputs of the pair are live
@@ -532,7 +532,7 @@ private:
     int pairIndex(int ch) const;                  // 0..3 for an input, else -1
     void loadLinks();
     void saveLinks();
-    uint8_t m_links = 0x01;                       // bit p: input pair p linked
+    uint8_t m_links = 0x00;                       // bit p: input pair p linked (none by default)
     float m_limiterGR[MAX_OUTPUTS] = {};
     qint64 m_lastClipMs[MAX_CHANNELS] = {};      // per wire channel, 0 = never
     int m_pollTick = 0;
