@@ -1,10 +1,19 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
+// Channel pills that show or hide curves: the main window's visibility, or
+// (follow false) a list of its own, changed through `toggled`.
 Item {
     id: legendRoot
     height: 36
     property int leftPadding: 0
+    property bool follow: true
+    property var shown: []
+    signal toggled(int channel)
+
+    property int rev: 0
+    Connections { target: bridge; function onMagnitudesChanged() { legendRoot.rev++ } }
+    function isVisible(ch) { rev; return follow ? bridge.channelVisible(ch) : shown.indexOf(ch) >= 0 }
 
     Row {
         anchors.left: parent.left
@@ -24,6 +33,16 @@ Item {
             eqChannel: 1
             label: bridge.channelDescriptor(1)
             pillColor: bridge.channelColor(1)
+        }
+
+        // Live inputs beyond the first pair
+        Repeater {
+            model: Math.max(0, bridge.liveInputCount() - 2)
+            LegendPill {
+                eqChannel: bridge.inputAppId(index + 2)
+                label: bridge.channelDescriptor(eqChannel)
+                pillColor: bridge.channelColor(eqChannel)
+            }
         }
 
         // Enabled outputs
@@ -48,11 +67,11 @@ Item {
         height: 22
         radius: 100
         color: {
-            var isVis = bridge.channelVisible(eqChannel)
+            var isVis = legendRoot.isVisible(eqChannel)
             return isVis ? Qt.rgba(parsedColor.r, parsedColor.g, parsedColor.b, 0.15) : Qt.rgba(0.5, 0.5, 0.5, 0.1)
         }
         border.color: {
-            var isVis = bridge.channelVisible(eqChannel)
+            var isVis = legendRoot.isVisible(eqChannel)
             return isVis ? Qt.rgba(parsedColor.r, parsedColor.g, parsedColor.b, 0.5) : "transparent"
         }
         border.width: 1
@@ -65,7 +84,7 @@ Item {
             Rectangle {
                 width: 6; height: 6; radius: 3
                 color: {
-                    var isVis = bridge.channelVisible(eqChannel)
+                    var isVis = legendRoot.isVisible(eqChannel)
                     return isVis ? pillColor : Qt.rgba(0.5, 0.5, 0.5, 0.5)
                 }
                 anchors.verticalCenter: parent.verticalCenter
@@ -75,7 +94,7 @@ Item {
                 text: label
                 font.pixelSize: 10
                 font.weight: Font.Bold
-                color: bridge.channelVisible(eqChannel) ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: legendRoot.isVisible(eqChannel) ? "white" : Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -83,7 +102,10 @@ Item {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: bridge.setChannelVisible(eqChannel, !bridge.channelVisible(eqChannel))
+            onClicked: {
+                if (legendRoot.follow) bridge.setChannelVisible(eqChannel, !bridge.channelVisible(eqChannel))
+                else legendRoot.toggled(eqChannel)
+            }
         }
     }
 }

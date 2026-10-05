@@ -17,6 +17,8 @@ add_executable(DSPiConsole
     src/DSPiBridge.cpp
     src/BodePlotItem.cpp
     src/PeqEditorItem.cpp
+    src/RtaController.cpp
+    src/RtaViews.cpp
     src/MeterItem.cpp
     src/WindowEffects.cpp
     resources.qrc

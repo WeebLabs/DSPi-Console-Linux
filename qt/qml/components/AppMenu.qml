@@ -75,6 +75,7 @@ Popup {
         { kind: "item", icon: "subwave", text: "Subharmonic Synthesizer", shortcut: "Ctrl+Shift+S", window: "subharm" },
         { kind: "item", icon: "tube", text: "Tube Modeller", shortcut: "Ctrl+Shift+D", window: "tube" },
         { kind: "item", icon: "upmix", text: "Stereo Upmixer", shortcut: "Ctrl+Shift+U", window: "upmix" },
+        { kind: "item", icon: "spectrum", text: "Spectrum Analyser", shortcut: "Ctrl+Shift+A", window: "spectrum" },
         { kind: "item", icon: "info", text: "Stats for Nerds", shortcut: "Ctrl+Shift+T", window: "stats" },
         { kind: "sep" },
         { kind: "item", icon: "gear", text: "Settings", shortcut: "Ctrl+,", window: "settings" },

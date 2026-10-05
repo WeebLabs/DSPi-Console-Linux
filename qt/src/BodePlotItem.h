@@ -30,6 +30,15 @@ class BodePlotItem : public QQuickPaintedItem
     Q_PROPERTY(bool showFreqLabels READ showFreqLabels WRITE setShowFreqLabels NOTIFY settingsChanged)
     Q_PROPERTY(bool showDbLabels READ showDbLabels WRITE setShowDbLabels NOTIFY settingsChanged)
     Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth NOTIFY settingsChanged)
+    // What this instance draws: everything, the grid and labels (under the
+    // spectrum), or the curves and phase (over it)
+    Q_PROPERTY(int drawLayer READ drawLayer WRITE setDrawLayer NOTIFY settingsChanged)
+    // Strength of the grid lines: 0.5 is the default look, 0-2
+    Q_PROPERTY(float gridOpacity READ gridOpacity WRITE setGridOpacity NOTIFY settingsChanged)
+    // Curves of the channels visible in the main window, or (pop-out graph
+    // with its own selection) of shownChannels (app ids)
+    Q_PROPERTY(bool followVisibility READ followVisibility WRITE setFollowVisibility NOTIFY settingsChanged)
+    Q_PROPERTY(QVariantList shownChannels READ shownChannels WRITE setShownChannels NOTIFY settingsChanged)
     // The channel the on-graph editor draws itself (-1 = none)
     Q_PROPERTY(int excludeChannel READ excludeChannel WRITE setExcludeChannel NOTIFY settingsChanged)
     // Dotted phase trace of one channel, on a degree axis at the right
@@ -52,6 +61,15 @@ public:
     bool showFreqLabels() const { return m_showFreqLabels; }
     bool showDbLabels() const { return m_showDbLabels; }
     float lineWidth() const { return m_lineWidth; }
+    enum Layer { AllLayers = 0, GridLayer = 1, CurveLayer = 2 };
+    int drawLayer() const { return m_layer; }
+    void setDrawLayer(int v);
+    float gridOpacity() const { return m_gridOpacity; }
+    void setGridOpacity(float v);
+    bool followVisibility() const { return m_followVisibility; }
+    void setFollowVisibility(bool v);
+    QVariantList shownChannels() const { return m_shownList; }
+    void setShownChannels(const QVariantList &l);
     int excludeChannel() const { return m_excludeChannel; }
     bool showPhase() const { return m_showPhase; }
     bool phaseUnwrapped() const { return m_phaseUnwrapped; }
@@ -84,6 +102,7 @@ private:
     QVector<ChannelCurve> buildCurves() const;
     QVector<ChannelCurve> shownCurves() const;
     void drawGrid(QPainter *painter, const QRectF &rect);
+    QColor gridColor(int alpha) const;
     void drawCurves(QPainter *painter, const QRectF &rect);
     void drawLabels(QPainter *painter, const QRectF &rect);
     void drawPhase(QPainter *painter, const QRectF &rect);
@@ -103,6 +122,12 @@ private:
     bool m_showFreqLabels = true;
     bool m_showDbLabels = true;
     float m_lineWidth = 2.0f;
+    int m_layer = AllLayers;
+    float m_gridOpacity = 0.5f;
+    bool m_followVisibility = true;
+    QVariantList m_shownList;
+    QVector<int> m_shown;
+    bool isShown(int eqCh) const;
     int m_excludeChannel = -1;
     bool m_showPhase = false;
     bool m_phaseUnwrapped = false;

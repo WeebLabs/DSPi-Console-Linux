@@ -7,6 +7,7 @@ use log::{info, warn};
 use rusb::{Device, GlobalContext};
 
 use crate::notify::{NotifyHub, NotifyListener};
+use crate::rta::{RtaHub, RtaWorker};
 use crate::protocol::{LEGACY_VENDOR_ID, PRODUCT_ID, VENDOR_ID};
 use crate::types::DeviceInfo;
 use crate::usb::{UsbConnection, UsbError};
@@ -26,6 +27,10 @@ pub struct DeviceManager {
     /// Reads the notification endpoint while connected (holds its own
     /// reference to the device handle).
     notify_listener: Option<NotifyListener>,
+    /// Spectrum analyser requests and results.
+    rta_hub: Arc<RtaHub>,
+    /// Polls the analyser while connected, once started.
+    rta_worker: Option<RtaWorker>,
 }
 
 /// True for a DSPi running current or pre-May-2026 firmware.
@@ -42,6 +47,24 @@ impl DeviceManager {
             connected_vid: None,
             notify_hub: Arc::new(NotifyHub::default()),
             notify_listener: None,
+            rta_hub: Arc::new(RtaHub::default()),
+            rta_worker: None,
+        }
+    }
+
+    /// The spectrum analyser's shared state.
+    pub fn rta_hub(&self) -> Arc<RtaHub> {
+        Arc::clone(&self.rta_hub)
+    }
+
+    /// Probe and poll the connected device's spectrum analyser. Call once
+    /// the firmware is known to be compatible; a no-op if already running.
+    pub fn start_rta(&mut self) {
+        if self.rta_worker.is_some() {
+            return;
+        }
+        if let Some(conn) = &self.connection {
+            self.rta_worker = Some(RtaWorker::start(conn.shared_handle(), conn.bus(), Arc::clone(&self.rta_hub)));
         }
     }
 
@@ -140,6 +163,7 @@ impl DeviceManager {
         if let Some(serial) = &self.selected_serial {
             info!("Disconnected from DSPi device: {serial}");
         }
+        self.rta_worker = None;
         self.notify_listener = None;
         self.connection = None;
         self.connected_vid = None;
@@ -215,6 +239,7 @@ impl DeviceManager {
         for dep in &departures {
             if Some(dep.as_str()) == self.selected_serial.as_deref() && self.connection.is_some() {
                 info!("Selected device departed: {dep}");
+                self.rta_worker = None;
                 self.notify_listener = None;
                 self.connection = None;
                 self.connected_vid = None;

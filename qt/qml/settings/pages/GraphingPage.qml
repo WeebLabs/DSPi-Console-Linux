@@ -40,6 +40,16 @@ SettingsPage {
     }
 
     SettingsSection {
+        title: "Pop-Out Graph"
+        SettingsSwitchRow {
+            title: "Follow Channel Selection"
+            detail: "The pop-out graph shows the channels the main window shows. Off, it keeps its own, picked with the pills under it."
+            checked: app ? app.graphPopOutFollows : true
+            onToggled: app.graphPopOutFollows = checked
+        }
+    }
+
+    SettingsSection {
         title: "Editing"
         footnote: "Drag a band's dot to change it; Shift for fine steps, Alt to keep to one axis, Ctrl-drag or the wheel for its width. Double-click empty graph to add a band."
         SettingsSwitchRow {
@@ -62,6 +72,15 @@ SettingsPage {
         SettingsSwitchRow { title: "Frequency Labels"; checked: app ? app.graphShowFreqLabels : true; onToggled: app.graphShowFreqLabels = checked }
         SettingsSwitchRow { title: "dB Grid"; checked: app ? app.graphShowDbGrid : true; onToggled: app.graphShowDbGrid = checked }
         SettingsSwitchRow { title: "dB Labels"; checked: app ? app.graphShowDbLabels : true; onToggled: app.graphShowDbLabels = checked }
+        SettingsSliderRow {
+            title: "Grid Opacity"
+            enabled: app ? app.graphShowFreqGrid || app.graphShowDbGrid : true
+            from: 0; to: 2; stepSize: 0.05
+            value: app ? app.graphGridOpacity : 0.5
+            format: function (v) { return Math.round(v * 100) + "%" }
+            onMoved: app.graphGridOpacity = value
+            onCommitted: app.graphGridOpacity = value
+        }
     }
 
     SettingsSection {

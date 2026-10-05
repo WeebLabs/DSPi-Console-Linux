@@ -133,6 +133,8 @@ impl DspiCore {
     /// REQ_GET_ALL_PARAMS_CHUNK: offset 0 snapshots the struct on the device,
     /// later offsets read the snapshot out.
     fn read_bulk_chunked(&self) -> Result<Vec<u8>> {
+        let bus = self.conn()?.bus();
+        let _session = bus.lock().unwrap_or_else(|e| e.into_inner());
         let mut out = Vec::with_capacity(BULK_PARAMS_SIZE);
         while out.len() < BULK_PARAMS_SIZE {
             let off = out.len();
@@ -153,6 +155,8 @@ impl DspiCore {
             return Err(UsbError::NotConnected);
         }
         let data = encode_bulk(&self.state);
+        let bus = self.conn()?.bus();
+        let _session = bus.lock().unwrap_or_else(|e| e.into_inner());
         for (i, chunk) in data.chunks(BULK_CHUNK_SIZE).enumerate() {
             self.send(REQ_SET_ALL_PARAMS_CHUNK, (i * BULK_CHUNK_SIZE) as u16, WINDEX_OUTPUT, chunk)?;
         }

@@ -11,6 +11,8 @@
         <file>qml/LoudnessWindow.qml</file>
         <file>qml/CrossfeedWindow.qml</file>
         <file>qml/StatsWindow.qml</file>
+        <file>qml/SpectrumAnalyserWindow.qml</file>
+        <file>qml/GraphWindow.qml</file>
         <file>qml/SettingsWindow.qml</file>
         <file>qml/Theme.qml</file>
         <file>qml/components/ValueField.qml</file>
@@ -39,6 +41,7 @@
         <file>icons/upmix.svg</file>
         <file>icons/gauge.svg</file>
         <file>icons/gear.svg</file>
+        <file>icons/spectrum.svg</file>
         <file>icons/headphones.svg</file>
         <file>icons/info.svg</file>
         <file>icons/loudness.svg</file>
@@ -77,6 +80,7 @@
         <file>qml/settings/pages/AdvancedPage.qml</file>
         <file>qml/settings/pages/GlobalParametersPage.qml</file>
         <file>qml/settings/pages/GraphingPage.qml</file>
+        <file>qml/settings/pages/SpectrumPage.qml</file>
         <file>qml/settings/pages/OutputsPage.qml</file>
         <file>qml/settings/pages/OverviewPage.qml</file>
         <file>qml/settings/pages/InputsPage.qml</file>
@@ -105,6 +109,8 @@
         <file>qml/components/PeqBandHud.qml</file>
         <file>qml/components/PeqShapeCard.qml</file>
         <file>qml/components/PeqShapeChooser.qml</file>
+        <file>qml/components/GraphOptionsPopup.qml</file>
+        <file>qml/components/SpectrumBarStrip.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>
 </RCC>

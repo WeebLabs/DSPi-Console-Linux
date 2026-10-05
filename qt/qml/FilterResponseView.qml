@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15
 import DSPi 1.0
 import "components"
 
@@ -9,6 +10,24 @@ Column {
     spacing: 0
     // The open channel's graph editor; the band list shares its selection
     property alias peqEditor: editor
+    // In the pop-out window: fills its height, has a legend, and can keep
+    // its own channel visibility instead of following the main window
+    property bool popOut: false
+    readonly property bool follows: !popOut || root.graphPopOutFollows
+    property var popOutChannels: []
+    function togglePopOutChannel(ch) {
+        var l = popOutChannels.slice(), i = l.indexOf(ch)
+        if (i >= 0) l.splice(i, 1); else l.push(ch)
+        popOutChannels = l
+    }
+    // Its own selection starts with the live inputs and enabled outputs
+    Component.onCompleted: {
+        if (!popOut) return
+        var l = []
+        for (var i = 0; i < bridge.liveInputCount(); i++) l.push(bridge.inputAppId(i))
+        for (var o = 0; o < bridge.numOutputChannels; o++) if (bridge.outputEnabled(o)) l.push(o + 2)
+        popOutChannels = l
+    }
 
     // Gap below the titlebar
     Item { width: parent.width; height: 6 }
@@ -17,7 +36,8 @@ Column {
     Item {
         id: plotContainer
         width: parent.width
-        height: 250
+        height: filterResponseRoot.popOut ? filterResponseRoot.height - 6 - legend.height
+                                          : Math.max(250, Math.min(350, root.graphHeight))
 
         Rectangle {
             anchors.fill: parent
@@ -29,9 +49,53 @@ Column {
             border.width: 1
             clip: true
 
+            HoverHandler { id: plotHover }
+
+            // Grid and labels, under the spectrum
+            BodePlotItem {
+                anchors.fill: parent
+                drawLayer: 1
+                gridOpacity: root.graphGridOpacity
+                lineWidth: root.graphLineWidth
+                showFreqGrid: root.graphShowFreqGrid
+                showFreqLabels: root.graphShowFreqLabels
+                showDbGrid: root.graphShowDbGrid
+                showDbLabels: root.graphShowDbLabels
+                dbTop: bodePlot.dbTop
+                dbBottom: bodePlot.dbBottom
+                minFreq: root.graphMinFreq
+                maxFreq: root.graphMaxFreq
+            }
+
+            // The device's spectrum, behind the response curves
+            SpectrumCurveItem {
+                id: spectrum
+                anchors.fill: parent
+                controller: rta
+                // Not while its window is minimised: nobody sees it
+                active: root.rtaShowGraph && bridge.connected && Window.visibility !== Window.Minimized
+                readonly property bool wanted: active && rta.supported && channels.length > 0
+                opacity: wanted ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
+                tap: root.rtaSelection.tap
+                channels: root.rtaSelection.channels
+                colors: channels.map(function (c) { return bridge.channelColor(rta.appChannel(tap, c)) })
+                floorDb: root.rtaFloorDb
+                ceilingDb: root.rtaCeilingDb
+                minFreq: root.graphMinFreq
+                maxFreq: root.graphMaxFreq
+                strength: root.rtaGraphOpacity
+                glow: root.graphShowGlow
+                showPeak: root.rtaShowPeakHold
+                smoothing: root.rtaSmoothing
+            }
+
+            // The response curves and phase, over the spectrum
             BodePlotItem {
                 id: bodePlot
                 anchors.fill: parent
+                drawLayer: 2
                 showGlow: root.graphShowGlow
                 lineWidth: root.graphLineWidth
                 showFreqGrid: root.graphShowFreqGrid
@@ -44,6 +108,8 @@ Column {
                 maxFreq: root.graphMaxFreq
                 // The open channel is drawn (and edited) by the editor above
                 excludeChannel: editor.active ? editor.channel : -1
+                followVisibility: filterResponseRoot.follows
+                shownChannels: filterResponseRoot.popOutChannels
                 showPhase: root.graphShowPhase
                 phaseUnwrapped: root.graphPhaseUnwrapped
                 phaseChannel: root.openChannelId
@@ -54,7 +120,7 @@ Column {
             PeqEditorItem {
                 id: editor
                 anchors.fill: parent
-                channel: root.openChannelId
+                channel: filterResponseRoot.follows ? root.openChannelId : -1
                 showGlow: root.graphShowGlow
                 lineWidth: root.graphLineWidth
                 dbTop: bodePlot.dbTop
@@ -112,6 +178,38 @@ Column {
                 editor: editor
             }
 
+            // Graph options: shown while the pointer is over the graph
+            Rectangle {
+                id: gearButton
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 6
+                width: 24
+                height: 22
+                radius: 6
+                opacity: plotHover.hovered || graphOptions.visible ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
+                color: gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse || graphOptions.visible
+                       ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                Icon {
+                    anchors.centerIn: parent
+                    name: "gear"
+                    size: 14
+                    color: Qt.rgba(1, 1, 1, graphOptions.visible ? 0.95 : 0.7)
+                }
+                MouseArea {
+                    id: gearMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: graphOptions.visible ? graphOptions.close() : graphOptions.openBelow(gearButton)
+                    ToolTip.visible: containsMouse && !graphOptions.visible
+                    ToolTip.delay: 600
+                    ToolTip.text: "Graph and spectrum options"
+                }
+            }
+
             // Scroll zone over dB axis labels for vertical zoom
             MouseArea {
                 x: 0
@@ -134,8 +232,21 @@ Column {
         }
     }
 
+    // Pop-out: the channel pills
+    GraphLegend {
+        id: legend
+        visible: filterResponseRoot.popOut
+        height: visible ? 36 : 0
+        width: parent.width
+        leftPadding: 16
+        follow: filterResponseRoot.follows
+        shown: filterResponseRoot.popOutChannels
+        onToggled: filterResponseRoot.togglePopOutChannel(channel)
+    }
+
     // Resize handle
     Item {
+        visible: !filterResponseRoot.popOut
         width: parent.width
         height: 8
 
@@ -163,12 +274,20 @@ Column {
                 if (pressed) {
                     var currentY = mouseY + parent.mapToItem(filterResponseRoot, 0, 0).y
                     var newHeight = startHeight + (currentY - startY)
-                    plotContainer.height = Math.max(250, Math.min(350, newHeight))
+                    root.graphHeight = Math.max(250, Math.min(350, newHeight))
                 }
             }
         }
     }
 
+
+    GraphOptionsPopup {
+        id: graphOptions
+        parent: Overlay.overlay
+        app: root
+        inPopOut: filterResponseRoot.popOut
+        onPopOutRequested: root.openToolWindow("graph")
+    }
 
     ActionMenu {
         id: graphMenu

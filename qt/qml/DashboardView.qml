@@ -16,6 +16,13 @@ Flickable {
         leftPadding: 16
         rightPadding: 16
 
+        // Third-octave bars of the dashboard's spectrum channels
+        SpectrumBarStrip {
+            width: parent.width - 32
+            app: root
+            onOpenAnalyser: root.openToolWindow("spectrum")
+        }
+
         // Master L/R stereo card
         DashboardCard {
             width: parent.width - 32

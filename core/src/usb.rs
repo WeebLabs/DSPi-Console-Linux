@@ -1,6 +1,6 @@
 //! Low-level USB communication via libusb (rusb crate).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use rusb::{DeviceHandle, GlobalContext};
@@ -29,12 +29,21 @@ pub type Result<T> = std::result::Result<T, UsbError>;
 /// with the notification listener thread (libusb allows concurrent transfers).
 pub struct UsbConnection {
     handle: Arc<DeviceHandle<GlobalContext>>,
+    /// Held for a chunked bulk-parameter session, and by the spectrum
+    /// analyser worker for each poll: any other vendor request aborts an open
+    /// chunked session on the device.
+    bus: Arc<Mutex<()>>,
 }
 
 impl UsbConnection {
     /// Create a new connection from an already-opened device handle.
     pub fn new(handle: DeviceHandle<GlobalContext>) -> Self {
-        Self { handle: Arc::new(handle) }
+        Self { handle: Arc::new(handle), bus: Arc::new(Mutex::new(())) }
+    }
+
+    /// The bus lock (see `bus`).
+    pub fn bus(&self) -> Arc<Mutex<()>> {
+        Arc::clone(&self.bus)
     }
 
     /// The shared device handle, for the notification listener.

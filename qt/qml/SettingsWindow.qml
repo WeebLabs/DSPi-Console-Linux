@@ -47,7 +47,9 @@ AppWindow {
         ]},
         { title: "Display", pages: [
             { id: "graphing", title: "Graphing", icon: "chart", tint: "#30b0c7",
-              source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid labels range center frequency" }
+              source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid opacity labels range center frequency pop out popout window follow phase readout" },
+            { id: "spectrum", title: "Spectrum Analyser", icon: "spectrum", tint: "#5e5ce6",
+              source: "settings/pages/SpectrumPage.qml", keywords: "rta fft spectrum analyser analyzer bars peak hold smoothing floor ceiling transform averaging decay" }
         ]},
         { title: "System", pages: [
             { id: "overview", title: "Overview", icon: "pins", tint: "#636366", needsDevice: true,

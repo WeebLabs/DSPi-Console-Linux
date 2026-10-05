@@ -410,6 +410,9 @@ public:
     Q_INVOKABLE bool canPaste() const;
     Q_INVOKABLE void pasteChannel(int ch);
 
+    // The core, for the spectrum analyser controller
+    FfiCore *core() const { return m_core; }
+
     // Magnitude curve access for C++ BodePlotItem (app ids)
     void getMagnitudeCurve(int ch, double *out);
     // Phase (degrees) of a channel's PEQ and crossover bands, 201 points

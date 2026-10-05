@@ -15,6 +15,7 @@ pub mod dsp_math;
 pub mod notify;
 pub mod preset;
 pub mod protocol;
+pub mod rta;
 pub mod state;
 pub mod types;
 pub mod usb;
@@ -1041,6 +1042,56 @@ pub extern "C" fn dspi_process_notifications(core: *mut FfiCore, out: *mut notif
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Spectrum analyser
+// ═══════════════════════════════════════════════════════════════════
+
+/// Register the callback the analyser worker calls (on its own thread) when
+/// the caps or the snapshot changed. It must only schedule work on the GUI
+/// thread. NULL stops the calls; once this returns, no call is in progress.
+#[no_mangle]
+pub extern "C" fn dspi_rta_set_callback(core: *mut FfiCore, callback: Option<extern "C" fn(user_data: *mut c_void)>, user_data: *mut c_void) {
+    with_core(core, |c| c.device_manager.rta_hub().set_waker(callback, user_data));
+}
+
+/// Probe and start polling the connected device's analyser (compatible
+/// firmware only). Stops by itself on disconnect.
+#[no_mangle]
+pub extern "C" fn dspi_rta_start(core: *mut FfiCore) {
+    with_core(core, |c| c.device_manager.start_rta());
+}
+
+/// What to analyse. A zero mask releases the analyser.
+#[no_mangle]
+pub extern "C" fn dspi_rta_set_request(core: *mut FfiCore, request: *const rta::RtaRequest) {
+    if request.is_null() {
+        return;
+    }
+    let r = unsafe { *request };
+    with_core(core, |c| c.device_manager.rta_hub().set_request(r));
+}
+
+/// The analyser's capabilities (`supported` false until probed or without one).
+#[no_mangle]
+pub extern "C" fn dspi_rta_get_caps(core: *mut FfiCore, out: *mut rta::RtaCapsInfo) {
+    if out.is_null() {
+        return;
+    }
+    let caps = with_core(core, |c| c.device_manager.rta_hub().caps());
+    unsafe { *out = caps };
+}
+
+/// Copy the latest snapshot into `out`.
+#[no_mangle]
+pub extern "C" fn dspi_rta_get_snapshot(core: *mut FfiCore, out: *mut rta::RtaSnapshot) {
+    if out.is_null() {
+        return;
+    }
+    let hub = with_core(core, |c| c.device_manager.rta_hub());
+    unsafe { *out = hub.snapshot() };
+}
+
 // Re-export constants that C consumers need
 pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};
 pub use notify::{NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_STATE};
+pub use rta::{RTA_FLOOR_DB, RTA_MAX_BANDS, RTA_MAX_BINS, RTA_MAX_CHANNELS, RTA_TAP_INPUT, RTA_TAP_OUTPUT};

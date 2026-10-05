@@ -51,6 +51,9 @@ ApplicationWindow {
     property bool graphPhaseUnwrapped: false
     property bool graphFreqReadout: true
     property bool graphLevelReadout: true
+    property real graphGridOpacity: 0.5      // grid line strength, 0-2 (macOS default 50%)
+    property bool graphPopOutFollows: true    // the pop-out graph shows what the main window shows
+    property real graphHeight: 250          // the response graph, resized by its handle (250-350)
 
     // Graph preferences persist between sessions
     Settings {
@@ -69,7 +72,137 @@ ApplicationWindow {
         property alias phaseUnwrapped: root.graphPhaseUnwrapped
         property alias freqReadout: root.graphFreqReadout
         property alias levelReadout: root.graphLevelReadout
+        property alias height: root.graphHeight
+        property alias gridOpacity: root.graphGridOpacity
+        property alias popOutFollows: root.graphPopOutFollows
     }
+
+    // ── Spectrum analyser ──
+    // Where it shows (dashboard and channel pages separately) and how
+    property bool rtaDashboardShowGraph: true
+    property bool rtaDashboardShowBars: false
+    property bool rtaChannelShowGraph: true
+    property bool rtaChannelShowBars: false
+    property bool rtaChannelPagesShowSpectrum: true
+    property string rtaDashboardSource: ""        // "out:0,1" / "in:0"; "out:" = none
+    property string rtaDashboardOtherSide: ""     // the other tap's last selection
+    property int rtaBarColumns: 2
+    property real rtaBarHeight: 96
+    property real rtaGraphOpacity: 1.0
+    property bool rtaShowPeakHold: true
+    property bool rtaSmoothing: true
+    property int rtaFloorDb: -90
+    property int rtaCeilingDb: 6
+    property int rtaFftOrder: 10
+    property int rtaAvgMs: 300
+    property int rtaPeakDecay: 12
+
+    Settings {
+        category: "spectrum"
+        property alias dashboardShowGraph: root.rtaDashboardShowGraph
+        property alias dashboardShowBars: root.rtaDashboardShowBars
+        property alias channelShowGraph: root.rtaChannelShowGraph
+        property alias channelShowBars: root.rtaChannelShowBars
+        property alias channelPagesShowSpectrum: root.rtaChannelPagesShowSpectrum
+        property alias dashboardSource: root.rtaDashboardSource
+        property alias dashboardOtherSide: root.rtaDashboardOtherSide
+        property alias barColumns: root.rtaBarColumns
+        property alias barHeight: root.rtaBarHeight
+        property alias graphOpacity: root.rtaGraphOpacity
+        property alias showPeakHold: root.rtaShowPeakHold
+        property alias smoothing: root.rtaSmoothing
+        property alias floorDb: root.rtaFloorDb
+        property alias ceilingDb: root.rtaCeilingDb
+        property alias fftOrder: root.rtaFftOrder
+        property alias avgMs: root.rtaAvgMs
+        property alias peakDecay: root.rtaPeakDecay
+    }
+    // Engine options go to the device (never stored there)
+    Binding { target: rta; property: "fftOrder"; value: root.rtaFftOrder }
+    Binding { target: rta; property: "avgMs"; value: root.rtaAvgMs }
+    Binding { target: rta; property: "peakDecay"; value: root.rtaPeakDecay }
+
+    readonly property bool onDashboard: selection === "overview"
+    readonly property bool rtaShowGraph: onDashboard ? rtaDashboardShowGraph : rtaChannelShowGraph
+    readonly property bool rtaShowBars: onDashboard ? rtaDashboardShowBars : rtaChannelShowBars
+    // A channel page's selection starts on its own channel each time it opens
+    property string rtaPageSource: ""
+    property string rtaPageOtherSide: ""
+
+    // Channels that can be analysed now, as "in:0,1|out:0,2"; changes rarely
+    property string rtaAvailable: ""
+    function rtaRefreshAvailable() {
+        var k = rta.availableChannels(0).join(",") + "|" + rta.availableChannels(1).join(",")
+        if (k !== rtaAvailable) rtaAvailable = k
+    }
+    Connections {
+        target: bridge
+        function onStateChanged() { root.rtaRefreshAvailable() }
+        function onStatusChanged() { root.rtaRefreshAvailable() }
+    }
+    Connections { target: rta; function onCapsChanged() { root.rtaRefreshAvailable() } }
+
+    function rtaAvailableAt(tap) {
+        var part = rtaAvailable.split("|")[tap] || ""
+        return part === "" ? [] : part.split(",").map(Number)
+    }
+    function rtaDefaultSource() {
+        var outs = rtaAvailableAt(1)
+        return outs.length ? "out:" + outs[0] : "in:0"
+    }
+    // {tap, channels} of a source key, keeping only channels that exist now
+    function rtaParse(src) {
+        var tap = src.indexOf("in:") === 0 ? 0 : 1
+        var body = src.slice(tap === 0 ? 3 : 4)
+        var avail = rtaAvailableAt(tap)
+        var chans = body === "" ? [] : body.split(",").map(Number).filter(function (c) { return avail.indexOf(c) >= 0 })
+        return { tap: tap, channels: chans }
+    }
+    function rtaKey(tap, channels) {
+        return (tap === 0 ? "in:" : "out:") + channels.slice().sort(function (a, b) { return a - b }).join(",")
+    }
+    readonly property var rtaSelection: {
+        rtaAvailable
+        return rtaParse(onDashboard ? (rtaDashboardSource !== "" ? rtaDashboardSource : rtaDefaultSource()) : rtaPageSource)
+    }
+
+    function rtaSetSource(src) {
+        if (onDashboard) rtaDashboardSource = src
+        else {
+            rtaPageSource = src
+            // Clearing a page's spectrum keeps the next pages clear too
+            rtaChannelPagesShowSpectrum = rtaParse(src).channels.length > 0
+        }
+    }
+    function rtaToggle(ch) {
+        var sel = rtaSelection, chans = sel.channels.slice(), i = chans.indexOf(ch)
+        if (i >= 0) chans.splice(i, 1); else chans.push(ch)
+        rtaSetSource(rtaKey(sel.tap, chans))
+    }
+    function rtaClear() { rtaSetSource(rtaKey(rtaSelection.tap, [])) }
+    // Inputs and outputs are never mixed: the device listens at one tap
+    function rtaSwitchSide(tap) {
+        var sel = rtaSelection
+        if (sel.tap === tap) return
+        var here = rtaKey(sel.tap, sel.channels)
+        var back = onDashboard ? rtaDashboardOtherSide : rtaPageOtherSide
+        var next = back !== "" && rtaParse(back).tap === tap ? back
+                 : rtaKey(tap, rtaAvailableAt(tap).slice(0, 1))
+        if (onDashboard) rtaDashboardOtherSide = here; else rtaPageOtherSide = here
+        rtaSetSource(next)
+    }
+    function rtaSetShowGraph(v) { if (onDashboard) rtaDashboardShowGraph = v; else rtaChannelShowGraph = v }
+    function rtaSetShowBars(v) { if (onDashboard) rtaDashboardShowBars = v; else rtaChannelShowBars = v }
+
+    onSelectionChanged: {
+        if (onDashboard) return
+        // (selectedChannel / selectedOutput are set after selection)
+        var n = parseInt(selection.split(":")[1])
+        var own = selection.indexOf("output:") === 0 ? "out:" + n : "in:" + rta.tapIndex(n)
+        rtaPageSource = rtaChannelPagesShowSpectrum ? own : own.slice(0, own.indexOf(":") + 1)
+        rtaPageOtherSide = ""
+    }
+    Component.onCompleted: rtaRefreshAvailable()
 
     // Selection state: "overview", "channel:N", "output:N"
     property string selection: "overview"
@@ -299,10 +432,23 @@ ApplicationWindow {
     Component {
         id: channelEditorComponent
         Item {
+            SpectrumBarStrip {
+                id: pageStrip
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                app: root
+                onOpenAnalyser: root.openToolWindow("spectrum")
+            }
+            // Below the bars when they show
+            readonly property real pageTop: pageStrip.visible ? pageStrip.height + 16 : 0
             ChannelSettingsView {
                 id: outputSettings
                 visible: root.selectedOutput >= 0
                 anchors.top: parent.top
+                anchors.topMargin: parent.pageTop
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 16
@@ -313,6 +459,7 @@ ApplicationWindow {
                 id: inputHeader
                 visible: root.selectedChannel >= 0
                 anchors.top: parent.top
+                anchors.topMargin: parent.pageTop
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 16
@@ -321,7 +468,7 @@ ApplicationWindow {
             }
             FilterListView {
                 anchors.top: root.selectedOutput >= 0 ? outputSettings.bottom
-                           : root.selectedChannel >= 0 ? inputHeader.bottom : parent.top
+                           : root.selectedChannel >= 0 ? inputHeader.bottom : pageStrip.bottom
                 anchors.topMargin: 16
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -403,8 +550,13 @@ ApplicationWindow {
         var w = { matrix: matrixWindow, loudness: loudnessWindow, crossfeed: crossfeedWindow,
                   leveller: levellerWindow, psybass: psybassWindow, subharm: subharmWindow,
                   tube: tubeWindow, upmix: upmixWindow, stats: statsWindow,
-                  settings: settingsWindow }[name]
+                  spectrum: spectrumWindow, graph: graphWindow, settings: settingsWindow }[name]
         if (w) { w.visible = true; w.raise(); w.requestActivate() }
+    }
+
+    function openSettingsPage(id) {
+        settingsWindow.navigate(id)
+        openToolWindow("settings")
     }
 
     // App menu (titlebar menu button)
@@ -441,7 +593,10 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+D"; onActivated: root.openToolWindow("tube") }
     Shortcut { sequence: "Ctrl+Shift+U"; onActivated: root.openToolWindow("upmix") }
     Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
+    Shortcut { sequence: "Ctrl+Shift+A"; onActivated: root.openToolWindow("spectrum") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }
+    SpectrumAnalyserWindow { id: spectrumWindow; app: root }
+    GraphWindow { id: graphWindow }
     SettingsWindow { id: settingsWindow }
 }

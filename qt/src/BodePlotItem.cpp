@@ -34,7 +34,7 @@ void BodePlotItem::setBridge(QObject *bridge) {
 QVector<ChannelCurve> BodePlotItem::buildCurves() const {
     QVector<ChannelCurve> curves;
     for (int eqCh = 0; eqCh < kAppChannelCount; eqCh++) {
-        if (!m_bridge->channelExists(eqCh) || !m_bridge->channelVisible(eqCh)) continue;
+        if (!m_bridge->channelExists(eqCh) || !isShown(eqCh)) continue;
         if (eqCh == m_excludeChannel) continue;     // drawn by the editor
 
         ChannelCurve curve;
@@ -114,10 +114,12 @@ void BodePlotItem::paint(QPainter *painter) {
     QRectF rect(0, 0, width(), height());
     painter->setRenderHint(QPainter::Antialiasing);
 
-    drawGrid(painter, rect);
-    drawCurves(painter, rect);
-    drawPhase(painter, rect);
-    drawLabels(painter, rect);
+    if (m_layer != CurveLayer) drawGrid(painter, rect);
+    if (m_layer != GridLayer) {
+        drawCurves(painter, rect);
+        drawPhase(painter, rect);
+    }
+    if (m_layer != CurveLayer) drawLabels(painter, rect);
 }
 
 qreal BodePlotItem::xForFreq(float freq, qreal w) const {
@@ -130,6 +132,11 @@ qreal BodePlotItem::xForFreq(float freq, qreal w) const {
 qreal BodePlotItem::yForDb(float db, qreal h) const {
     float normalized = (db - m_dbBottom) / (m_dbTop - m_dbBottom);
     return h - static_cast<qreal>(normalized) * h;
+}
+
+// A grid line's alpha at the user's grid strength (0.5 = as designed)
+QColor BodePlotItem::gridColor(int alpha) const {
+    return QColor(255, 255, 255, qBound(0, int(std::lround(alpha * m_gridOpacity * 2.0f)), 255));
 }
 
 void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {
@@ -147,7 +154,7 @@ void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {
         };
 
         // Major lines (white 15%)
-        QPen majorPen(QColor(255, 255, 255, 38), 1.0);
+        QPen majorPen(gridColor(38), 1.0);
         painter->setPen(majorPen);
         for (float f : majorFreqs) {
             if (f >= m_minFreq && f <= m_maxFreq) {
@@ -157,7 +164,7 @@ void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {
         }
 
         // Minor lines (white 6%)
-        QPen minorPen(QColor(255, 255, 255, 15), 1.0);
+        QPen minorPen(gridColor(15), 1.0);
         painter->setPen(minorPen);
         for (float f : minorFreqs) {
             if (f >= m_minFreq && f <= m_maxFreq) {
@@ -177,7 +184,7 @@ void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {
         float step = dbSpan <= 12 ? 1.0f : (dbSpan <= 30 ? 3.0f : (dbSpan <= 60 ? 5.0f : 10.0f));
         float startDB = std::ceil(m_dbBottom / step) * step;
 
-        QPen dbPen(QColor(255, 255, 255, 26), 1.0);
+        QPen dbPen(gridColor(26), 1.0);
         painter->setPen(dbPen);
         for (float db = startDB; db <= m_dbTop; db += step) {
             if (std::abs(db) > 0.01f) { // skip 0dB
@@ -188,7 +195,7 @@ void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {
 
         // 0dB reference (30% opacity)
         if (m_dbBottom <= 0 && m_dbTop >= 0) {
-            QPen zeroPen(QColor(255, 255, 255, 77), 1.0);
+            QPen zeroPen(gridColor(77), 1.0);
             painter->setPen(zeroPen);
             qreal y = yForDb(0, h);
             painter->drawLine(QPointF(0, y), QPointF(w, y));
@@ -342,6 +349,29 @@ void BodePlotItem::setShowFreqGrid(bool v) { if (m_showFreqGrid != v) { m_showFr
 void BodePlotItem::setShowDbGrid(bool v) { if (m_showDbGrid != v) { m_showDbGrid = v; emit settingsChanged(); update(); } }
 void BodePlotItem::setShowFreqLabels(bool v) { if (m_showFreqLabels != v) { m_showFreqLabels = v; emit settingsChanged(); update(); } }
 void BodePlotItem::setShowDbLabels(bool v) { if (m_showDbLabels != v) { m_showDbLabels = v; emit settingsChanged(); update(); } }
+bool BodePlotItem::isShown(int eqCh) const {
+    return m_followVisibility ? m_bridge->channelVisible(eqCh) : m_shown.contains(eqCh);
+}
+
+void BodePlotItem::setFollowVisibility(bool v) {
+    if (m_followVisibility == v) return;
+    m_followVisibility = v;
+    emit settingsChanged();
+    updatePhase();
+    refreshNow();
+}
+
+void BodePlotItem::setShownChannels(const QVariantList &l) {
+    if (l == m_shownList) return;
+    m_shownList = l;
+    m_shown.clear();
+    for (const QVariant &v : l) m_shown.append(v.toInt());
+    emit settingsChanged();
+    if (!m_followVisibility) { updatePhase(); refreshNow(); }
+}
+
+void BodePlotItem::setDrawLayer(int v) { if (m_layer != v) { m_layer = v; emit settingsChanged(); update(); } }
+void BodePlotItem::setGridOpacity(float v) { if (m_gridOpacity != v) { m_gridOpacity = v; emit settingsChanged(); update(); } }
 void BodePlotItem::setLineWidth(float v) { if (m_lineWidth != v) { m_lineWidth = v; emit settingsChanged(); update(); } }
 
 void BodePlotItem::setExcludeChannel(int ch) { if (m_excludeChannel != ch) { m_excludeChannel = ch; emit settingsChanged(); refreshNow(); } }
@@ -353,7 +383,7 @@ void BodePlotItem::setPhaseChannel(int ch) { if (m_phaseChannel != ch) { m_phase
 void BodePlotItem::updatePhase() {
     QVector<double> next;
     if (m_bridge && m_showPhase && m_phaseChannel >= 0 && m_bridge->channelExists(m_phaseChannel)
-        && m_bridge->channelVisible(m_phaseChannel)) {
+        && isShown(m_phaseChannel)) {
         next.resize(MAGNITUDE_POINTS);
         m_bridge->getPhaseCurve(m_phaseChannel, m_phaseUnwrapped, next.data());
     }

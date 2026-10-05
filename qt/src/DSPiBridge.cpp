@@ -947,6 +947,7 @@ void DSPiBridge::selectDevice(const QString &serial) {
         qWarning() << "DSPi: could not read device state for" << serial;
     else if (state()->compat != COMPAT_OK)
         qWarning() << "DSPi:" << compatMessage();
+    if (usable()) dspi_rta_start(m_core);     // probes for the spectrum analyser
     markAllDirty();
 
     // Show the first input pair and every enabled output on the graph
