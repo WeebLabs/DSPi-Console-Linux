@@ -351,7 +351,13 @@ pub struct CsState {
 
 impl CsState {
     fn config_key(&self) -> String {
-        format!("{:?}{:?}{:?}{:?}{:?}{:?}{:?}", self.bindings, self.names, self.ir, self.groups, self.macros,
+        // An empty slot is empty whatever its other bytes hold: a removed
+        // control reads back with the GUI's blank pins, not the factory's
+        let bindings: Vec<Binding> = self.bindings.iter()
+            .map(|b| if b.kind == 0 { Binding::default() } else { *b }).collect();
+        let ir: Vec<IrCommand> = self.ir.iter()
+            .map(|c| if c.protocol == 0 { IrCommand::default() } else { *c }).collect();
+        format!("{:?}{:?}{:?}{:?}{:?}{:?}{:?}", bindings, self.names, ir, self.groups, self.macros,
                 self.display, self.pages)
     }
     fn dirty(&self) -> bool {
@@ -763,6 +769,21 @@ impl DspiCore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn removed_control_is_not_unsaved() {
+        let mut cs = CsState::default();
+        cs.status = vec![0, 0, 0, 1];
+        cs.mark_clean();
+        // Added: unsaved
+        cs.bindings[0] = Binding { kind: 1, gpio: [5, 0xFF], ..Default::default() };
+        cs.ir[0] = IrCommand { protocol: 1, code: 0x1234, ..Default::default() };
+        assert!(cs.unsaved());
+        // Removed again, with leftover bytes in the empty slots: saved
+        cs.bindings[0] = Binding { gpio: [0, 0xFF], ..Default::default() };
+        cs.ir[0] = IrCommand { code: 0x1234, ..Default::default() };
+        assert!(!cs.unsaved());
+    }
 
     #[test]
     fn binding_round_trip() {
