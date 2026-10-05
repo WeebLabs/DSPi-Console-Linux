@@ -94,6 +94,7 @@ void PeqEditorItem::setBridge(QObject *bridge) {
     if (!m_bridge) return;
     connect(m_bridge, &DSPiBridge::stateChanged, this, &PeqEditorItem::reload);
     connect(m_bridge, &DSPiBridge::magnitudesChanged, this, &PeqEditorItem::reload);
+    connect(m_bridge, &DSPiBridge::previewChanged, this, &PeqEditorItem::reloadOffset);
     reload();
 }
 
@@ -165,6 +166,16 @@ void PeqEditorItem::reload() {
         if (!isEditable(b) && m_selected[b]) { m_selected[b] = false; emit selectionChanged(); kickEase(); }
     }
     recomputeCombined();
+    updateHud();
+    update();
+}
+
+// Mid-drag gain or preamp: only the level shift changes, the shapes don't
+void PeqEditorItem::reloadOffset() {
+    if (!m_active || m_channel < 0) return;
+    float offset = m_bridge->channelGainOffset(m_channel);
+    if (offset == m_offset) return;
+    m_offset = offset;
     updateHud();
     update();
 }

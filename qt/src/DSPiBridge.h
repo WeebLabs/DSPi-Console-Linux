@@ -440,7 +440,7 @@ public:
     // The channel's PEQ bands (BANDS_PER_CHANNEL) and, for an output, its
     // crossover bands; false if the channel doesn't exist
     bool channelBands(int ch, FilterParams *bands, FilterParams *xover, int *xoverCount) const;
-    // dB the graph adds to the channel's curve (an output's gain)
+    // dB the graph adds to the channel's curve (output gain, input preamp)
     float channelGainOffset(int ch) const;
     // Mid-drag: device (and linked partner) only, no signals
     void sendBandLive(int ch, int band, const FilterParams &p);

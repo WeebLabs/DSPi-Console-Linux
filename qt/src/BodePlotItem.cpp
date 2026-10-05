@@ -41,10 +41,8 @@ QVector<ChannelCurve> BodePlotItem::buildCurves() const {
         curve.color = QColor(m_bridge->channelColor(eqCh));
         curve.visible = true;
 
-        // Output curves include the output gain (app ids 2..10 are outputs)
-        if (!m_bridge->isInputChannel(eqCh)) {
-            curve.gainOffset = m_bridge->outputGainDB(eqCh - 2);
-        }
+        // Curves include the output gain or the input preamp
+        curve.gainOffset = m_bridge->channelGainOffset(eqCh);
 
         double mags[MAGNITUDE_POINTS];
         m_bridge->getMagnitudeCurve(eqCh, mags);

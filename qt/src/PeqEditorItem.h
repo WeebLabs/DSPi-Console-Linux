@@ -130,6 +130,7 @@ private:
 
     // Model
     void reload();                         // from the bridge, unless editing
+    void reloadOffset();                   // gain/preamp preview only
     void updateActive();
     void recomputeBand(int b);
     void recomputeCombined();

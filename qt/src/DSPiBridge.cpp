@@ -544,9 +544,12 @@ bool DSPiBridge::channelBands(int ch, FilterParams *bands, FilterParams *xover, 
     return true;
 }
 
+// The level shift drawn on a channel's curve: an output's gain, an input's preamp
 float DSPiBridge::channelGainOffset(int ch) const {
     int out = outputOf(ch);
-    return out >= 0 ? state()->output_gain_db[out] : 0.0f;
+    if (out >= 0) return state()->output_gain_db[out];
+    int in = inputOf(ch);
+    return in >= 0 ? state()->input_preamp_db[in] : 0.0f;
 }
 
 void DSPiBridge::sendBandLive(int ch, int band, const FilterParams &p) {
@@ -611,7 +614,8 @@ void DSPiBridge::setInputPreamp(int input, float db, bool sendOnly) {
     // all-inputs preamp, which would clobber the other pairs).
     int partner = inputOf(linkedPartner(inputAppId(input)));
     if (partner >= 0) dspi_set_input_preamp(m_core, partner, db);
-    if (!sendOnly) emit stateChanged();
+    if (sendOnly) emit previewChanged();   // the curves shift mid-drag
+    else emit stateChanged();
 }
 
 void DSPiBridge::setBypass(bool en) {
