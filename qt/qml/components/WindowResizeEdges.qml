@@ -12,7 +12,7 @@ Item {
         property int edgeFlags: 0
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
-        onPressed: edges.window.startSystemResize(edgeFlags)
+        onPressed: windowEffects.systemResize(edges.window, edgeFlags)
     }
 
     Edge { edgeFlags: Qt.LeftEdge; cursorShape: Qt.SizeHorCursor

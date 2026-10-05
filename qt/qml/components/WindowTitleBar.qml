@@ -32,7 +32,7 @@ Item {
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton
-        onPressed: bar.window.startSystemMove()
+        onPressed: windowEffects.systemMove(bar.window)
         onDoubleClicked: bar.toggleMaximized()
     }
 

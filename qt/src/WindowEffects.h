@@ -7,6 +7,7 @@
 #include <QRect>
 
 class QWindow;
+void releaseHeldButton(QWindow *window);
 
 // Desktop effects for the app's frameless windows: a blurred, translucent
 // sidebar strip and a drop shadow drawn by the window manager.
@@ -36,6 +37,11 @@ public:
     // Blur behind a rounded rectangle of a shown window (a translucent
     // popover card). A no-op without blur; call again after each show.
     Q_INVOKABLE void blurBehind(QWindow *window, const QRect &area, int radius);
+    // Hand a titlebar drag or an edge resize to the window manager. It keeps
+    // the button release, so Qt is told the button went up right away: left
+    // believing it held, Qt Quick delivers no hover until the next click.
+    Q_INVOKABLE bool systemMove(QWindow *window);
+    Q_INVOKABLE bool systemResize(QWindow *window, int edges);
 
 signals:
     void blurAvailableChanged();

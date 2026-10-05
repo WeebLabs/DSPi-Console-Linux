@@ -1,3 +1,6 @@
+#include <QCoreApplication>
+#include <QMouseEvent>
+#include <QCursor>
 #include "WindowEffects.h"
 
 #include <QTimer>
@@ -166,4 +169,30 @@ void WindowEffects::attachShadow(QWindow *window)
 #else
     Q_UNUSED(window);
 #endif
+}
+
+// ── Window-manager moves and resizes ──
+
+void releaseHeldButton(QWindow *window) {
+    QPointer<QWindow> w(window);
+    // After the press handler returns, so the item that took the press sees
+    // its release in order
+    QTimer::singleShot(0, [w]() {
+        if (!w) return;
+        const QPoint global = QCursor::pos();
+        QCoreApplication::postEvent(w, new QMouseEvent(QEvent::MouseButtonRelease, w->mapFromGlobal(global), global,
+                                                       Qt::LeftButton, Qt::NoButton, Qt::NoModifier));
+    });
+}
+
+bool WindowEffects::systemMove(QWindow *window) {
+    if (!window || !window->startSystemMove()) return false;
+    releaseHeldButton(window);
+    return true;
+}
+
+bool WindowEffects::systemResize(QWindow *window, int edges) {
+    if (!window || !window->startSystemResize(Qt::Edges(edges))) return false;
+    releaseHeldButton(window);
+    return true;
 }
