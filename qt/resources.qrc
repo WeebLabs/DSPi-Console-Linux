@@ -16,6 +16,7 @@
         <file>qml/WhatsNewWindow.qml</file>
         <file>qml/GettingStartedView.qml</file>
         <file>whatsnew.json</file>
+        <file>dspi-console.svg</file>
         <file>autoeq/autoeq_database.json</file>
         <file>qml/components/Spinner.qml</file>
         <file>qml/components/DashboardLayoutPopup.qml</file>

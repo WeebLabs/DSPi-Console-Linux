@@ -1,0 +1,4 @@
+# DSPi Console: let the logged-in user open a DSPi without root.
+# Current firmware uses vendor ID 2e8b; older firmware used 2e8a.
+SUBSYSTEM=="usb", ATTR{idVendor}=="2e8b", ATTR{idProduct}=="feaa", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2e8a", ATTR{idProduct}=="feaa", MODE="0666", TAG+="uaccess"

@@ -19,3 +19,6 @@ qt/build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Release builds (packaging/linux/build-appimage.sh)
+/dist/

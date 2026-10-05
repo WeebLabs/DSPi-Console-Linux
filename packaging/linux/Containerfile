@@ -1,0 +1,16 @@
+# Ubuntu 22.04 (glibc 2.35, Qt 5.15.3): the AppImage built here runs on it
+# and on every newer distribution.
+FROM docker.io/library/ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential cmake pkg-config curl ca-certificates file patchelf \
+        libusb-1.0-0-dev libudev-dev \
+        qtbase5-dev qtdeclarative5-dev qtquickcontrols2-5-dev qtdeclarative5-dev-tools \
+        qtwayland5 libqt5svg5 libqt5waylandclient5 \
+        qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts \
+        qml-module-qtquick-controls2 qml-module-qtquick-templates2 qml-module-qtqml \
+        qml-module-qt-labs-settings qml-module-qt-labs-platform \
+        libkf5windowsystem-dev kwayland-integration qt5-xdgdesktopportal-platformtheme \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+ENV PATH=/root/.cargo/bin:$PATH

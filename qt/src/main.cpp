@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QIcon>
 #include <QPalette>
 #include <QFont>
 #include <QSettings>
@@ -128,6 +129,11 @@ int main(int argc, char *argv[])
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
     app.setApplicationVersion("1.1.6-beta4");   // firmware release this Console targets
+#ifndef Q_OS_MACOS
+    // The Wayland app id, matched to dspi-console.desktop for the taskbar icon
+    app.setDesktopFileName(QStringLiteral("dspi-console"));
+    app.setWindowIcon(QIcon(QStringLiteral(":/dspi-console.svg")));
+#endif
 
     setPlatformDarkMode();
 
@@ -136,7 +142,7 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle(QStringLiteral(":/qml/style"));
     QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
 
-    // Dark palette: use system palette on Linux, hardcoded dark on macOS/other
+    // Dark palette, hardcoded
 #ifdef Q_OS_MACOS
     QPalette darkPalette;
     darkPalette.setColor(QPalette::Window, QColor(48, 48, 48));
@@ -154,6 +160,75 @@ int main(int argc, char *argv[])
     darkPalette.setColor(QPalette::HighlightedText, Qt::white);
     darkPalette.setColor(QPalette::Disabled, QPalette::Text, QColor(128, 128, 128));
     darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(128, 128, 128));
+    app.setPalette(darkPalette);
+#else
+    // The app's own dark palette, the same on every desktop (and in the
+    // AppImage, which can't load the desktop's theme plugin)
+    struct Swatch { QPalette::ColorGroup group; QPalette::ColorRole role; QColor color; };
+    const Swatch swatches[] = {
+        { QPalette::Active, QPalette::WindowText, QColor(230, 230, 230) },
+        { QPalette::Active, QPalette::Button, QColor(44, 44, 44) },
+        { QPalette::Active, QPalette::Light, QColor(54, 54, 54) },
+        { QPalette::Active, QPalette::Midlight, QColor(44, 44, 44) },
+        { QPalette::Active, QPalette::Dark, QColor(21, 21, 21) },
+        { QPalette::Active, QPalette::Mid, QColor(29, 29, 29) },
+        { QPalette::Active, QPalette::Text, QColor(230, 230, 230) },
+        { QPalette::Active, QPalette::BrightText, QColor(255, 255, 255) },
+        { QPalette::Active, QPalette::ButtonText, QColor(230, 230, 230) },
+        { QPalette::Active, QPalette::Base, QColor(24, 24, 24) },
+        { QPalette::Active, QPalette::Window, QColor(32, 32, 32) },
+        { QPalette::Active, QPalette::Shadow, QColor(15, 15, 15) },
+        { QPalette::Active, QPalette::Highlight, QColor(125, 155, 215) },
+        { QPalette::Active, QPalette::HighlightedText, QColor(252, 252, 252) },
+        { QPalette::Active, QPalette::Link, QColor(120, 155, 235) },
+        { QPalette::Active, QPalette::LinkVisited, QColor(170, 130, 210) },
+        { QPalette::Active, QPalette::AlternateBase, QColor(28, 28, 28) },
+        { QPalette::Active, QPalette::ToolTipBase, QColor(38, 38, 38) },
+        { QPalette::Active, QPalette::ToolTipText, QColor(230, 230, 230) },
+        { QPalette::Active, QPalette::PlaceholderText, QColor(230, 230, 230, 128) },
+        { QPalette::Disabled, QPalette::WindowText, QColor(97, 97, 97) },
+        { QPalette::Disabled, QPalette::Button, QColor(42, 42, 42) },
+        { QPalette::Disabled, QPalette::Light, QColor(53, 53, 53) },
+        { QPalette::Disabled, QPalette::Midlight, QColor(43, 43, 43) },
+        { QPalette::Disabled, QPalette::Dark, QColor(20, 20, 20) },
+        { QPalette::Disabled, QPalette::Mid, QColor(27, 27, 27) },
+        { QPalette::Disabled, QPalette::Text, QColor(92, 92, 92) },
+        { QPalette::Disabled, QPalette::BrightText, QColor(255, 255, 255) },
+        { QPalette::Disabled, QPalette::ButtonText, QColor(104, 104, 104) },
+        { QPalette::Disabled, QPalette::Base, QColor(23, 23, 23) },
+        { QPalette::Disabled, QPalette::Window, QColor(31, 31, 31) },
+        { QPalette::Disabled, QPalette::Shadow, QColor(14, 14, 14) },
+        { QPalette::Disabled, QPalette::Highlight, QColor(31, 31, 31) },
+        { QPalette::Disabled, QPalette::HighlightedText, QColor(97, 97, 97) },
+        { QPalette::Disabled, QPalette::Link, QColor(55, 67, 93) },
+        { QPalette::Disabled, QPalette::LinkVisited, QColor(72, 58, 85) },
+        { QPalette::Disabled, QPalette::AlternateBase, QColor(27, 27, 27) },
+        { QPalette::Disabled, QPalette::ToolTipBase, QColor(38, 38, 38) },
+        { QPalette::Disabled, QPalette::ToolTipText, QColor(230, 230, 230) },
+        { QPalette::Disabled, QPalette::PlaceholderText, QColor(230, 230, 230, 128) },
+        { QPalette::Inactive, QPalette::WindowText, QColor(230, 230, 230) },
+        { QPalette::Inactive, QPalette::Button, QColor(44, 44, 44) },
+        { QPalette::Inactive, QPalette::Light, QColor(54, 54, 54) },
+        { QPalette::Inactive, QPalette::Midlight, QColor(44, 44, 44) },
+        { QPalette::Inactive, QPalette::Dark, QColor(21, 21, 21) },
+        { QPalette::Inactive, QPalette::Mid, QColor(29, 29, 29) },
+        { QPalette::Inactive, QPalette::Text, QColor(230, 230, 230) },
+        { QPalette::Inactive, QPalette::BrightText, QColor(255, 255, 255) },
+        { QPalette::Inactive, QPalette::ButtonText, QColor(230, 230, 230) },
+        { QPalette::Inactive, QPalette::Base, QColor(24, 24, 24) },
+        { QPalette::Inactive, QPalette::Window, QColor(32, 32, 32) },
+        { QPalette::Inactive, QPalette::Shadow, QColor(15, 15, 15) },
+        { QPalette::Inactive, QPalette::Highlight, QColor(48, 58, 78) },
+        { QPalette::Inactive, QPalette::HighlightedText, QColor(230, 230, 230) },
+        { QPalette::Inactive, QPalette::Link, QColor(120, 155, 235) },
+        { QPalette::Inactive, QPalette::LinkVisited, QColor(170, 130, 210) },
+        { QPalette::Inactive, QPalette::AlternateBase, QColor(28, 28, 28) },
+        { QPalette::Inactive, QPalette::ToolTipBase, QColor(38, 38, 38) },
+        { QPalette::Inactive, QPalette::ToolTipText, QColor(230, 230, 230) },
+        { QPalette::Inactive, QPalette::PlaceholderText, QColor(230, 230, 230, 128) },
+    };
+    QPalette darkPalette;
+    for (const Swatch &s : swatches) darkPalette.setColor(s.group, s.role, s.color);
     app.setPalette(darkPalette);
 #endif
 

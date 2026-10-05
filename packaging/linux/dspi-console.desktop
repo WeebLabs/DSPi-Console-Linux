@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=DSPi Console
+GenericName=DSP Controller
+Comment=Configure and tune a DSPi audio processor
+Exec=DSPiConsole
+Icon=dspi-console
+Terminal=false
+Categories=AudioVideo;Audio;Mixer;
+Keywords=DSP;EQ;equalizer;crossover;audio;
+StartupWMClass=DSPiConsole

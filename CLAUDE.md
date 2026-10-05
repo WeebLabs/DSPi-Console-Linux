@@ -26,6 +26,14 @@ cd qt/build && QT_FORCE_STDERR_LOGGING=1 ./DSPiConsole
 - The user tests on real hardware. Don't drive the running app against the
   connected DSPi; build, lint, render offscreen, relaunch, and hand it over.
 
+## Release
+
+`packaging/linux/build-appimage.sh` builds `dist/DSPi-Console-v<version>-x86_64.AppImage`
+and a `-linux-x86_64.tar.gz` (AppImage, `70-dspi.rules`, `install.sh`) in an
+Ubuntu 22.04 podman container, so it runs on glibc 2.35+. The version comes from
+`setApplicationVersion` in `qt/src/main.cpp`. Releases are tagged `v<version>`
+and named `DSPi Console v<version>`, like the macOS and Windows repos.
+
 ## Git
 
 - Work on `linux-parity`. Commit or push only when asked. Never commit
