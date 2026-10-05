@@ -824,6 +824,30 @@ ApplicationWindow {
                 showFileResult("Load Failed", [status === 3 ? "Preset data is corrupted." : "Failed to load preset (error " + status + ")."], false)
         })
     }
+    // Switching devices: staged Settings edits belong to this device, and the
+    // preset may have unsaved changes (as on macOS)
+    function switchDevice(serial) {
+        if (settingsWindow.hasPendingChanges) {
+            settingsDiscard.serial = serial
+            settingsDiscard.open()
+            return
+        }
+        withUnsaved(function (choice) { bridge.selectDevice(serial) })
+    }
+    AppDialog {
+        id: settingsDiscard
+        property string serial: ""
+        icon: "warning"
+        iconTint: "#ff9f0a"
+        title: "Unsaved Settings Changes"
+        message: "Settings has pending changes for the current device that have not been saved. Switching devices will discard them."
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "switch", text: "Discard and Switch", role: "destructive" }]
+        onChosen: if (key === "switch") {
+            settingsWindow.discardPending()
+            var s = serial
+            root.withUnsaved(function (choice) { bridge.selectDevice(s) })
+        }
+    }
     AppDialog {
         id: unsavedDialog
         property var pending: null

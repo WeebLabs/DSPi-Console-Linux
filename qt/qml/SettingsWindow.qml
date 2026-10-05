@@ -146,6 +146,10 @@ AppWindow {
         }
     }
 
+    // Pending changes for the current device (asked about before a device switch)
+    readonly property bool hasPendingChanges: ctx.dirty
+    function discardPending() { ctx.load() }
+
     SettingsContext {
         id: ctx
         app: root

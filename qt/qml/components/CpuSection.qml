@@ -94,17 +94,43 @@ Item {
             // Short device name, as in the Windows Console: "DSPi (last 8 of the serial)"
             text: {
                 if (!cpuRoot.connected)
-                    return bridge.availableSerials.length === 0 ? "No Device" : "Disconnected"
+                    return bridge.availableSerials.length === 0 ? "No Devices" : "Disconnected"
                 var room = cpuRoot.width - cpuRoot.fixedLeft - 28 - 18
                 return fullNameMetrics.advanceWidth <= room || cpuRoot.serialTail === "" ? cpuRoot.fullName : cpuRoot.serialTail
             }
             font.pixelSize: 11
-            color: cpuRoot.connected ? Qt.rgba(1, 1, 1, 0.65) : Qt.rgba(1, 1, 1, 0.45)
+            color: cpuRoot.connected ? Qt.rgba(1, 1, 1, 0.65)
+                 : bridge.availableSerials.length === 0 ? "#ff453a" : Qt.rgba(1, 1, 1, 0.45)
         }
 
-        ToolTip.visible: statusHover.containsMouse && bridge.selectedSerial !== ""
-        ToolTip.text: (cpuRoot.connected ? "Connected · " : "") + "Serial " + bridge.selectedSerial
+        ToolTip.visible: statusHover.containsMouse
+        ToolTip.delay: 500
+        ToolTip.text: cpuRoot.connected
+                      ? "Connected · Serial " + bridge.selectedSerial
+                        + (bridge.availableSerials.length > 1 ? "\nClick to switch device. Right-click to reconnect." : "\nRight-click to reconnect.")
+                      : (bridge.connectionError || "Not connected. Right-click the device name to retry.")
     }
 
-    MouseArea { id: statusHover; anchors.fill: status; anchors.margins: -4; hoverEnabled: true }
+    // Several DSPis: click to choose one. Right-click rescans and reconnects.
+    MouseArea {
+        id: statusHover
+        anchors.fill: status
+        anchors.margins: -4
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        cursorShape: bridge.availableSerials.length > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onClicked: {
+            if (mouse.button === Qt.RightButton) { bridge.rescan(); return }
+            if (bridge.availableSerials.length > 1) deviceMenu.toggleAt(status)
+        }
+    }
+    ChoiceMenu {
+        id: deviceMenu
+        parent: Overlay.overlay
+        alignRight: true
+        heading: "Devices"
+        currentValue: bridge.selectedSerial
+        options: bridge.availableSerials.map(function (s) { return { value: s, text: "DSPi " + s.slice(-8) } })
+        onChosen: if (value !== bridge.selectedSerial) root.switchDevice(value)
+    }
 }

@@ -976,7 +976,13 @@ void DSPiBridge::scanDevices() {
 
 void DSPiBridge::selectDevice(const QString &serial) {
     QByteArray utf8 = serial.toUtf8();
-    if (!dspi_select_device(m_core, utf8.constData())) return;
+    if (!dspi_select_device(m_core, utf8.constData())) {
+        m_connectionError = QString("Could not open DSPi %1. Check that its udev rule is installed and that no other "
+                                    "program is using it. Right-click the device name to retry.").arg(serial.right(8));
+        emit statusChanged();
+        return;
+    }
+    m_connectionError.clear();
 
     m_selectedSerial = serial;
     m_hardwareUnsaved = false;
@@ -984,8 +990,10 @@ void DSPiBridge::selectDevice(const QString &serial) {
     memset(m_limiterGR, 0, sizeof(m_limiterGR));
     memset(m_lastClipMs, 0, sizeof(m_lastClipMs));
     loadLinks();
-    if (!dspi_fetch_all(m_core))
+    if (!dspi_fetch_all(m_core)) {
         qWarning() << "DSPi: could not read device state for" << serial;
+        m_connectionError = "Connected, but the device's settings could not be read. Right-click the device name to retry.";
+    }
     else if (state()->compat != COMPAT_OK)
         qWarning() << "DSPi:" << compatMessage();
     else
@@ -1011,6 +1019,20 @@ void DSPiBridge::disconnectDevice() {
     markAllDirty();
     emit stateChanged();
     emit statusChanged();
+}
+
+void DSPiBridge::rescan() {
+    const QString previous = m_selectedSerial;
+    if (connected()) disconnectDevice();
+    DeviceInfo devices[8];
+    const uint32_t count = dspi_scan_devices(m_core, devices, 8);
+    QStringList serials;
+    for (uint32_t i = 0; i < count; i++)
+        serials.append(QString::fromUtf8(reinterpret_cast<const char *>(devices[i].serial), devices[i].serial_len));
+    m_availableSerials = serials;
+    emit devicesChanged();
+    if (serials.contains(previous)) selectDevice(previous);
+    else if (!serials.isEmpty()) selectDevice(serials.first());
 }
 
 void DSPiBridge::reconnect() {

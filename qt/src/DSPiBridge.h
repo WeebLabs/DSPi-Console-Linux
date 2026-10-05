@@ -34,6 +34,8 @@ class DSPiBridge : public QObject
     Q_PROPERTY(bool connected READ connected NOTIFY statusChanged)
     // The live settings differ from the active preset (the `*` after its name)
     Q_PROPERTY(bool presetDirty READ presetDirty NOTIFY presetDirtyChanged)
+    // Why the last connection attempt failed ("" if it didn't)
+    Q_PROPERTY(QString connectionError READ connectionError NOTIFY statusChanged)
     Q_PROPERTY(QString selectedSerial READ selectedSerial NOTIFY stateChanged)
     Q_PROPERTY(QStringList availableSerials READ availableSerials NOTIFY devicesChanged)
     Q_PROPERTY(QString platformName READ platformName NOTIFY stateChanged)
@@ -287,6 +289,10 @@ public:
 
     Q_INVOKABLE int savePreset(int slot);
     bool presetDirty() const { return m_presetDirty; }
+    QString connectionError() const { return m_connectionError; }
+    // Drop the connection, rescan USB and reconnect (the same device if it's
+    // still there)
+    Q_INVOKABLE void rescan();
     // What differs from the active preset, one sentence each
     Q_INVOKABLE QStringList presetChanges() const;
     Q_INVOKABLE int loadPreset(int slot);
@@ -484,6 +490,7 @@ private:
     QTimer *m_notifyTimer = nullptr;
     bool m_hardwareUnsaved = false;
     bool m_presetDirty = false;
+    QString m_connectionError;
     void updatePresetDirty();
     int hardwareEdited(int status);   // marks unsaved edits, emits, returns status
     QElapsedTimer m_lastNotify;
