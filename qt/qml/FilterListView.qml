@@ -20,6 +20,10 @@ Item {
     property string madeByList: ""      // the selection the list last made; it doesn't scroll for it
 
     onChannelIdChanged: showCrossover = false
+    // While the XO tab is open the graph can't add or edit PEQ bands (as on macOS)
+    onXoChanged: root.crossoverTabOpen = xo
+    Component.onCompleted: root.crossoverTabOpen = xo
+    Component.onDestruction: root.crossoverTabOpen = false
     onLinkedChanged: {
         previousSelection = linked ? editor.selectedBands : []
         if (!linked && editor && editor.listHovered >= 0) editor.listHovered = -1

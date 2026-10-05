@@ -122,7 +122,7 @@ Column {
             PeqEditorItem {
                 id: editor
                 anchors.fill: parent
-                channel: filterResponseRoot.follows ? root.openChannelId : -1
+                channel: filterResponseRoot.follows && !root.crossoverTabOpen ? root.openChannelId : -1
                 showGlow: root.graphShowGlow
                 lineWidth: root.graphLineWidth
                 dbTop: bodePlot.dbTop

@@ -33,6 +33,16 @@ ApplicationWindow {
         property alias width: root.sidebarWidth
     }
 
+    // The open output page shows its XO tab: no PEQ editing on the graph
+    property bool crossoverTabOpen: false
+
+    // Dashboard cards per row: 0 = as many as fit (Auto), or 1-3
+    property int dashboardCardsPerRow: 0
+    Settings {
+        category: "dashboard"
+        property alias cardsPerRow: root.dashboardCardsPerRow
+    }
+
     // Platform-aware monospace font
     readonly property string monoFont: isMacOS ? "Menlo" : "monospace"
 
@@ -876,7 +886,8 @@ ApplicationWindow {
     // Closing the main window quits: ask about unsaved changes first
     property bool closeConfirmed: false
     onClosing: {
-        if (closeConfirmed || !bridge.connected || !bridge.presetDirty) return
+        // Closing the main window quits, tool windows and all (as on macOS)
+        if (closeConfirmed || !bridge.connected || !bridge.presetDirty) { Qt.quit(); return }
         close.accepted = false
         withUnsaved(function (choice) { root.closeConfirmed = true; root.close() },
                     function (status) {
@@ -978,24 +989,28 @@ ApplicationWindow {
     }
 
     // Shortcuts (Linux has no native menu bar to carry them); like the
-    // menu, off while the Getting Started wizard has the window
+    // menu, off while the Getting Started wizard has the window. Those that
+    // open a window work from any window, as menu shortcuts do on macOS (so
+    // Ctrl+Shift+M also closes the Matrix from its own window); the rest act
+    // on the main window and stay with it
+    Shortcut { sequences: [StandardKey.Quit]; context: Qt.ApplicationShortcut; onActivated: root.close() }
     Shortcut { sequence: "Ctrl+S"; enabled: !root.showWizard && bridge.connected; onActivated: commitDialog.open() }
-    Shortcut { sequence: "Ctrl+Shift+M"; enabled: !root.showWizard; onActivated: matrixWindow.visible = !matrixWindow.visible }
-    Shortcut { sequence: "Ctrl+Shift+L"; enabled: !root.showWizard; onActivated: root.openToolWindow("loudness") }
-    Shortcut { sequence: "Ctrl+Shift+X"; enabled: !root.showWizard; onActivated: root.openToolWindow("crossfeed") }
-    Shortcut { sequence: "Ctrl+Shift+V"; enabled: !root.showWizard; onActivated: root.openToolWindow("leveller") }
-    Shortcut { sequence: "Ctrl+Shift+P"; enabled: !root.showWizard; onActivated: root.openToolWindow("psybass") }
-    Shortcut { sequence: "Ctrl+Shift+S"; enabled: !root.showWizard; onActivated: root.openToolWindow("subharm") }
-    Shortcut { sequence: "Ctrl+Shift+D"; enabled: !root.showWizard; onActivated: root.openToolWindow("tube") }
-    Shortcut { sequence: "Ctrl+Shift+U"; enabled: !root.showWizard; onActivated: root.openToolWindow("upmix") }
-    Shortcut { sequence: "Ctrl+Shift+T"; enabled: !root.showWizard; onActivated: root.openToolWindow("stats") }
-    Shortcut { sequence: "Ctrl+Shift+A"; enabled: !root.showWizard; onActivated: root.openToolWindow("spectrum") }
-    Shortcut { sequence: "Ctrl+Shift+G"; enabled: !root.showWizard; onActivated: root.openToolWindow("siggen") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+M"; enabled: !root.showWizard; onActivated: matrixWindow.visible = !matrixWindow.visible }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+L"; enabled: !root.showWizard; onActivated: root.openToolWindow("loudness") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+X"; enabled: !root.showWizard; onActivated: root.openToolWindow("crossfeed") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+V"; enabled: !root.showWizard; onActivated: root.openToolWindow("leveller") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+P"; enabled: !root.showWizard; onActivated: root.openToolWindow("psybass") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+S"; enabled: !root.showWizard; onActivated: root.openToolWindow("subharm") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+D"; enabled: !root.showWizard; onActivated: root.openToolWindow("tube") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+U"; enabled: !root.showWizard; onActivated: root.openToolWindow("upmix") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+T"; enabled: !root.showWizard; onActivated: root.openToolWindow("stats") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+A"; enabled: !root.showWizard; onActivated: root.openToolWindow("spectrum") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+G"; enabled: !root.showWizard; onActivated: root.openToolWindow("siggen") }
     Shortcut { sequence: "Ctrl+I"; enabled: !root.showWizard && bridge.connected && !root.textFocused; onActivated: root.fileAction("importFilters") }
     Shortcut { sequence: "Ctrl+E"; enabled: !root.showWizard && bridge.connected && !root.textFocused; onActivated: root.fileAction("exportFilters") }
-    Shortcut { sequence: "Ctrl+Shift+I"; enabled: !root.showWizard; onActivated: root.openToolWindow("monitor") }
-    Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
-    Shortcut { sequence: "Ctrl+Shift+B"; enabled: !root.showWizard; onActivated: root.openToolWindow("autoeq") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+I"; enabled: !root.showWizard; onActivated: root.openToolWindow("monitor") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
+    Shortcut { context: Qt.ApplicationShortcut; sequence: "Ctrl+Shift+B"; enabled: !root.showWizard; onActivated: root.openToolWindow("autoeq") }
     StatsWindow { id: statsWindow }
     SpectrumAnalyserWindow { id: spectrumWindow; app: root }
     GraphWindow { id: graphWindow }

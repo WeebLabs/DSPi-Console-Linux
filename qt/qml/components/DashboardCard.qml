@@ -18,8 +18,17 @@ Item {
     // Output cards show each channel's delay (ms); -1 hides it
     property real leftDelay: -1
     property real rightDelay: -1
+    // The layout gear shows at the header's right end: the readout under it moves aside
+    property bool gearVisible: false
+    readonly property real gearSlot: gearVisible ? 18 : 0
 
     property int bandCount: 10
+    // The owner bumps this when the device state changes: the rows re-read
+    property int revision: 0
+    function ft(ch, b) { revision; return bridge.filterType(ch, b) }
+    function ff(ch, b) { revision; return bridge.filterFreq(ch, b) }
+    function fg(ch, b) { revision; return bridge.filterGain(ch, b) }
+    function fq(ch, b) { revision; return bridge.filterQ(ch, b) }
     height: 32 + 1 + (bandCount * 24)
 
     // An off band shows a dash, as on macOS
@@ -137,7 +146,8 @@ Item {
             // Delay readouts at the right of each half (output cards)
             Text {
                 visible: cardRoot.leftDelay >= 0
-                x: (isStereo ? parent.width / 2 : parent.width) - width - 10
+                x: (isStereo ? parent.width / 2 : parent.width - cardRoot.gearSlot) - width - 10
+                Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Delay: " + cardRoot.leftDelay.toFixed(0) + "ms"
                 font.pixelSize: 9
@@ -146,7 +156,8 @@ Item {
             }
             Text {
                 visible: isStereo && cardRoot.rightDelay >= 0
-                x: parent.width - width - 10
+                x: parent.width - cardRoot.gearSlot - width - 10
+                Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Delay: " + cardRoot.rightDelay.toFixed(0) + "ms"
                 font.pixelSize: 9
@@ -193,10 +204,10 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 24
-                            text: typeShort[bridge.filterType(leftChannel, index)] || "–"
+                            text: typeShort[cardRoot.ft(leftChannel, index)] || "–"
                             font.pixelSize: 10
                             font.weight: Font.Bold
-                            color: bridge.filterType(leftChannel, index) > 0 ? parsedLeftColor : Qt.rgba(1, 1, 1, 0.3)
+                            color: cardRoot.ft(leftChannel, index) > 0 ? parsedLeftColor : Qt.rgba(1, 1, 1, 0.3)
                             horizontalAlignment: Text.AlignLeft
                         }
 
@@ -207,8 +218,8 @@ Item {
                             spacing: 8
 
                             Text {
-                                visible: bridge.filterType(leftChannel, index) > 0
-                                text: bridge.filterFreq(leftChannel, index).toFixed(1) + " Hz"
+                                visible: cardRoot.ft(leftChannel, index) > 0
+                                text: cardRoot.ff(leftChannel, index).toFixed(1) + " Hz"
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
@@ -216,8 +227,8 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                visible: bridge.filterType(leftChannel, index) > 0
-                                text: bridge.filterGain(leftChannel, index).toFixed(1) + " dB"
+                                visible: cardRoot.ft(leftChannel, index) > 0
+                                text: cardRoot.fg(leftChannel, index).toFixed(1) + " dB"
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
@@ -225,8 +236,8 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                visible: bridge.filterType(leftChannel, index) > 0
-                                text: "Q " + bridge.filterQ(leftChannel, index).toFixed(3)
+                                visible: cardRoot.ft(leftChannel, index) > 0
+                                text: "Q " + cardRoot.fq(leftChannel, index).toFixed(3)
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
@@ -246,10 +257,10 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 24
-                            text: rightChannel >= 0 ? (typeShort[bridge.filterType(rightChannel, index)] || "–") : ""
+                            text: rightChannel >= 0 ? (typeShort[cardRoot.ft(rightChannel, index)] || "–") : ""
                             font.pixelSize: 10
                             font.weight: Font.Bold
-                            color: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0 ? parsedRightColor : Qt.rgba(1, 1, 1, 0.3)
+                            color: rightChannel >= 0 && cardRoot.ft(rightChannel, index) > 0 ? parsedRightColor : Qt.rgba(1, 1, 1, 0.3)
                             horizontalAlignment: Text.AlignLeft
                         }
 
@@ -260,8 +271,8 @@ Item {
                             spacing: 8
 
                             Text {
-                                visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
-                                text: bridge.filterFreq(rightChannel, index).toFixed(1) + " Hz"
+                                visible: rightChannel >= 0 && cardRoot.ft(rightChannel, index) > 0
+                                text: cardRoot.ff(rightChannel, index).toFixed(1) + " Hz"
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
@@ -269,8 +280,8 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
-                                text: bridge.filterGain(rightChannel, index).toFixed(1) + " dB"
+                                visible: rightChannel >= 0 && cardRoot.ft(rightChannel, index) > 0
+                                text: cardRoot.fg(rightChannel, index).toFixed(1) + " dB"
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
@@ -278,8 +289,8 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                visible: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0
-                                text: "Q " + bridge.filterQ(rightChannel, index).toFixed(3)
+                                visible: rightChannel >= 0 && cardRoot.ft(rightChannel, index) > 0
+                                text: "Q " + cardRoot.fq(rightChannel, index).toFixed(3)
                                 font.pixelSize: 10
                                 font.family: root.monoFont
                                 color: Qt.rgba(1, 1, 1, 0.7)
