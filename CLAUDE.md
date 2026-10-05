@@ -36,7 +36,7 @@ and named `DSPi Console v<version>`, like the macOS and Windows repos.
 
 ## Git
 
-- Work on `linux-parity`. Commit or push only when asked. Never commit
+- Work on `main`. Commit or push only when asked. Never commit
   `channel_editor.png`.
 
 ## Rendering and updates

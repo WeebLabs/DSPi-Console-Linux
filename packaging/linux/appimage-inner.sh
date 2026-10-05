@@ -31,7 +31,8 @@ mkdir -p AppDir/usr/plugins/platformthemes
 cp "$plugins/platformthemes/libqxdgdesktopportal.so" AppDir/usr/plugins/platformthemes/
 "$tools/linuxdeploy-x86_64.AppImage" --appdir AppDir --deploy-deps-only AppDir/usr/plugins/kf5/kwindowsystem \
     --deploy-deps-only AppDir/usr/plugins/platformthemes
-cp packaging/linux/apprun-hook.sh AppDir/apprun-hooks/dspi-console.sh
+# Named to run after linuxdeploy-plugin-qt-hook.sh
+cp packaging/linux/apprun-hook.sh AppDir/apprun-hooks/zz-dspi-console.sh
 
 OUTPUT="$name-x86_64.AppImage" "$tools/linuxdeploy-x86_64.AppImage" --appdir AppDir --output appimage
 
