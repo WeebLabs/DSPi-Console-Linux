@@ -1,0 +1,13 @@
+post_install() {
+    # Apply the udev rule to a DSPi that's already plugged in
+    udevadm control --reload-rules || true
+    udevadm trigger --subsystem-match=usb --attr-match=idProduct=feaa || true
+}
+
+post_upgrade() {
+    post_install
+}
+
+post_remove() {
+    udevadm control --reload-rules || true
+}

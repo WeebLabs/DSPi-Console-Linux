@@ -1,0 +1,38 @@
+# Maintainer: WeebLabs <https://github.com/WeebLabs>
+# Builds DSPi Console from source against the system Qt 5.
+pkgname=dspi-console
+pkgver=1.1.6beta4
+pkgrel=1
+_commit=b1c15497c3cc6399e54fbab6e7ddca38d2dcfb73
+pkgdesc="Control application for the DSPi audio processor"
+arch=('x86_64')
+url="https://github.com/WeebLabs/DSPi-Console-Linux"
+license=('unknown')
+depends=('qt5-base' 'qt5-declarative' 'qt5-quickcontrols2' 'qt5-svg' 'qt5-wayland'
+         'kwindowsystem5' 'libusb' 'systemd-libs' 'libx11' 'gcc-libs' 'glibc')
+makedepends=('git' 'cargo' 'cmake')
+optdepends=('kwayland-integration: blurred sidebar on KDE Plasma (Wayland)'
+            'xdg-desktop-portal: native file dialogs'
+            'udisks2: firmware updates')
+install=dspi-console.install
+source=("$pkgname::git+$url.git#commit=$_commit")
+sha256sums=('SKIP')
+
+prepare() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+    cargo build --frozen --release
+    cmake -S qt -B build -DCMAKE_BUILD_TYPE=None -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build
+}
+
+package() {
+    cd "$pkgname"
+    DESTDIR="$pkgdir" cmake --install build
+}
