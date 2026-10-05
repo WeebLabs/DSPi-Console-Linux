@@ -1416,8 +1416,32 @@ pub extern "C" fn dspi_cs_pin_uses(core: *mut FfiCore, pins: *mut u8, slots: *mu
     uses.len() as u32
 }
 
+/// Boards in BOOTSEL (Raspberry Pi's ROM loader, not DSPi) on the USB bus:
+/// fills the RP2040 and RP2350 counts.
+#[no_mangle]
+pub extern "C" fn dspi_bootloader_counts(rp2040: *mut u32, rp2350: *mut u32) {
+    let (mut a, mut b) = (0u32, 0u32);
+    if let Ok(list) = rusb::devices() {
+        for d in list.iter() {
+            if let Ok(desc) = d.device_descriptor() {
+                if desc.vendor_id() == 0x2E8A {
+                    match desc.product_id() {
+                        0x0003 => a += 1,
+                        0x000F => b += 1,
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    unsafe {
+        if !rp2040.is_null() { *rp2040 = a; }
+        if !rp2350.is_null() { *rp2350 = b; }
+    }
+}
+
 // Re-export constants that C consumers need
-pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};
+pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, FW_BETA_EARLY, PIN_CONFIG_SUCCESS, PRESET_OK};
 pub use notify::{
     NOTIFY_CS_AUX, NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_IR_LEARN, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_SIGGEN,
     NOTIFY_STATE,

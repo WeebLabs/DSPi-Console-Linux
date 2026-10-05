@@ -1,0 +1,18 @@
+[
+  {
+    "version": "1.1.6-beta4",
+    "headline": "Feature parity with the macOS Console",
+    "items": [
+      "The Tube Modeller gives each output the character of one of 16 popular vacuum tubes, with drive, mix and an output stage that recreates how a valve amplifier's transformer meets a loudspeaker. Find it in the menu under Tube Modeller (Ctrl+Shift+D).",
+      "Every output has its own brickwall limiter with adjustable threshold and release. Click the icon under an output's mute button to switch it on, or right-click it for settings. Linked outputs share their limiter settings.",
+      "A spectrum analyser shows the sound on any input or output as it plays: behind the response graph, as bars under it, and in its own window (Ctrl+Shift+A). The device does the measuring, so it works with every source.",
+      "The Subharmonic Synthesizer adds a new octave below the bass, for recordings that are light on low end (Ctrl+Shift+S).",
+      "Filters can be edited directly on the response graph. Drag a band's dot to change its frequency and gain, scroll to change its width, and use the card beside it to pick a shape. The graph can also show phase.",
+      "Control Surfaces wire buttons, knobs, encoders, LEDs, an IR remote and a small display to spare GPIOs, with channel groups, macros and auxiliary outputs. Find them in Settings under Control.",
+      "Console now carries the matching firmware and installs it for you from Firmware Update in the menu. If a connected device runs a different version, a banner offers the update.",
+      "A setup wizard on first launch walks you through installing DSPi on a Pico. You can skip it, and run it again from Help in the menu.",
+      "Device configurations can be exported and imported as .dspipreset files shared with the macOS and Windows Consoles, and filters as REW or AutoEQ text.",
+      "The Signal Generator, Stats for Nerds and Interrupt Monitor have been rebuilt, and Settings has been redesigned to match the rest of the app."
+    ]
+  }
+]

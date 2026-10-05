@@ -90,7 +90,14 @@ Popup {
         { kind: "sep" },
         { kind: "item", icon: "gear", text: "Settings", shortcut: "Ctrl+,", window: "settings" },
         { kind: "sep" },
-        { kind: "item", icon: "warning", text: "Factory Reset…", shortcut: "", action: "factoryReset", danger: true }
+        { kind: "item", icon: "chip", text: "Firmware Update…", shortcut: "", window: "firmware" },
+        { kind: "item", icon: "warning", text: "Factory Reset…", shortcut: "", action: "factoryReset", danger: true },
+
+        { kind: "header", text: "Help" },
+        { kind: "item", icon: "cap", text: "Getting Started…", shortcut: "", window: "gettingStarted", help: true },
+        { kind: "item", icon: "sparkles", text: "What's New in DSPi Console", shortcut: "", window: "whatsNew", help: true },
+        { kind: "item", icon: "github", text: "DSPi Console on GitHub", shortcut: "", window: "url:https://github.com/WeebLabs/DSPi-Console-Linux", help: true },
+        { kind: "item", icon: "github", text: "DSPi Firmware on GitHub", shortcut: "", window: "url:https://github.com/WeebLabs/DSPi", help: true }
     ]
 
     // Items that are shown and can be activated, in order
@@ -104,7 +111,11 @@ Popup {
     }
     property int current: -1   // index into rows
 
+    // While the Getting Started wizard has the window: only Settings and Help
+    property bool restricted: false
+
     function rowEnabled(r) {
+        if (restricted && !r.help && r.window !== "settings") return false
         if (r.window) return true
         return bridge.connected
     }

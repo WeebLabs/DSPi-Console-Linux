@@ -151,7 +151,7 @@ pub fn export(s: &DspState, name: &str, app_version: &str, links: u8) -> String 
     let n_in = s.num_input_channels as usize;
     let n_out = s.num_output_channels as usize;
     let fw = format!("{}.{}.{}", s.fw_major, s.fw_minor, s.fw_patch)
-        + &if s.fw_beta > 0 { format!("-beta{}", s.fw_beta) } else { String::new() };
+        + &if s.fw_beta > 0 && s.fw_beta != FW_BETA_EARLY { format!("-beta{}", s.fw_beta) } else { String::new() };
 
     let mut channels = Vec::new();
     for i in 0..n_in {

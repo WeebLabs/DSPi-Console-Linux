@@ -47,3 +47,9 @@ SpectrumBarStrip 1.0 SpectrumBarStrip.qml
 PopoverWindow 1.0 PopoverWindow.qml
 SiggenGlyph 1.0 SiggenGlyph.qml
 CascadeMenu 1.0 CascadeMenu.qml
+Spinner 1.0 Spinner.qml
+LabelValueRow 1.0 LabelValueRow.qml
+StepStrip 1.0 StepStrip.qml
+InstallStateCard 1.0 InstallStateCard.qml
+InstallWritingCard 1.0 InstallWritingCard.qml
+AppButton 1.0 AppButton.qml

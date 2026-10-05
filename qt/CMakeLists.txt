@@ -22,6 +22,7 @@ add_executable(DSPiConsole
     src/PointerTracker.cpp
     src/SiggenController.cpp
     src/CsController.cpp
+    src/FirmwareUpdater.cpp
     src/StatsController.cpp
     src/MonitorModel.cpp
     src/ConfigFiles.cpp

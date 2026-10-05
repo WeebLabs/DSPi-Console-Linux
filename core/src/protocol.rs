@@ -1061,8 +1061,14 @@ pub fn parse_status(data: &[u8], num_channels: usize) -> Option<SystemStatus> {
     Some(status)
 }
 
+/// `fw_beta` for a beta that can't say which one it is: 1.1.6 betas 1 and 2
+/// predate the ordinal and answer as plain 1.1.6. Sorts below every beta.
+pub const FW_BETA_EARLY: u8 = 0xFF;
+
 /// Parse the REQ_GET_PLATFORM reply. Firmware before 1.1.6 sends 4 bytes with
 /// minor/patch packed into nibbles; 1.1.6+ appends full-width minor, patch, beta.
+/// A reply without the ordinal that claims 1.1.6 or later is one of the early
+/// 1.1.6 betas, never a final release.
 pub fn parse_platform(data: &[u8]) -> Option<PlatformInfo> {
     if data.len() < 4 {
         return None;
@@ -1081,6 +1087,8 @@ pub fn parse_platform(data: &[u8]) -> Option<PlatformInfo> {
     }
     if data.len() >= 7 {
         info.fw_beta = data[6];
+    } else if (info.fw_major, info.fw_minor, info.fw_patch) >= (1, 1, 6) {
+        info.fw_beta = FW_BETA_EARLY;
     }
     Some(info)
 }
@@ -1221,6 +1229,11 @@ mod tests {
     fn parse_platform_full_and_legacy() {
         let p = parse_platform(&[1, 1, 0x16, 9, 1, 6, 4]).unwrap();
         assert_eq!((p.platform_id, p.fw_major, p.fw_minor, p.fw_patch, p.fw_beta), (1, 1, 1, 6, 4));
+        // No ordinal: a release before 1.1.6, or an early 1.1.6 beta
+        let old = parse_platform(&[0, 1, 0x15, 4, 1, 5]).unwrap();
+        assert_eq!((old.fw_minor, old.fw_patch, old.fw_beta), (1, 5, 0));
+        let early = parse_platform(&[0, 1, 0x16, 4, 1, 6]).unwrap();
+        assert_eq!(early.fw_beta, FW_BETA_EARLY);
         let p = parse_platform(&[0, 1, 0x15, 5]).unwrap();
         assert_eq!((p.fw_minor, p.fw_patch, p.num_output_channels), (1, 5, 5));
     }

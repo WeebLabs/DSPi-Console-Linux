@@ -202,7 +202,7 @@ ApplicationWindow {
         rtaPageSource = rtaChannelPagesShowSpectrum ? own : own.slice(0, own.indexOf(":") + 1)
         rtaPageOtherSide = ""
     }
-    Component.onCompleted: rtaRefreshAvailable()
+    Component.onCompleted: { rtaRefreshAvailable(); startOnboarding() }
 
     // Selection state: "overview", "channel:N", "output:N"
     property string selection: "overview"
@@ -397,6 +397,72 @@ ApplicationWindow {
                     }
                 }
 
+                // Firmware version mismatch: the device runs another version
+                // than this Console expects (hidden until the next launch)
+                Rectangle {
+                    id: versionBanner
+                    property bool hiddenThisLaunch: false
+                    visible: !hiddenThisLaunch && !compatBanner.visible && (firmware.match === 2 || firmware.match === 3)
+                    width: parent.width - 32
+                    x: 16
+                    height: visible ? Math.max(versionText.implicitHeight + 16, 40) : 0
+                    radius: 8
+                    color: Qt.rgba(1, 0.62, 0.04, 0.12)
+                    border.color: Qt.rgba(1, 0.62, 0.04, 0.45)
+
+                    Icon {
+                        id: versionIcon
+                        x: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "warning"
+                        size: 15
+                        color: "#ff9f0a"
+                    }
+                    Text {
+                        id: versionText
+                        anchors.left: versionIcon.right
+                        anchors.leftMargin: 9
+                        anchors.right: versionButtons.left
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 12
+                        color: "white"
+                        text: firmware.match === 3
+                              ? "This device runs firmware " + firmware.deviceVersion + ", which is newer than DSPi Console "
+                                + firmware.expectedVersion + ". Some of its features may not be shown."
+                              : "This device runs firmware " + firmware.deviceVersion + "; DSPi Console expects " + firmware.expectedVersion + "."
+                    }
+                    Row {
+                        id: versionButtons
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 6
+                        Repeater {
+                            model: [firmware.match === 3 ? "Details…" : "Update…", "Hide"]
+                            Rectangle {
+                                width: label.implicitWidth + 20
+                                height: 24
+                                radius: 7
+                                color: bannerMouse.pressed ? Qt.rgba(1, 1, 1, 0.13) : bannerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                                border.color: Qt.rgba(1, 1, 1, 0.18)
+                                Text { id: label; anchors.centerIn: parent; text: modelData; font.pixelSize: 12; color: "white" }
+                                MouseArea {
+                                    id: bannerMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: index === 0 ? root.openToolWindow("firmware") : (versionBanner.hiddenThisLaunch = true)
+                                }
+                                ToolTip.text: index === 1 ? "Hide this warning until DSPi Console is next started" : ""
+                                ToolTip.visible: index === 1 && bannerMouse.containsMouse
+                                ToolTip.delay: 600
+                            }
+                        }
+                    }
+                }
+
                 // Graph section
                 FilterResponseView {
                     id: filterResponse
@@ -410,6 +476,7 @@ ApplicationWindow {
                     // The column already starts below the titlebar
                     height: parent.height - filterResponse.height - 10
                             - (compatBanner.visible ? compatBanner.height + 10 : 0)
+                            - (versionBanner.visible ? versionBanner.height + 10 : 0)
 
                     sourceComponent: {
                         if (root.selection === "overview")
@@ -499,6 +566,37 @@ ApplicationWindow {
     }
 
     // Linux: client-side titlebar, resize edges and window outline
+    // ── Onboarding ──
+    // The Getting Started wizard takes over the main window for a new user
+    // (and from Help); What's New shows once after Console is updated.
+    Settings {
+        id: onboarding
+        category: "onboarding"
+        property bool setupDone: false
+        property string whatsNewShown: ""
+    }
+    property bool setupRequested: false
+    readonly property bool showWizard: setupRequested || !onboarding.setupDone
+    Loader {
+        id: wizardLoader
+        anchors.fill: parent
+        anchors.topMargin: root.titlebarHeight
+        active: root.showWizard
+        sourceComponent: GettingStartedView {
+            onFinished: { onboarding.setupDone = true; root.setupRequested = false }
+        }
+    }
+    function startOnboarding() {
+        // Someone who used Console before this existed isn't sent through setup
+        if (!onboarding.setupDone && hadSettingsAtLaunch) onboarding.setupDone = true
+        if (onboarding.whatsNewShown === "") {
+            // A new install starts caught up
+            onboarding.whatsNewShown = Qt.application.version
+        } else if (whatsNewWindow.unread(onboarding.whatsNewShown).length > 0) {
+            openToolWindow("whatsNew")
+        }
+    }
+
     WindowTitleBar {
         visible: !isMacOS
         z: 900
@@ -545,13 +643,17 @@ ApplicationWindow {
     SubharmonicSynthWindow { id: subharmWindow }
     TubeModellerWindow { id: tubeWindow }
     UpmixerWindow { id: upmixWindow }
+    FirmwareUpdateWindow { id: firmwareWindow; onExportRequested: root.fileAction("exportConfig") }
+    WhatsNewWindow { id: whatsNewWindow; onVisibleChanged: if (visible) onboarding.whatsNewShown = Qt.application.version }
 
     function openToolWindow(name) {
+        if (name.indexOf("url:") === 0) { Qt.openUrlExternally(name.substring(4)); return }
+        if (name === "gettingStarted") { setupRequested = true; return }
         var w = { matrix: matrixWindow, loudness: loudnessWindow, crossfeed: crossfeedWindow,
                   leveller: levellerWindow, psybass: psybassWindow, subharm: subharmWindow,
                   tube: tubeWindow, upmix: upmixWindow, stats: statsWindow,
                   spectrum: spectrumWindow, graph: graphWindow, siggen: siggenWindow, monitor: monitorWindow,
-                  settings: settingsWindow }[name]
+                  settings: settingsWindow, firmware: firmwareWindow, whatsNew: whatsNewWindow }[name]
         if (w) { w.visible = true; w.raise(); w.requestActivate() }
     }
 
@@ -569,6 +671,8 @@ ApplicationWindow {
         onFactoryResetRequested: factoryResetDialog.open()
         onOpenWindow: root.openToolWindow(name)
         onFileAction: root.fileAction(name)
+        // As on macOS, setup leaves only Settings and Help in the menu
+        restricted: root.showWizard
     }
 
     // ── Configuration and filter files ──
@@ -699,22 +803,23 @@ ApplicationWindow {
         onChosen: if (key === "reset") bridge.factoryReset()
     }
 
-    // Shortcuts (Linux has no native menu bar to carry them)
-    Shortcut { sequence: "Ctrl+S"; enabled: bridge.connected; onActivated: bridge.saveParams() }
-    Shortcut { sequence: "Ctrl+Shift+M"; onActivated: matrixWindow.visible = !matrixWindow.visible }
-    Shortcut { sequence: "Ctrl+Shift+L"; onActivated: root.openToolWindow("loudness") }
-    Shortcut { sequence: "Ctrl+Shift+X"; onActivated: root.openToolWindow("crossfeed") }
-    Shortcut { sequence: "Ctrl+Shift+V"; onActivated: root.openToolWindow("leveller") }
-    Shortcut { sequence: "Ctrl+Shift+P"; onActivated: root.openToolWindow("psybass") }
-    Shortcut { sequence: "Ctrl+Shift+S"; onActivated: root.openToolWindow("subharm") }
-    Shortcut { sequence: "Ctrl+Shift+D"; onActivated: root.openToolWindow("tube") }
-    Shortcut { sequence: "Ctrl+Shift+U"; onActivated: root.openToolWindow("upmix") }
-    Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
-    Shortcut { sequence: "Ctrl+Shift+A"; onActivated: root.openToolWindow("spectrum") }
-    Shortcut { sequence: "Ctrl+Shift+G"; onActivated: root.openToolWindow("siggen") }
-    Shortcut { sequence: "Ctrl+I"; enabled: bridge.connected && !root.textFocused; onActivated: root.fileAction("importFilters") }
-    Shortcut { sequence: "Ctrl+E"; enabled: bridge.connected && !root.textFocused; onActivated: root.fileAction("exportFilters") }
-    Shortcut { sequence: "Ctrl+Shift+I"; onActivated: root.openToolWindow("monitor") }
+    // Shortcuts (Linux has no native menu bar to carry them); like the
+    // menu, off while the Getting Started wizard has the window
+    Shortcut { sequence: "Ctrl+S"; enabled: !root.showWizard && bridge.connected; onActivated: bridge.saveParams() }
+    Shortcut { sequence: "Ctrl+Shift+M"; enabled: !root.showWizard; onActivated: matrixWindow.visible = !matrixWindow.visible }
+    Shortcut { sequence: "Ctrl+Shift+L"; enabled: !root.showWizard; onActivated: root.openToolWindow("loudness") }
+    Shortcut { sequence: "Ctrl+Shift+X"; enabled: !root.showWizard; onActivated: root.openToolWindow("crossfeed") }
+    Shortcut { sequence: "Ctrl+Shift+V"; enabled: !root.showWizard; onActivated: root.openToolWindow("leveller") }
+    Shortcut { sequence: "Ctrl+Shift+P"; enabled: !root.showWizard; onActivated: root.openToolWindow("psybass") }
+    Shortcut { sequence: "Ctrl+Shift+S"; enabled: !root.showWizard; onActivated: root.openToolWindow("subharm") }
+    Shortcut { sequence: "Ctrl+Shift+D"; enabled: !root.showWizard; onActivated: root.openToolWindow("tube") }
+    Shortcut { sequence: "Ctrl+Shift+U"; enabled: !root.showWizard; onActivated: root.openToolWindow("upmix") }
+    Shortcut { sequence: "Ctrl+Shift+T"; enabled: !root.showWizard; onActivated: root.openToolWindow("stats") }
+    Shortcut { sequence: "Ctrl+Shift+A"; enabled: !root.showWizard; onActivated: root.openToolWindow("spectrum") }
+    Shortcut { sequence: "Ctrl+Shift+G"; enabled: !root.showWizard; onActivated: root.openToolWindow("siggen") }
+    Shortcut { sequence: "Ctrl+I"; enabled: !root.showWizard && bridge.connected && !root.textFocused; onActivated: root.fileAction("importFilters") }
+    Shortcut { sequence: "Ctrl+E"; enabled: !root.showWizard && bridge.connected && !root.textFocused; onActivated: root.fileAction("exportFilters") }
+    Shortcut { sequence: "Ctrl+Shift+I"; enabled: !root.showWizard; onActivated: root.openToolWindow("monitor") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }
     SpectrumAnalyserWindow { id: spectrumWindow; app: root }

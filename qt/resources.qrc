@@ -11,6 +11,16 @@
         <file>qml/LoudnessWindow.qml</file>
         <file>qml/CrossfeedWindow.qml</file>
         <file>qml/StatsWindow.qml</file>
+        <file>qml/WhatsNewWindow.qml</file>
+        <file>qml/GettingStartedView.qml</file>
+        <file>whatsnew.json</file>
+        <file>qml/components/Spinner.qml</file>
+        <file>qml/components/AppButton.qml</file>
+        <file>qml/components/InstallWritingCard.qml</file>
+        <file>qml/components/InstallStateCard.qml</file>
+        <file>qml/components/StepStrip.qml</file>
+        <file>qml/components/LabelValueRow.qml</file>
+        <file>qml/FirmwareUpdateWindow.qml</file>
         <file>qml/SpectrumAnalyserWindow.qml</file>
         <file>qml/GraphWindow.qml</file>
         <file>qml/SignalGeneratorWindow.qml</file>
@@ -47,6 +57,17 @@
         <file>icons/signal.svg</file>
         <file>icons/play.svg</file>
         <file>icons/check.svg</file>
+        <file>icons/cap.svg</file>
+        <file>icons/github.svg</file>
+        <file>icons/sparkles.svg</file>
+        <file>icons/spinner.svg</file>
+        <file>icons/drive.svg</file>
+        <file>icons/plug.svg</file>
+        <file>icons/check-circle.svg</file>
+        <file>icons/question-circle.svg</file>
+        <file>icons/arrow-down-circle.svg</file>
+        <file>firmware/DSPi-RP2040-v1.1.6-beta4.uf2</file>
+        <file>firmware/DSPi-RP2350-v1.1.6-beta4.uf2</file>
         <file>icons/cs-button.svg</file>
         <file>icons/cs-switch.svg</file>
         <file>icons/cs-pot.svg</file>

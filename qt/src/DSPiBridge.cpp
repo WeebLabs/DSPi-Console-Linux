@@ -276,7 +276,8 @@ QString DSPiBridge::firmwareVersion() const {
     auto *s = state();
     if (!connected() || (s->fw_major == 0 && s->fw_minor == 0 && s->fw_patch == 0)) return "";
     QString v = QString("%1.%2.%3").arg(s->fw_major).arg(s->fw_minor).arg(s->fw_patch);
-    if (s->fw_beta) v += QString("-beta%1").arg(s->fw_beta);
+    if (s->fw_beta == FW_BETA_EARLY) v += " early beta";
+    else if (s->fw_beta) v += QString("-beta%1").arg(s->fw_beta);
     return v;
 }
 

@@ -4,6 +4,7 @@
 #include <QQuickStyle>
 #include <QPalette>
 #include <QFont>
+#include <QSettings>
 
 #ifdef Q_OS_MACOS
 #include <objc/runtime.h>
@@ -22,6 +23,7 @@
 #include "PointerTracker.h"
 #include "SiggenController.h"
 #include "CsController.h"
+#include "FirmwareUpdater.h"
 #include "StatsController.h"
 #include "MonitorModel.h"
 #include "ConfigFiles.h"
@@ -189,6 +191,7 @@ int main(int argc, char *argv[])
     RtaController rta(&bridge);
     SiggenController siggen(&bridge);
     CsController controlSurfaces(&bridge);
+    FirmwareUpdater firmware(&bridge);
     StatsController stats(&bridge);
     MonitorModel monitor(&bridge);
     ConfigFiles configFiles(&bridge);
@@ -198,6 +201,14 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("rta", &rta);
     engine.rootContext()->setContextProperty("siggen", &siggen);
     engine.rootContext()->setContextProperty("controlSurfaces", &controlSurfaces);
+    engine.rootContext()->setContextProperty("firmware", &firmware);
+    // Whether this machine ran Console before (any saved setting): an existing
+    // user isn't put through the first-launch wizard on upgrade day
+    {
+        QStringList groups = QSettings().childGroups();
+        groups.removeAll("onboarding");
+        engine.rootContext()->setContextProperty("hadSettingsAtLaunch", !groups.isEmpty());
+    }
     engine.rootContext()->setContextProperty("stats", &stats);
     engine.rootContext()->setContextProperty("monitor", &monitor);
     engine.rootContext()->setContextProperty("configFiles", &configFiles);
