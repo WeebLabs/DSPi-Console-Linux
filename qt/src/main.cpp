@@ -19,6 +19,7 @@
 #include "PeqEditorItem.h"
 #include "RtaController.h"
 #include "RtaViews.h"
+#include "PointerTracker.h"
 #include "MeterItem.h"
 #include "WindowEffects.h"
 #include "TextFocusReleaser.h"
@@ -172,6 +173,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<PeqEditorItem>("DSPi", 1, 0, "PeqEditorItem");
     qmlRegisterType<SpectrumCurveItem>("DSPi", 1, 0, "SpectrumCurveItem");
     qmlRegisterType<SpectrumBarsItem>("DSPi", 1, 0, "SpectrumBarsItem");
+    qmlRegisterType<PointerTracker>("DSPi", 1, 0, "PointerTracker");
     qmlRegisterType<MeterItem>("DSPi", 1, 0, "MeterItem");
 
     // Create bridge

@@ -110,6 +110,7 @@
         <file>qml/components/PeqShapeCard.qml</file>
         <file>qml/components/PeqShapeChooser.qml</file>
         <file>qml/components/GraphOptionsPopup.qml</file>
+        <file>qml/components/PopoverWindow.qml</file>
         <file>qml/components/SpectrumBarStrip.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>

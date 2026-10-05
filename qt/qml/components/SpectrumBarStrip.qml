@@ -33,7 +33,7 @@ Item {
             return Qt.rgba(c.r, c.g, c.b, 0.3)
         }
 
-        HoverHandler { id: cardHover }
+        PointerTracker { id: cardHover; anchors.fill: parent }
 
         Grid {
             id: grid
@@ -89,7 +89,7 @@ Item {
             width: 20
             height: 18
             radius: 5
-            opacity: cardHover.hovered || options.visible ? 1 : 0
+            opacity: cardHover.containsPointer || options.visible ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
             color: gearMouse.containsMouse || options.visible ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
@@ -99,13 +99,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (options.visible) { options.close(); return }
-                    var p = gear.mapToItem(options.parent, 0, 0)
-                    options.x = Math.max(6, Math.min(p.x + gear.width - options.width, options.parent.width - options.width - 6))
-                    options.y = p.y + gear.height + 4
-                    options.open()
-                }
+                onClicked: options.toggleBelow(gear)
             }
         }
 
@@ -128,36 +122,19 @@ Item {
         }
     }
 
-    Popup {
+    // Columns and the window: a popover of its own, centred under the gear
+    PopoverWindow {
         id: options
-        parent: Overlay.overlay
-        width: 200
-        padding: 10
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        enter: Transition {
-            ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
-            }
-        }
-        exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 80 } }
-        background: Item {
-            Repeater {
-                model: 6
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -(index + 1) * 2
-                    anchors.topMargin: -(index + 1) * 2 + 4
-                    radius: 11 + (index + 1) * 2
-                    color: "transparent"
-                    border.width: 2
-                    border.color: Qt.rgba(0, 0, 0, 0.10 - index * 0.015)
-                }
-            }
-            Rectangle { anchors.fill: parent; radius: 11; color: MenuStyle.background; border.color: MenuStyle.border }
-        }
+        transientParent: strip.Window.window
+        radius: 11
+        contentWidth: 200
+        contentHeight: optionsColumn.implicitHeight + 20
 
-        contentItem: Column {
+        Column {
+            id: optionsColumn
+            x: 10
+            y: 10
+            width: 180
             spacing: 8
             Text {
                 visible: strip.count > 1

@@ -49,7 +49,8 @@ Column {
             border.width: 1
             clip: true
 
-            HoverHandler { id: plotHover }
+            // Pointer over the graph, whatever item under it takes the hover
+            PointerTracker { id: plotPointer; anchors.fill: parent }
 
             // Grid and labels, under the spectrum
             BodePlotItem {
@@ -187,7 +188,7 @@ Column {
                 width: 24
                 height: 22
                 radius: 6
-                opacity: plotHover.hovered || graphOptions.visible ? 1 : 0
+                opacity: plotPointer.containsPointer || graphOptions.visible ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
                 color: gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse || graphOptions.visible
@@ -203,7 +204,7 @@ Column {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: graphOptions.visible ? graphOptions.close() : graphOptions.openBelow(gearButton)
+                    onClicked: graphOptions.toggleBelow(gearButton)
                     ToolTip.visible: containsMouse && !graphOptions.visible
                     ToolTip.delay: 600
                     ToolTip.text: "Graph and spectrum options"
@@ -283,7 +284,7 @@ Column {
 
     GraphOptionsPopup {
         id: graphOptions
-        parent: Overlay.overlay
+        transientParent: filterResponseRoot.Window.window
         app: root
         inPopOut: filterResponseRoot.popOut
         onPopOutRequested: root.openToolWindow("graph")

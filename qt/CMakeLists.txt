@@ -19,6 +19,7 @@ add_executable(DSPiConsole
     src/PeqEditorItem.cpp
     src/RtaController.cpp
     src/RtaViews.cpp
+    src/PointerTracker.cpp
     src/MeterItem.cpp
     src/WindowEffects.cpp
     resources.qrc

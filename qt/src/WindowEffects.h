@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QVector>
+#include <QRect>
 
 class QWindow;
 
@@ -31,6 +32,10 @@ public:
 
     // Change the width of a decorated window's blurred strip (resizable sidebar)
     Q_INVOKABLE void setBlurWidth(QWindow *window, int blurWidth);
+
+    // Blur behind a rounded rectangle of a shown window (a translucent
+    // popover card). A no-op without blur; call again after each show.
+    Q_INVOKABLE void blurBehind(QWindow *window, const QRect &area, int radius);
 
 signals:
     void blurAvailableChanged();

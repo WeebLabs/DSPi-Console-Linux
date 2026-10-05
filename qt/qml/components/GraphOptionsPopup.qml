@@ -2,11 +2,12 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
-// The response graph's gear popover, after the macOS Console. The main page
-// picks which channels the spectrum analyser shows on this page (inputs or
-// outputs, never both) and where; Graph Setup slides in the graph's scale,
-// grid and curve options.
-Popup {
+// The response graph's gear popover, after the macOS Console: a window of
+// its own, so it opens centred under the gear even at the window's edge.
+// The main page picks which channels the spectrum analyser shows on this
+// page (inputs or outputs, never both) and where; Graph Setup slides in the
+// graph's scale, grid and curve options.
+PopoverWindow {
     id: pop
     property var app                      // main window: spectrum selection and settings
     property bool inPopOut: false         // opened from the pop-out graph window
@@ -16,49 +17,9 @@ Popup {
     readonly property var available: app ? (app.rtaAvailable, app.rtaAvailableAt(sel.tap)) : []
     property int page: 0                  // 0 main, 1 graph setup
 
-    // Opens under the anchor's bottom-right corner, on the main page
-    function openBelow(anchor) {
-        page = 0
-        var p = anchor.mapToItem(parent, 0, 0)
-        x = Math.max(6, Math.min(p.x + anchor.width - width, parent.width - width - 6))
-        y = p.y + anchor.height + 4
-        open()
-    }
-
-    width: 280
-    padding: 0
-    margins: 6
-    focus: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-    enter: Transition {
-        ParallelAnimation {
-            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutCubic }
-            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
-        }
-    }
-    exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 80 } }
-
-    background: Item {
-        Repeater {
-            model: 6
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -(index + 1) * 2
-                anchors.topMargin: -(index + 1) * 2 + 4
-                radius: 12 + (index + 1) * 2
-                color: "transparent"
-                border.width: 2
-                border.color: Qt.rgba(0, 0, 0, 0.10 - index * 0.015)
-            }
-        }
-        Rectangle {
-            anchors.fill: parent
-            radius: 12
-            color: MenuStyle.background
-            border.color: MenuStyle.border
-        }
-    }
+    contentWidth: 280
+    contentHeight: page === 0 ? mainPage.implicitHeight : setupPage.implicitHeight
+    onAboutToOpen: page = 0
 
     component SectionLabel: Text {
         font.pixelSize: 11
@@ -164,10 +125,9 @@ Popup {
         }
     }
 
-    contentItem: Item {
-        implicitHeight: pop.page === 0 ? mainPage.implicitHeight : setupPage.implicitHeight
+    Item {
+        anchors.fill: parent
         clip: true
-        Behavior on implicitHeight { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
 
         // ── Main page ──
         Column {

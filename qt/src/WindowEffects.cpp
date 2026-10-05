@@ -10,6 +10,8 @@
 #include <KWindowEffects>
 #include <KWindowShadow>
 #include <QImage>
+#include <QPainterPath>
+#include <QRegion>
 #include <cmath>
 #endif
 
@@ -53,6 +55,21 @@ void WindowEffects::setBlurWidth(QWindow *window, int blurWidth)
             return;
         }
     }
+}
+
+void WindowEffects::blurBehind(QWindow *window, const QRect &area, int radius)
+{
+#ifdef HAS_KDE_BLUR
+    if (!window || !m_blurAvailable || !window->isVisible()) return;
+    // The card's rounded shape, so the blur doesn't show past its corners
+    QPainterPath path;
+    path.addRoundedRect(QRectF(area), radius, radius);
+    KWindowEffects::enableBlurBehind(window, true, QRegion(path.toFillPolygon().toPolygon()));
+#else
+    Q_UNUSED(window);
+    Q_UNUSED(area);
+    Q_UNUSED(radius);
+#endif
 }
 
 int WindowEffects::blurWidthOf(QWindow *window) const

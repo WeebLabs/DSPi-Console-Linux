@@ -44,3 +44,4 @@ PeqShapeCard 1.0 PeqShapeCard.qml
 PeqShapeChooser 1.0 PeqShapeChooser.qml
 GraphOptionsPopup 1.0 GraphOptionsPopup.qml
 SpectrumBarStrip 1.0 SpectrumBarStrip.qml
+PopoverWindow 1.0 PopoverWindow.qml
