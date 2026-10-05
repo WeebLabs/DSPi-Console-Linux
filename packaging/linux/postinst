@@ -1,0 +1,8 @@
+#!/bin/sh
+# Apply the udev rule now, so a DSPi that's already plugged in can be opened
+# without replugging. Shared by the .deb and the .rpm.
+if command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules || true
+    udevadm trigger --subsystem-match=usb --attr-match=idProduct=feaa || true
+fi
+exit 0

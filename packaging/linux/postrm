@@ -1,0 +1,6 @@
+#!/bin/sh
+# The udev rule is gone (or replaced): reload the rules.
+if command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules || true
+fi
+exit 0

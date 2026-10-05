@@ -1,0 +1,8 @@
+# Fedora 42: the .rpm built here installs on Fedora 42 and newer.
+FROM registry.fedoraproject.org/fedora:42
+RUN dnf -y install gcc-c++ cmake make pkgconf-pkg-config rpm-build curl \
+        libusb1-devel systemd-devel qt5-qtbase-devel qt5-qtdeclarative-devel \
+        qt5-qtquickcontrols2-devel kf5-kwindowsystem-devel \
+    && dnf clean all
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+ENV PATH=/root/.cargo/bin:$PATH

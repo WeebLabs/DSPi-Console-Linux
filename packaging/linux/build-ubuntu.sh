@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs inside the build container (see build-appimage.sh).
+# Runs inside the Ubuntu build container (see build-release.sh): the
+# AppImage, the release archive and the .deb.
 set -euo pipefail
 export APPIMAGE_EXTRACT_AND_RUN=1
 tools=/src/dist/tools
@@ -19,7 +20,8 @@ export QML_SOURCES_PATHS=/work/qt/qml
 export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"
 export EXTRA_QT_PLUGINS="waylandcompositor;svg"
 cp qt/dspi-console.svg build/dspi-console.svg
-"$tools/linuxdeploy-x86_64.AppImage" --appdir AppDir -e build/DSPiConsole \
+cp build/DSPiConsole build/dspi-console
+"$tools/linuxdeploy-x86_64.AppImage" --appdir AppDir -e build/dspi-console \
     -d packaging/linux/dspi-console.desktop -i build/dspi-console.svg --plugin qt
 
 # KDE window effects (blur, shadow) load these at run time
@@ -42,3 +44,6 @@ cp "$name-x86_64.AppImage" packaging/linux/70-dspi.rules packaging/linux/install
 cp packaging/linux/README.txt "$name/"
 tar -czf "$name-linux-x86_64.tar.gz" "$name"
 cp "$name-x86_64.AppImage" "$name-linux-x86_64.tar.gz" /src/dist/
+
+# The .deb, against the system Qt (Ubuntu 22.04 and newer, Debian 12 and newer)
+(cd build && cpack -G DEB && cp dspi-console_*.deb /src/dist/)

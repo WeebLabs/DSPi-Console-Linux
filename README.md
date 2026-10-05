@@ -41,10 +41,40 @@ Each release of Console carries the matching firmware for RP2040 and RP2350 boar
 ## Installing
 
 Download the latest release from the [Releases page](https://github.com/WeebLabs/DSPi-Console-Linux/releases).
-It needs 64-bit x86 Linux with glibc 2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36 or later), on X11 or
-Wayland.
+All builds are for 64-bit x86 and work on X11 and Wayland.
 
-### With the installer (recommended)
+| Distribution | Download |
+|---|---|
+| Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pop!_OS | `dspi-console_<version>_amd64.deb` |
+| Fedora 42+ | `dspi-console-<version>-1.x86_64.rpm` |
+| Arch, Manjaro, EndeavourOS | The `dspi-console` package from the AUR |
+| Anything else (glibc 2.35+) | The AppImage, or the `.tar.gz` with an installer |
+
+The packages install the udev rule for you, add DSPi Console to the application menu, and use your
+distribution's Qt and KDE libraries. Settings are kept in `~/.config/DSPi` whichever way you install.
+
+### Ubuntu, Debian and Mint
+
+```
+sudo apt install ./dspi-console_<version>_amd64.deb
+```
+
+Double-clicking the file in a file manager also works. Remove it with `sudo apt remove dspi-console`.
+
+### Fedora
+
+```
+sudo dnf install ./dspi-console-<version>-1.x86_64.rpm
+```
+
+Remove it with `sudo dnf remove dspi-console`.
+
+### Arch
+
+Install `dspi-console` from the AUR with your AUR helper, for example `yay -S dspi-console`. It builds from
+source, so it needs a few minutes the first time.
+
+### AppImage with the installer
 
 ```
 tar -xzf DSPi-Console-<version>-linux-x86_64.tar.gz
@@ -53,8 +83,8 @@ cd DSPi-Console-<version>
 ```
 
 The installer copies the AppImage to `~/.local/bin`, adds DSPi Console to your application menu, and installs
-a udev rule so the app can open the DSPi without root (it asks for your password once). Run it again to
-update, or `./install.sh --uninstall` to remove everything. Settings are kept in `~/.config/DSPi`.
+the udev rule (it asks for your password once). Run it again to update, or `./install.sh --uninstall` to remove
+everything.
 
 ### Running the AppImage directly
 
@@ -63,10 +93,12 @@ chmod +x DSPi-Console-<version>-x86_64.AppImage
 ./DSPi-Console-<version>-x86_64.AppImage
 ```
 
+This way the udev rule has to be installed by hand, once (below).
+
 ### The udev rule
 
-Linux only lets root open USB devices unless a udev rule says otherwise. The installer handles this; to do it
-by hand, use `70-dspi.rules` from the release:
+Linux only lets root open USB devices unless a udev rule says otherwise. The packages and the installer handle
+this; to do it by hand, use `70-dspi.rules` from the release:
 
 ```
 sudo cp 70-dspi.rules /etc/udev/rules.d/
@@ -149,6 +181,9 @@ Right-click a slider or level field to reset it to its default.
 **"Could not open DSPi".** The udev rule is missing or hasn't applied yet. Install it (see
 [The udev rule](#the-udev-rule)), then unplug and replug the device.
 
+**"Could not open DSPi" right after installing a package.** If the DSPi was plugged in during the install,
+unplug it and plug it back in.
+
 **The AppImage won't start, with a FUSE error.** Install your distribution's FUSE package (`libfuse2` or
 `fuse`), or run it with `--appimage-extract-and-run`.
 
@@ -200,8 +235,9 @@ The QML, firmware images and AutoEQ database are compiled into the binary.
 
 ### Release builds
 
-`packaging/linux/build-appimage.sh` builds the AppImage and the release archive into `dist/`. It builds in an
-Ubuntu 22.04 container (podman) so the result runs on older distributions as well.
+`packaging/linux/build-release.sh` builds the AppImage, the release archive, the `.deb` and the `.rpm` into
+`dist/`. Each is built in a podman container of the oldest distribution it supports (Ubuntu 22.04 and
+Fedora 42). `cmake --install` lays out a system install, and the AUR package is in `packaging/arch/`.
 
 ---
 
@@ -214,7 +250,8 @@ Ubuntu 22.04 container (podman) so the result runs on older distributions as wel
 | `qt/qml/` | The interface: main window, channel pages, tool windows, settings and shared components. |
 | `qt/firmware/` | The bundled DSPi firmware images. |
 | `qt/autoeq/` | The bundled AutoEQ headphone database. |
-| `packaging/linux/` | AppImage build, udev rule, desktop entry and installer. |
+| `packaging/linux/` | Release builds (AppImage, .deb, .rpm), udev rule, desktop entry, AppStream data and installer. |
+| `packaging/arch/` | The AUR package. |
 | `Documentation/` | Core specification and the macOS parity plan. |
 
 ---

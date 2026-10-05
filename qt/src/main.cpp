@@ -124,6 +124,11 @@ static void setupPlatformEffects(QQuickWindow *qw)
 
 int main(int argc, char *argv[])
 {
+#ifndef Q_OS_MACOS
+    // X11 WM_CLASS instance, matched to the desktop entry's StartupWMClass
+    // (otherwise the binary's name, which an AppImage changes)
+    if (!qEnvironmentVariableIsSet("RESOURCE_NAME")) qputenv("RESOURCE_NAME", "dspi-console");
+#endif
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #ifdef HAS_KDE_BLUR
     // Windows need an alpha channel from creation for the blurred sidebar to

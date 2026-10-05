@@ -28,11 +28,16 @@ cd qt/build && QT_FORCE_STDERR_LOGGING=1 ./DSPiConsole
 
 ## Release
 
-`packaging/linux/build-appimage.sh` builds `dist/DSPi-Console-v<version>-x86_64.AppImage`
-and a `-linux-x86_64.tar.gz` (AppImage, `70-dspi.rules`, `install.sh`) in an
-Ubuntu 22.04 podman container, so it runs on glibc 2.35+. The version comes from
-`setApplicationVersion` in `qt/src/main.cpp`. Releases are tagged `v<version>`
-and named `DSPi Console v<version>`, like the macOS and Windows repos.
+`packaging/linux/build-release.sh` builds into `dist/`, in podman containers:
+the AppImage and `-linux-x86_64.tar.gz` (AppImage, `70-dspi.rules`, `install.sh`)
+and the `.deb` on Ubuntu 22.04, the `.rpm` on Fedora 42. Packages come from the
+CMake install rules and CPack config at the end of `qt/CMakeLists.txt`. The
+version comes from `setApplicationVersion` in `qt/src/main.cpp` (packages use
+`~` for the pre-release: `1.1.6~beta4`). Per release, also bump the `<release>`
+in `packaging/linux/io.github.weeblabs.DSPiConsole.metainfo.xml` and `pkgver` /
+`_commit` in `packaging/arch/PKGBUILD` (then regenerate `.SRCINFO`). Releases are
+tagged `v<version>` and named `DSPi Console v<version>`, like the macOS and
+Windows repos.
 
 ## Git
 

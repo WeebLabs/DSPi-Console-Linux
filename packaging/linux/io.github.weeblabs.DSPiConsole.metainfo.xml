@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.weeblabs.DSPiConsole</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>DSPi Console</name>
+  <summary>Configure and tune a DSPi audio processor</summary>
+  <description>
+    <p>
+      DSPi Console controls a DSPi, open source DSP firmware that turns a Raspberry Pi Pico
+      into a multi-output USB audio interface with an onboard signal processor.
+    </p>
+    <p>
+      Parametric EQ edited on the response graph, crossovers, routing, delay, a spectrum
+      analyser, loudness, crossfeed, a tube modeller, a subharmonic synthesizer, a limiter on
+      every output, control surfaces and firmware updates, all applied live over USB.
+    </p>
+  </description>
+  <launchable type="desktop-id">dspi-console.desktop</launchable>
+  <url type="homepage">https://github.com/WeebLabs/DSPi-Console-Linux</url>
+  <url type="bugtracker">https://github.com/WeebLabs/DSPi-Console-Linux/issues</url>
+  <developer id="io.github.weeblabs">
+    <name>WeebLabs</name>
+  </developer>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+  <provides>
+    <binary>dspi-console</binary>
+    <modalias>usb:v2E8BpFEAA*</modalias>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.1.6~beta4" date="2026-10-05" type="development"/>
+  </releases>
+</component>

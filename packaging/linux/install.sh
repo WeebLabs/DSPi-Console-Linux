@@ -56,7 +56,7 @@ Icon=dspi-console
 Terminal=false
 Categories=AudioVideo;Audio;Mixer;
 Keywords=DSP;EQ;equalizer;crossover;audio;
-StartupWMClass=DSPiConsole
+StartupWMClass=dspi-console
 DESKTOP
 refresh_menus
 echo "Installed $app to $bin, with a menu entry."
