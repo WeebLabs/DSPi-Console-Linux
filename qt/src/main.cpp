@@ -15,6 +15,7 @@
 
 #include <QWindow>
 #include <QQuickWindow>
+#include <QSurfaceFormat>
 
 #include "DSPiBridge.h"
 #include "BodePlotItem.h"
@@ -124,6 +125,14 @@ static void setupPlatformEffects(QQuickWindow *qw)
 int main(int argc, char *argv[])
 {
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#ifdef HAS_KDE_BLUR
+    // Windows need an alpha channel from creation for the blurred sidebar to
+    // show through: Qt can't add one to an existing surface, so the switch to
+    // a transparent clear colour in applyBlur() would otherwise leave it opaque
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setAlphaBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);
+#endif
     QApplication app(argc, argv);
     app.installEventFilter(new TextFocusReleaser(&app));
     app.setApplicationName("DSPi Console");
