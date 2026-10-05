@@ -168,6 +168,13 @@ pub extern "C" fn dspi_scan_devices(core: *mut FfiCore, out_devices: *mut Device
     })
 }
 
+/// The highest preamp (dB) the connected chip applies correctly: +18 on
+/// RP2040, +24 on RP2350. The lowest is -60.
+#[no_mangle]
+pub extern "C" fn dspi_preamp_max_db(core: *mut FfiCore) -> f32 {
+    with_core(core, |c| c.state.preamp_range().1)
+}
+
 /// DSPis seen on the bus by the last scan or hot-plug poll that couldn't be
 /// opened for want of permission (the udev rule is missing).
 #[no_mangle]

@@ -327,8 +327,9 @@ impl DspiCore {
         // Global
         let g = v.get("global").cloned().unwrap_or(Value::Null);
         if let Some(pre) = floats(&g, "inputPreampsDb") {
+            let (lo, hi) = ns.preamp_range();
             for (i, db) in pre.iter().enumerate().take(MAX_INPUTS) {
-                ns.input_preamp_db[i] = db.clamp(-24.0, 24.0);
+                ns.input_preamp_db[i] = db.clamp(lo, hi);
             }
             ns.preamp_db = ns.input_preamp_db[0];
         }

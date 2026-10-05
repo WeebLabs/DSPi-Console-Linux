@@ -395,7 +395,7 @@ impl DspiCore {
                 }
             }
             if let (Some(db), true) = (preamp, w < n_in) {
-                core.set_input_preamp(wire, db.clamp(-24.0, 24.0))?;
+                core.set_input_preamp(wire, db)?;     // clamped to the chip's range
             }
             if let (Some(on), true) = (enable, w >= n_in) {
                 core.set_output_enable((w - n_in) as u8, on)?;

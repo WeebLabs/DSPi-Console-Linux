@@ -252,7 +252,8 @@ impl DspiCore {
 
     /// Legacy preamp: sets every input channel to the same value.
     pub fn set_preamp(&mut self, db: f32) -> Result<()> {
-        let val = quantize_gain(db);
+        let (lo, hi) = self.state.preamp_range();
+        let val = quantize_gain(db.clamp(lo, hi));
         self.state.preamp_db = val;
         self.state.input_preamp_db = [val; MAX_INPUTS];
         self.send(REQ_SET_PREAMP, 0, WINDEX_GLOBAL, &val.to_le_bytes())
@@ -263,7 +264,8 @@ impl DspiCore {
         if input as usize >= MAX_INPUTS {
             return Err(UsbError::InvalidArgument);
         }
-        let val = quantize_gain(db);
+        let (lo, hi) = self.state.preamp_range();
+        let val = quantize_gain(db.clamp(lo, hi));
         self.state.input_preamp_db[input as usize] = val;
         if input == 0 {
             self.state.preamp_db = val;

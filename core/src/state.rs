@@ -319,6 +319,14 @@ impl Default for DspState {
 }
 
 impl DspState {
+    /// The preamp range (dB) the firmware applies correctly. The firmware
+    /// itself doesn't clamp, but RP2040 applies the preamp as a Q28 multiplier
+    /// that overflows above +18.06 dB; RP2350 uses a float (+24 dB is the
+    /// control-surface span).
+    pub fn preamp_range(&self) -> (f32, f32) {
+        (-60.0, if self.platform_id == 1 { 24.0 } else { 18.0 })
+    }
+
     /// Platform name string.
     pub fn platform_name(&self) -> &str {
         if self.platform_id == 1 {
@@ -345,5 +353,19 @@ impl DspState {
     /// PDM output index (the last output).
     pub fn pdm_output_index(&self) -> u8 {
         self.num_output_channels.saturating_sub(1)
+    }
+}
+
+#[cfg(test)]
+mod preamp_tests {
+    use super::*;
+
+    #[test]
+    fn preamp_range_follows_the_chip() {
+        let mut s = DspState::default();
+        s.platform_id = 0;
+        assert_eq!(s.preamp_range(), (-60.0, 18.0));     // RP2040: Q28 overflows above +18.06
+        s.platform_id = 1;
+        assert_eq!(s.preamp_range(), (-60.0, 24.0));     // RP2350
     }
 }

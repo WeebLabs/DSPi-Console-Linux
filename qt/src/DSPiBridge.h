@@ -41,6 +41,8 @@ class DSPiBridge : public QObject
     // DSPis on the bus this user can't open (the udev rule is missing)
     Q_PROPERTY(int inaccessibleDevices READ inaccessibleDevices NOTIFY inaccessibleDevicesChanged)
     Q_PROPERTY(QString platformName READ platformName NOTIFY stateChanged)
+    // Highest preamp the chip applies correctly: +18 dB on RP2040, +24 on RP2350
+    Q_PROPERTY(float preampMaxDB READ preampMaxDB NOTIFY stateChanged)
     Q_PROPERTY(int numChannels READ numChannels NOTIFY stateChanged)
     Q_PROPERTY(int numInputChannels READ numInputChannels NOTIFY stateChanged)
     Q_PROPERTY(int numOutputChannels READ numOutputChannels NOTIFY stateChanged)
@@ -224,6 +226,7 @@ public:
 
     // Inputs (input index)
     Q_INVOKABLE float inputPreampDB(int input) const;
+    float preampMaxDB() const { return dspi_preamp_max_db(m_core); }
     Q_INVOKABLE float channelDelayMS(int ch) const;
 
     // Outputs (output index)

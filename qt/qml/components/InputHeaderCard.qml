@@ -135,7 +135,7 @@ Rectangle {
             StyledSlider {
                 id: preampSlider
                 Layout.fillWidth: true
-                from: -24; to: 24     // the firmware's preamp range
+                from: -60; to: bridge.preampMaxDB     // +18 dB on RP2040, +24 on RP2350
                 stepSize: 0.1
                 value: preampDB
                 // Value follows the drag; the device gets live updates. A
@@ -162,8 +162,8 @@ Rectangle {
                 value: preampDB
                 suffix: "dB"
                 decimals: 1
-                minValue: -24
-                maxValue: 24
+                minValue: -60
+                maxValue: bridge.preampMaxDB
                 onValueEdited: bridge.setInputPreamp(inputIndex, newValue)
             }
         }
