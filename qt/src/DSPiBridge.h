@@ -32,6 +32,8 @@ class DSPiBridge : public QObject
 
     // Connection / device
     Q_PROPERTY(bool connected READ connected NOTIFY statusChanged)
+    // The live settings differ from the active preset (the `*` after its name)
+    Q_PROPERTY(bool presetDirty READ presetDirty NOTIFY presetDirtyChanged)
     Q_PROPERTY(QString selectedSerial READ selectedSerial NOTIFY stateChanged)
     Q_PROPERTY(QStringList availableSerials READ availableSerials NOTIFY devicesChanged)
     Q_PROPERTY(QString platformName READ platformName NOTIFY stateChanged)
@@ -284,6 +286,9 @@ public:
     Q_INVOKABLE void resetChannelNames();   // every channel back to its default name
 
     Q_INVOKABLE int savePreset(int slot);
+    bool presetDirty() const { return m_presetDirty; }
+    // What differs from the active preset, one sentence each
+    Q_INVOKABLE QStringList presetChanges() const;
     Q_INVOKABLE int loadPreset(int slot);
     Q_INVOKABLE int deletePreset(int slot);
     Q_INVOKABLE int copyPreset(int fromSlot, int toSlot);
@@ -448,6 +453,7 @@ signals:
     void devicesChanged();
     // The signal generator started or stopped (on the device or elsewhere)
     void siggenNotified();
+    void presetDirtyChanged();
     // An aux output changed, or IR learning finished
     void csNotified(bool aux, bool learn);
     // A batch of device notifications arrived (the Interrupt Monitor reads them)
@@ -477,6 +483,8 @@ private:
     // hardware knob sends many), each batch with one stateChanged
     QTimer *m_notifyTimer = nullptr;
     bool m_hardwareUnsaved = false;
+    bool m_presetDirty = false;
+    void updatePresetDirty();
     int hardwareEdited(int status);   // marks unsaved edits, emits, returns status
     QElapsedTimer m_lastNotify;
 

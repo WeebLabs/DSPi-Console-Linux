@@ -90,12 +90,17 @@ Item {
         }
     }
 
-    // Copies the current settings (saving them to the active slot as well)
+    // Copies the current settings (saving them to the active slot as well),
+    // after asking about unsaved changes: Save keeps them, Discard reloads
+    // the active slot first
     function copyTo(dest) {
         var src = slot
-        ensureName(src)
-        ensureName(dest)
-        report(bridge.copyPreset(src, dest), "Copy")
+        root.withUnsaved(function (choice) {
+            if (choice === "discard") bridge.loadPreset(src)
+            ensureName(src)
+            ensureName(dest)
+            report(bridge.copyPreset(src, dest), "Copy")
+        })
     }
 
     AppDialog {

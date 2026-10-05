@@ -1,4 +1,6 @@
 #include "DSPiBridge.h"
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QDebug>
 #include <QSettings>
 #include <QDateTime>
@@ -34,6 +36,8 @@ DSPiBridge::DSPiBridge(QObject *parent)
     : QObject(parent)
 {
     m_core = dspi_core_new();
+    // Every state change may make the preset dirty or clean again
+    connect(this, &DSPiBridge::stateChanged, this, &DSPiBridge::updatePresetDirty);
 
     // Only the first input pair is visible on the graph by default
     for (int i = 0; i < kAppChannelCount; i++)
@@ -840,6 +844,7 @@ void DSPiBridge::setChannelName(int ch, const QString &name) {
 
 int DSPiBridge::savePreset(int slot) {
     int status = dspi_save_preset(m_core, slot);
+    if (status == PRESET_OK && slot == state()->active_preset_slot) dspi_capture_baseline(m_core);
     emit stateChanged();
     return status;
 }
@@ -847,6 +852,7 @@ int DSPiBridge::savePreset(int slot) {
 int DSPiBridge::loadPreset(int slot) {
     int status = dspi_load_preset(m_core, slot);
     if (status == PRESET_OK) {
+        dspi_capture_baseline(m_core);
         markAllDirty();
         emit stateChanged();
         emit magnitudesChanged();
@@ -880,12 +886,18 @@ void DSPiBridge::setPresetStartup(int mode, int slot) {
 }
 
 int DSPiBridge::saveParams() {
-    return dspi_save_params(m_core);
+    int status = dspi_save_params(m_core);
+    if (status == FLASH_OK) {
+        dspi_capture_baseline(m_core);
+        emit stateChanged();
+    }
+    return status;
 }
 
 int DSPiBridge::loadParams() {
     int status = dspi_load_params(m_core);
     if (status == FLASH_OK) {
+        dspi_capture_baseline(m_core);
         markAllDirty();
         emit stateChanged();
         emit magnitudesChanged();
@@ -896,6 +908,8 @@ int DSPiBridge::loadParams() {
 int DSPiBridge::factoryReset() {
     int status = dspi_factory_reset(m_core);
     if (status == FLASH_OK) {
+        // The reset state is the new starting point for change tracking
+        dspi_capture_baseline(m_core);
         markAllDirty();
         emit stateChanged();
         emit magnitudesChanged();
@@ -912,6 +926,28 @@ void DSPiBridge::clearClips() {
     memset(m_lastClipMs, 0, sizeof(m_lastClipMs));
     m_status.clip_flags = 0;
     emit statusChanged();
+}
+
+// ── Unsaved changes ──
+
+void DSPiBridge::updatePresetDirty() {
+    const bool dirty = usable() && dspi_preset_dirty(m_core);
+    if (dirty == m_presetDirty) return;
+    m_presetDirty = dirty;
+    emit presetDirtyChanged();
+}
+
+QStringList DSPiBridge::presetChanges() const {
+    QByteArray buf(16 * 1024, '\0');
+    uint32_t needed = dspi_preset_changes(m_core, buf.data(), uint32_t(buf.size()));
+    if (needed > uint32_t(buf.size())) {
+        buf.resize(int(needed));
+        needed = dspi_preset_changes(m_core, buf.data(), uint32_t(buf.size()));
+    }
+    buf.truncate(int(qMax<uint32_t>(1, needed) - 1));
+    QStringList out;
+    for (const QJsonValue &v : QJsonDocument::fromJson(buf).array()) out << v.toString();
+    return out;
 }
 
 int DSPiBridge::checkCore1Conflict(int output) {
@@ -952,6 +988,8 @@ void DSPiBridge::selectDevice(const QString &serial) {
         qWarning() << "DSPi: could not read device state for" << serial;
     else if (state()->compat != COMPAT_OK)
         qWarning() << "DSPi:" << compatMessage();
+    else
+        dspi_capture_baseline(m_core);
     if (usable()) dspi_rta_start(m_core);     // probes for the spectrum analyser
     markAllDirty();
 

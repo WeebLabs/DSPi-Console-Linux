@@ -252,16 +252,18 @@ Rectangle {
                         for (var i = 0; i < 10; i++) {
                             var name = bridge.presetName(i)
                             var occupied = bridge.isPresetOccupied(i)
+                            // An empty slot loads factory defaults, as on macOS
                             o.push({ value: i, prefix: String(i + 1),
-                                     text: occupied ? (name === "" ? "Preset " + (i + 1) : name) : "Empty",
-                                     enabled: occupied })
+                                     text: occupied ? (name === "" ? "Preset " + (i + 1) : name) : "Empty" })
                         }
                         return o
                     }
                     options: slots
                     currentValue: bridge.activePresetSlot
-                    valueText: bridge.connected && slots[bridge.activePresetSlot] ? slots[bridge.activePresetSlot].text : "—"
-                    onChosen: if (value !== bridge.activePresetSlot) bridge.loadPreset(value)
+                    // A `*` marks settings that differ from the saved preset
+                    valueText: bridge.connected && slots[bridge.activePresetSlot]
+                               ? slots[bridge.activePresetSlot].text + (bridge.presetDirty ? " *" : "") : "—"
+                    onChosen: if (value !== bridge.activePresetSlot) root.switchPreset(value)
                     onContextMenuRequested: presetMenu.openAt(presetPicker, x, y)
                 }
 

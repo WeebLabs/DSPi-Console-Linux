@@ -22,6 +22,7 @@ pub mod monitor;
 pub mod presetfile;
 pub mod filterfile;
 pub mod cs;
+pub mod presetdiff;
 pub mod state;
 pub mod types;
 pub mod usb;
@@ -43,6 +44,8 @@ pub struct DspiCore {
     pub(crate) device_manager: DeviceManager,
     pub(crate) state: DspState,
     pub(crate) cs: cs::CsState,
+    /// The state when it last matched the active preset (unsaved changes)
+    pub(crate) baseline: Option<Box<DspState>>,
     hotplug_callback: Option<(DeviceEventCallback, *mut c_void)>,
 }
 
@@ -56,6 +59,7 @@ impl DspiCore {
             device_manager: DeviceManager::new(),
             state: DspState::default(),
             cs: cs::CsState::default(),
+            baseline: None,
             hotplug_callback: None,
         }
     }
@@ -173,6 +177,7 @@ pub extern "C" fn dspi_select_device(core: *mut FfiCore, serial: *const c_char) 
         if ok {
             c.state = DspState::default();
             c.cs = cs::CsState::default();
+            c.baseline = None;
         }
         ok
     })
@@ -1438,6 +1443,26 @@ pub extern "C" fn dspi_bootloader_counts(rp2040: *mut u32, rp2350: *mut u32) {
         if !rp2040.is_null() { *rp2040 = a; }
         if !rp2350.is_null() { *rp2350 = b; }
     }
+}
+
+/// The live state now matches the active preset (after connecting, loading
+/// a preset, saving to the active slot, reverting or a factory reset).
+#[no_mangle]
+pub extern "C" fn dspi_capture_baseline(core: *mut FfiCore) {
+    with_core(core, |c| c.capture_baseline());
+}
+
+/// Whether the live state differs from the active preset.
+#[no_mangle]
+pub extern "C" fn dspi_preset_dirty(core: *mut FfiCore) -> bool {
+    with_core(core, |c| !c.preset_changes().is_empty())
+}
+
+/// What differs from the active preset, as a JSON array of sentences.
+#[no_mangle]
+pub extern "C" fn dspi_preset_changes(core: *mut FfiCore, buf: *mut c_char, len: u32) -> u32 {
+    let lines = with_core(core, |c| c.preset_changes());
+    copy_text(&serde_json::Value::from(lines).to_string(), buf, len)
 }
 
 // Re-export constants that C consumers need

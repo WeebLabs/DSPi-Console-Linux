@@ -47,6 +47,8 @@ const EVT_CS_IR_LEARN: u8 = 0x0A;
 const EVT_CS_AUX: u8 = 0x0C;
 /// ParamSource: our own EP0 writes echo back with this tag.
 const SRC_HOST_SET: u8 = 1;
+const SRC_PRESET: u8 = 3;
+const SRC_FACTORY: u8 = 4;
 
 /// `NotifyResult.flags`: some parameter changed; re-read the state.
 pub const NOTIFY_STATE: u32 = 1 << 0;
@@ -205,6 +207,7 @@ impl DspiCore {
         let hub = self.device_manager.notify_hub();
         let (packets, overflow) = hub.drain();
         let mut refresh = overflow;
+        let mut rebaseline = false;
         let usable = self.state.bulk_valid && self.state.compat == COMPAT_OK;
         // The patched image starts from the state, not the last raw image:
         // the setters change the state only, and decoding a stale image
@@ -231,7 +234,13 @@ impl DspiCore {
                     img[off..off + size].copy_from_slice(&p[12..12 + size]);
                     r.flags |= NOTIFY_STATE | classify(off, &mut r.filter_channels);
                 }
-                EVT_BULK_INVALIDATED => refresh = true,
+                EVT_BULK_INVALIDATED => {
+                    refresh = true;
+                    // A preset load or factory reset: the new state is the preset
+                    if p.len() > 4 && (p[4] == SRC_PRESET || p[4] == SRC_FACTORY) {
+                        rebaseline = true;
+                    }
+                }
                 EVT_PRESET_LOADED if p.len() > 4 => {
                     self.state.active_preset_slot = p[4];
                     r.flags |= NOTIFY_STATE | NOTIFY_PRESET;
@@ -259,6 +268,9 @@ impl DspiCore {
             // Supersedes any patches.
             if self.refresh_params().is_ok() {
                 self.fetch_preset_directory_internal();
+                if rebaseline {
+                    self.capture_baseline();
+                }
                 r.flags |= NOTIFY_STATE | NOTIFY_CURVES | NOTIFY_REFRESHED;
             }
         } else if let Some(img) = image {

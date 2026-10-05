@@ -669,8 +669,8 @@ ApplicationWindow {
     AppMenu {
         id: appMenu
         parent: Overlay.overlay
-        onCommitRequested: bridge.saveParams()
-        onRevertRequested: bridge.loadParams()
+        onCommitRequested: commitDialog.open()
+        onRevertRequested: revertDialog.open()
         onFactoryResetRequested: factoryResetDialog.open()
         onOpenWindow: root.openToolWindow(name)
         onFileAction: root.fileAction(name)
@@ -794,6 +794,81 @@ ApplicationWindow {
         buttons: [{ key: "ok", text: "OK", role: "primary" }]
     }
 
+    // ── Unsaved changes ──
+    // Before anything that would lose them (preset switch, Copy to, closing
+    // the window): Save stores them in the active preset, Discard carries on
+    // without, Cancel stops. action(choice) runs with "none", "save" (already
+    // saved; a failed save is reported and stops) or "discard".
+    function withUnsaved(action, onSaveFailed) {
+        if (!bridge.connected || !bridge.presetDirty) { action("none"); return }
+        var lines = bridge.presetChanges()
+        var shown = lines.slice(0, 15).map(function (l) { return { text: l } })
+        if (lines.length > 15) {
+            var more = lines.length - 15
+            shown.push({ text: "…and " + more + " more change" + (more === 1 ? "" : "s") })
+        }
+        unsavedDialog.details = shown
+        unsavedDialog.pending = action
+        unsavedDialog.onSaveFailed = onSaveFailed || null
+        unsavedDialog.open()
+    }
+    function saveActivePreset() {
+        var slot = bridge.activePresetSlot
+        if (bridge.presetName(slot) === "") bridge.setPresetName(slot, "Preset " + (slot + 1))
+        return bridge.savePreset(slot)
+    }
+    function switchPreset(slot) {
+        withUnsaved(function (choice) {
+            var status = bridge.loadPreset(slot)
+            if (status !== 0)
+                showFileResult("Load Failed", [status === 3 ? "Preset data is corrupted." : "Failed to load preset (error " + status + ")."], false)
+        })
+    }
+    AppDialog {
+        id: unsavedDialog
+        property var pending: null
+        property var onSaveFailed: null
+        icon: "warning"
+        iconTint: "#ff9f0a"
+        title: "Unsaved Changes"
+        message: "The current preset has unsaved changes. Save before continuing?"
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "discard", text: "Discard" }, { key: "save", text: "Save", role: "primary" }]
+        onChosen: {
+            var action = pending
+            pending = null
+            if (!action || key === "cancel") return
+            if (key === "save") {
+                var status = root.saveActivePreset()
+                if (status !== 0) {
+                    if (onSaveFailed) onSaveFailed(status)
+                    else root.showFileResult("Save Failed", ["Failed to save preset (error " + status + ")."], false)
+                    return
+                }
+            }
+            action(key)
+        }
+    }
+
+    // Closing the main window quits: ask about unsaved changes first
+    property bool closeConfirmed: false
+    onClosing: {
+        if (closeConfirmed || !bridge.connected || !bridge.presetDirty) return
+        close.accepted = false
+        withUnsaved(function (choice) { root.closeConfirmed = true; root.close() },
+                    function (status) {
+                        quitAnyway.message = "Failed to save preset (error " + status + "). Quit anyway?"
+                        quitAnyway.open()
+                    })
+    }
+    AppDialog {
+        id: quitAnyway
+        icon: "warning"
+        iconTint: "#ff9f0a"
+        title: "Save Failed"
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "quit", text: "Quit", role: "destructive" }]
+        onChosen: if (key === "quit") { root.closeConfirmed = true; root.close() }
+    }
+
     // ── AutoEQ database ──
     AppDialog {
         id: autoeqUpdate
@@ -835,22 +910,52 @@ ApplicationWindow {
         onAccepted: { var r = autoeq.importFile(file); root.showFileResult(r.ok ? "AutoEQ Database" : "Import Failed", [r.message], r.ok) }
     }
 
+    // ── Commit, Revert and Factory Reset (macOS wording) ──
+    AppDialog {
+        id: commitDialog
+        icon: "save"
+        title: "Save Preset"
+        message: "Save current parameters to preset slot " + (bridge.activePresetSlot + 1) + "?"
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "save", text: "Save", role: "primary" }]
+        onChosen: {
+            if (key !== "save") return
+            var status = root.saveActivePreset()
+            root.showFileResult(status === 0 ? "Success" : "Error",
+                                [status === 0 ? "Preset saved successfully" : "Failed to save preset (error " + status + ")"], status === 0)
+        }
+    }
+    AppDialog {
+        id: revertDialog
+        icon: "revert"
+        title: "Revert to Saved"
+        message: "Revert to last saved parameters?\n\nCurrent unsaved changes will be lost."
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "revert", text: "Revert", role: "primary" }]
+        onChosen: {
+            if (key !== "revert") return
+            var status = bridge.loadParams()
+            if (status === 0) root.showFileResult("Success", ["Parameters reverted successfully"], true)
+            else if (status === 2) root.showFileResult("No Saved Parameters", ["No saved parameters found.\n\nThe device is using factory defaults."], true)
+            else root.showFileResult("Error", [status === 3 ? "Saved data is corrupted" : "Failed to load parameters"], false)
+        }
+    }
     AppDialog {
         id: factoryResetDialog
         icon: "warning"
         iconTint: "#ff6961"
-        title: "Factory Reset?"
-        message: "Every parameter on the device returns to its factory default. This cannot be undone."
-        buttons: [
-            { key: "cancel", text: "Cancel" },
-            { key: "reset", text: "Factory Reset", role: "destructive" }
-        ]
-        onChosen: if (key === "reset") bridge.factoryReset()
+        title: "Factory Reset"
+        message: "Do you wish to clear all active parameters?\n\nThis will not overwrite your saved parameters unless you run Commit Parameters."
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "reset", text: "Reset", role: "destructive" }]
+        onChosen: {
+            if (key !== "reset") return
+            var status = bridge.factoryReset()
+            root.showFileResult(status === 0 ? "Success" : "Error",
+                                [status === 0 ? "Factory reset complete" : "Failed to reset parameters"], status === 0)
+        }
     }
 
     // Shortcuts (Linux has no native menu bar to carry them); like the
     // menu, off while the Getting Started wizard has the window
-    Shortcut { sequence: "Ctrl+S"; enabled: !root.showWizard && bridge.connected; onActivated: bridge.saveParams() }
+    Shortcut { sequence: "Ctrl+S"; enabled: !root.showWizard && bridge.connected; onActivated: commitDialog.open() }
     Shortcut { sequence: "Ctrl+Shift+M"; enabled: !root.showWizard; onActivated: matrixWindow.visible = !matrixWindow.visible }
     Shortcut { sequence: "Ctrl+Shift+L"; enabled: !root.showWizard; onActivated: root.openToolWindow("loudness") }
     Shortcut { sequence: "Ctrl+Shift+X"; enabled: !root.showWizard; onActivated: root.openToolWindow("crossfeed") }
