@@ -44,7 +44,8 @@ Column {
             anchors.leftMargin: 16
             anchors.rightMargin: 16
             radius: 8
-            color: isMacOS ? "#2C2C2C" : Qt.lighter(nativeBaseColor, 1.4)
+            // The dark row colour of the dashboard cards, as on macOS
+            color: isMacOS ? "#252525" : nativeAltBaseColor
             border.color: Qt.rgba(1, 1, 1, 0.1)
             border.width: 1
             clip: true

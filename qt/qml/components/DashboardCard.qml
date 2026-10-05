@@ -15,11 +15,15 @@ Item {
     property color parsedRightColor: rightColor
     property string leftDescriptor: ""
     property string rightDescriptor: ""
+    // Output cards show each channel's delay (ms); -1 hides it
+    property real leftDelay: -1
+    property real rightDelay: -1
 
     property int bandCount: 10
     height: 32 + 1 + (bandCount * 24)
 
-    readonly property var typeShort: ["OFF", "PK", "LS", "HS", "HC", "LC", "NO", "AP", "AP1", "LS1", "HS1", "LT", "HC1", "LC1"]
+    // An off band shows a dash, as on macOS
+    readonly property var typeShort: ["–", "PK", "LS", "HS", "HC", "LC", "NO", "AP", "AP1", "LS1", "HS1", "LT", "HC1", "LC1"]
 
     // Gradient border (left color → right color for stereo, single color for mono)
     Rectangle {
@@ -130,6 +134,25 @@ Item {
                     }
                 }
             }
+            // Delay readouts at the right of each half (output cards)
+            Text {
+                visible: cardRoot.leftDelay >= 0
+                x: (isStereo ? parent.width / 2 : parent.width) - width - 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Delay: " + cardRoot.leftDelay.toFixed(0) + "ms"
+                font.pixelSize: 9
+                font.family: root.monoFont
+                color: Qt.rgba(1, 1, 1, 0.5)
+            }
+            Text {
+                visible: isStereo && cardRoot.rightDelay >= 0
+                x: parent.width - width - 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Delay: " + cardRoot.rightDelay.toFixed(0) + "ms"
+                font.pixelSize: 9
+                font.family: root.monoFont
+                color: Qt.rgba(1, 1, 1, 0.5)
+            }
         }
 
         // Separator
@@ -170,7 +193,7 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 24
-                            text: typeShort[bridge.filterType(leftChannel, index)] || "OFF"
+                            text: typeShort[bridge.filterType(leftChannel, index)] || "–"
                             font.pixelSize: 10
                             font.weight: Font.Bold
                             color: bridge.filterType(leftChannel, index) > 0 ? parsedLeftColor : Qt.rgba(1, 1, 1, 0.3)
@@ -223,7 +246,7 @@ Item {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 24
-                            text: rightChannel >= 0 ? (typeShort[bridge.filterType(rightChannel, index)] || "OFF") : ""
+                            text: rightChannel >= 0 ? (typeShort[bridge.filterType(rightChannel, index)] || "–") : ""
                             font.pixelSize: 10
                             font.weight: Font.Bold
                             color: rightChannel >= 0 && bridge.filterType(rightChannel, index) > 0 ? parsedRightColor : Qt.rgba(1, 1, 1, 0.3)

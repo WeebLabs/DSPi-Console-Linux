@@ -40,32 +40,23 @@ Flickable {
 
         // Output channel cards (stereo pairs where applicable)
         Repeater {
+            // Fixed pairs (Out 1+2, 3+4, ...): both enabled share a card, one
+            // alone gets its own; the PDM subwoofer has a card of its own
             model: {
-                // Build list of output card definitions
+                bridge.numOutputChannels
                 var cards = []
                 var numOut = bridge.numOutputChannels
-                var i = 0
-                while (i < numOut) {
-                    if (bridge.outputEnabled(i)) {
-                        // Check if next output forms a stereo pair
-                        if (i + 1 < numOut && bridge.outputEnabled(i + 1)) {
-                            cards.push({
-                                stereo: true,
-                                leftIdx: i,
-                                rightIdx: i + 1
-                            })
-                            i += 2
-                        } else {
-                            cards.push({
-                                stereo: false,
-                                leftIdx: i,
-                                rightIdx: -1
-                            })
-                            i++
-                        }
-                    } else {
-                        i++
+                for (var i = 0; i < numOut; i++) {
+                    if (bridge.isPdmOutput(i)) {
+                        if (bridge.outputEnabled(i)) cards.push({ stereo: false, leftIdx: i, rightIdx: -1 })
+                        continue
                     }
+                    var j = i + 1 < numOut && !bridge.isPdmOutput(i + 1) ? i + 1 : -1
+                    var a = bridge.outputEnabled(i), b = j >= 0 && bridge.outputEnabled(j)
+                    if (a && b) cards.push({ stereo: true, leftIdx: i, rightIdx: j })
+                    else if (a) cards.push({ stereo: false, leftIdx: i, rightIdx: -1 })
+                    else if (b) cards.push({ stereo: false, leftIdx: j, rightIdx: -1 })
+                    if (j >= 0) i = j
                 }
                 return cards
             }
@@ -81,6 +72,8 @@ Flickable {
                 rightColor: modelData.stereo ? bridge.channelColor(modelData.rightIdx + 2) : ""
                 leftDescriptor: bridge.channelDescriptor(modelData.leftIdx + 2)
                 rightDescriptor: modelData.stereo ? bridge.channelDescriptor(modelData.rightIdx + 2) : ""
+                leftDelay: bridge.outputDelayMS(modelData.leftIdx)
+                rightDelay: modelData.stereo ? bridge.outputDelayMS(modelData.rightIdx) : -1
                 bandCount: 10
             }
         }
