@@ -191,6 +191,8 @@ void DSPiBridge::processNotifications()
     m_lastNotify.restart();
     NotifyResult r = {};
     dspi_process_notifications(m_core, &r);
+    emit notificationsArrived();
+    if (r.flags & NOTIFY_SIGGEN) emit siggenNotified();
     if (!(r.flags & NOTIFY_STATE)) return;
 
     if (r.flags & NOTIFY_REFRESHED) {

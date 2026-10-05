@@ -20,6 +20,9 @@
 #include "RtaController.h"
 #include "RtaViews.h"
 #include "PointerTracker.h"
+#include "SiggenController.h"
+#include "StatsController.h"
+#include "MonitorModel.h"
 #include "MeterItem.h"
 #include "WindowEffects.h"
 #include "TextFocusReleaser.h"
@@ -174,6 +177,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<SpectrumCurveItem>("DSPi", 1, 0, "SpectrumCurveItem");
     qmlRegisterType<SpectrumBarsItem>("DSPi", 1, 0, "SpectrumBarsItem");
     qmlRegisterType<PointerTracker>("DSPi", 1, 0, "PointerTracker");
+    qmlRegisterType<BufferTraceItem>("DSPi", 1, 0, "BufferTraceItem");
     qmlRegisterType<MeterItem>("DSPi", 1, 0, "MeterItem");
 
     // Create bridge
@@ -181,10 +185,16 @@ int main(int argc, char *argv[])
 
     // Before the engine, so it outlives every view that uses it
     RtaController rta(&bridge);
+    SiggenController siggen(&bridge);
+    StatsController stats(&bridge);
+    MonitorModel monitor(&bridge);
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("bridge", &bridge);
     engine.rootContext()->setContextProperty("rta", &rta);
+    engine.rootContext()->setContextProperty("siggen", &siggen);
+    engine.rootContext()->setContextProperty("stats", &stats);
+    engine.rootContext()->setContextProperty("monitor", &monitor);
     engine.rootContext()->setContextProperty("isMacOS", isMacOS);
 
     // Blur and shadow for the frameless windows (main window, Settings)

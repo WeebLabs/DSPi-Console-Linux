@@ -439,6 +439,10 @@ signals:
     void stateChanged();
     void statusChanged();
     void devicesChanged();
+    // The signal generator started or stopped (on the device or elsewhere)
+    void siggenNotified();
+    // A batch of device notifications arrived (the Interrupt Monitor reads them)
+    void notificationsArrived();
     void deviceArrived(const QString &serial);
     void deviceDeparted(const QString &serial);
     void magnitudesChanged();

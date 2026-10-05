@@ -147,6 +147,13 @@ Rectangle {
             { key: "copy", text: "Copy Parameters", icon: "copy" },
             { key: "paste", text: "Paste Parameters", icon: "paste", enabled: bridge.canPaste() }
         ]
+        // Outputs: play their channel number (the signal generator's Channel ID)
+        if (!bridge.isInputChannel(channelIndex) && bridge.connected && siggen.supported) {
+            contextMenu.items = contextMenu.items.concat([
+                { separator: true },
+                { key: "identify", text: "Identify", icon: "identify" }
+            ])
+        }
         contextMenu.openAt(rowRoot, px, py)
     }
 
@@ -157,6 +164,7 @@ Rectangle {
             if (key === "rename") rowRoot.startRename()
             else if (key === "copy") bridge.copyChannel(rowRoot.channelIndex)
             else if (key === "paste") bridge.pasteChannel(rowRoot.channelIndex)
+            else if (key === "identify") siggen.identify(rowRoot.channelIndex - 2)
         }
     }
 }

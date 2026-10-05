@@ -196,6 +196,11 @@ AppWindow {
                                         { key: "copy", text: "Copy Parameters", icon: "copy" },
                                         { key: "paste", text: "Paste Parameters", icon: "paste", enabled: bridge.canPaste() }
                                     ]
+                                    if (bridge.connected && siggen.supported)
+                                        hdrMenu.items = hdrMenu.items.concat([
+                                            { separator: true },
+                                            { key: "identify", text: "Identify", icon: "identify", enabled: bridge.outputEnabled(index) }
+                                        ])
                                     hdrMenu.openAt(hdr, mouse.x, mouse.y)
                                 }
                             }
@@ -212,6 +217,8 @@ AppWindow {
                                         bridge.copyChannel(index + 2)
                                     } else if (key === "paste") {
                                         bridge.pasteChannel(index + 2)
+                                    } else if (key === "identify") {
+                                        siggen.identify(index)
                                     }
                                 }
                             }

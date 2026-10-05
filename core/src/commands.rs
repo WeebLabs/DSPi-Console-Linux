@@ -1007,6 +1007,8 @@ impl DspiCore {
             detected_rate: read_u32_le(&d, 4),
             measured_hz: read_u32_le(&d, 8),
             rate_ok: true,
+            lock_count: d[2],
+            loss_count: d[3],
         })
     }
 
@@ -1045,6 +1047,8 @@ impl DspiCore {
             detected_rate: read_u32_le(&d, 12),
             measured_hz: read_u32_le(&d, 16),
             rate_ok: d[4] != 0,
+            lock_count: d[5],
+            loss_count: d[6],
         })
     }
 

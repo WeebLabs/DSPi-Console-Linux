@@ -21,4 +21,9 @@ include = [
     "RtaRequest",
     "RtaCapsInfo",
     "RtaSnapshot",
+    "SiggenConfig",
+    "SiggenStatus",
+    "SiggenCaps",
+    "BufferStats",
+    "SpdifRxStatus",
 ]

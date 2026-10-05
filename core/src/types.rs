@@ -150,6 +150,9 @@ pub struct InputLockStatus {
     pub measured_hz: u32,
     /// ADAT: the rate is supported (44.1/48 kHz).
     pub rate_ok: bool,
+    /// Locks and lock losses since the input started (saturate at 255).
+    pub lock_count: u8,
+    pub loss_count: u8,
 }
 
 /// ADAT bulk output state (REQ_GET_ADAT_STATUS, RP2350).

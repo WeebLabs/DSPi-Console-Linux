@@ -24,6 +24,7 @@ use rusb::{DeviceHandle, GlobalContext};
 use crate::protocol::*;
 use crate::state::COMPAT_OK;
 use crate::types::*;
+use crate::monitor::MonitorLog;
 use crate::DspiCore;
 
 /// Bulk IN notification endpoint on the vendor interface.
@@ -41,6 +42,7 @@ const EVT_PARAM_CHANGED: u8 = 0x02;
 const EVT_BULK_INVALIDATED: u8 = 0x03;
 const EVT_PRESET_LOADED: u8 = 0x04;
 const EVT_INPUT_FORMAT: u8 = 0x05;
+const EVT_SIGGEN_STATE: u8 = 0x07;
 /// ParamSource: our own EP0 writes echo back with this tag.
 const SRC_HOST_SET: u8 = 1;
 
@@ -54,6 +56,9 @@ pub const NOTIFY_REFRESHED: u32 = 1 << 2;
 pub const NOTIFY_INPUT_FORMAT: u32 = 1 << 3;
 /// A preset was loaded on the device.
 pub const NOTIFY_PRESET: u32 = 1 << 4;
+/// The signal generator started or stopped (re-read its status). Not a
+/// parameter change: comes without NOTIFY_STATE.
+pub const NOTIFY_SIGGEN: u32 = 1 << 5;
 
 /// What a batch of notifications changed.
 #[repr(C)]
@@ -78,6 +83,8 @@ unsafe impl Send for Waker {}
 #[derive(Default)]
 pub struct NotifyHub {
     queue: Mutex<VecDeque<Vec<u8>>>,
+    /// Every packet, decoded, for the Interrupt Monitor.
+    pub monitor: MonitorLog,
     overflow: AtomicBool,
     last_seq: Mutex<Option<u8>>,
     waker: Mutex<Option<Waker>>,
@@ -160,11 +167,14 @@ fn read_loop(handle: &DeviceHandle<GlobalContext>, hub: &NotifyHub, stop: &Atomi
     let mut buf = [0u8; NOTIFY_PACKET_MAX];
     while !stop.load(Ordering::SeqCst) {
         match handle.read_bulk(NOTIFY_ENDPOINT, &mut buf, READ_TIMEOUT) {
-            // v2 packets only: 1-byte keep-alives and the v1 master-volume
-            // packet (which has a v2 twin) are dropped here.
-            Ok(n) if n >= 4 && buf[0] == NOTIFY_V2 => {
+            // Everything but the 1-byte keep-alive goes to the monitor log;
+            // only v2 packets are applied (the v1 master volume has a v2 twin)
+            Ok(n) if n > 1 => {
                 debug!("Notification {:02x?}", &buf[..n]);
-                hub.push(buf[..n].to_vec())
+                hub.monitor.record(&buf[..n]);
+                if n >= 4 && buf[0] == NOTIFY_V2 {
+                    hub.push(buf[..n].to_vec())
+                }
             }
             Ok(_) | Err(rusb::Error::Timeout) | Err(rusb::Error::Interrupted) => {}
             Err(rusb::Error::Pipe) => {
@@ -219,6 +229,7 @@ impl DspiCore {
                     r.flags |= NOTIFY_STATE | NOTIFY_PRESET;
                 }
                 EVT_INPUT_FORMAT => r.flags |= NOTIFY_STATE | NOTIFY_INPUT_FORMAT,
+                EVT_SIGGEN_STATE => r.flags |= NOTIFY_SIGGEN,
                 _ => {}
             }
         }

@@ -16,6 +16,9 @@ pub mod notify;
 pub mod preset;
 pub mod protocol;
 pub mod rta;
+pub mod siggen;
+pub mod stats;
+pub mod monitor;
 pub mod state;
 pub mod types;
 pub mod usb;
@@ -1091,7 +1094,202 @@ pub extern "C" fn dspi_rta_get_snapshot(core: *mut FfiCore, out: *mut rta::RtaSn
     unsafe { *out = hub.snapshot() };
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Signal generator
+// ═══════════════════════════════════════════════════════════════════
+
+/// The generator's caps and signal types. False on a USB error; true with
+/// `supported` false when the firmware has no generator.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_fetch_caps(core: *mut FfiCore, out: *mut siggen::SiggenCaps) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_siggen_caps() {
+        Ok(caps) => {
+            unsafe { *out = caps };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// The config the generator runs (as the device sanitised it).
+#[no_mangle]
+pub extern "C" fn dspi_siggen_get_config(core: *mut FfiCore, out: *mut siggen::SiggenConfig) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_siggen_config() {
+        Ok(cfg) => {
+            unsafe { *out = cfg };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Stage a config; a running generator restarts with it. The device ACKs
+/// even a config it refuses: read it back to check.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_set_config(core: *mut FfiCore, cfg: *const siggen::SiggenConfig) -> bool {
+    if cfg.is_null() {
+        return false;
+    }
+    let cfg = unsafe { *cfg };
+    with_core(core, |c| c.set_siggen_config(&cfg).is_ok())
+}
+
+/// SIGGEN_CTL_START / STOP (fade) / STOP_NOW. False if refused.
+#[no_mangle]
+pub extern "C" fn dspi_siggen_control(core: *mut FfiCore, action: u16) -> bool {
+    with_core(core, |c| c.siggen_control(action).is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_siggen_get_status(core: *mut FfiCore, out: *mut siggen::SiggenStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_siggen_status() {
+        Ok(s) => {
+            unsafe { *out = s };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Statistics
+// ═══════════════════════════════════════════════════════════════════
+
+/// One REQ_GET_STATUS u32 counter (STAT_*).
+#[no_mangle]
+pub extern "C" fn dspi_fetch_stat(core: *mut FfiCore, which: u16, out: *mut u32) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_stat(which) {
+        Ok(v) => {
+            unsafe { *out = v };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_buffer_stats(core: *mut FfiCore, out: *mut stats::BufferStats) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_buffer_stats() {
+        Ok(s) => {
+            unsafe { *out = s };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// Restart the buffer watermarks.
+#[no_mangle]
+pub extern "C" fn dspi_reset_buffer_stats(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.reset_buffer_stats().is_ok())
+}
+
+#[no_mangle]
+pub extern "C" fn dspi_fetch_spdif_rx_status(core: *mut FfiCore, out: *mut stats::SpdifRxStatus) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_spdif_rx_status() {
+        Ok(s) => {
+            unsafe { *out = s };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// `out` receives 24 bytes of IEC 60958 channel status.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_spdif_rx_channel_status(core: *mut FfiCore, out: *mut u8) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_spdif_rx_channel_status() {
+        Ok(b) => {
+            unsafe { std::slice::from_raw_parts_mut(out, 24) }.copy_from_slice(&b);
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+/// GPIO of S/PDIF receiver `index`; false if it has none.
+#[no_mangle]
+pub extern "C" fn dspi_fetch_spdif_rx_pin(core: *mut FfiCore, index: u8, out: *mut u8) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    with_core(core, |c| match c.fetch_spdif_rx_pin(index) {
+        Ok(p) => {
+            unsafe { *out = p };
+            true
+        }
+        Err(_) => false,
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Interrupt Monitor
+// ═══════════════════════════════════════════════════════════════════
+
+/// Copy the notification log lines after `after_id` into `buf` as
+/// "time_ms<TAB>text<LF>" (ms since the Unix epoch), stopping before `buf`
+/// would overflow. Returns the id of the last line written (`after_id` if
+/// none); call again from there to get the rest.
+#[no_mangle]
+pub extern "C" fn dspi_monitor_read(core: *mut FfiCore, after_id: u64, buf: *mut c_char, buf_len: u32) -> u64 {
+    if buf.is_null() || buf_len == 0 {
+        return after_id;
+    }
+    let hub = with_core(core, |c| c.device_manager.notify_hub());
+    let mut text = String::new();
+    let mut last = after_id;
+    let limit = buf_len as usize - 1;
+    let mut full = false;
+    hub.monitor.read_after(after_id, |e| {
+        if full {
+            return;
+        }
+        let line = format!("{}\t{}\n", e.time_ms, e.text);
+        if text.len() + line.len() > limit {
+            full = true;
+            return;
+        }
+        text.push_str(&line);
+        last = e.id;
+    });
+    copy_out(&text, buf, buf_len);
+    last
+}
+
+/// Empty the notification log.
+#[no_mangle]
+pub extern "C" fn dspi_monitor_clear(core: *mut FfiCore) {
+    with_core(core, |c| c.device_manager.notify_hub().monitor.clear());
+}
+
 // Re-export constants that C consumers need
 pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};
-pub use notify::{NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_STATE};
+pub use notify::{NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_SIGGEN, NOTIFY_STATE};
+pub use stats::{
+    STAT_CLOCK_HZ, STAT_CORE_MV, STAT_PDM_DMA_OVERRUNS, STAT_PDM_DMA_UNDERRUNS, STAT_PDM_RING_OVERRUNS,
+    STAT_PDM_RING_UNDERRUNS, STAT_SAMPLE_RATE, STAT_SPDIF_OVERRUNS, STAT_SPDIF_UNDERRUNS, STAT_STARVATION_FIRST,
+    STAT_STARVATION_TOTAL, STAT_TEMPERATURE, STAT_USB_RING_OVERRUNS,
+};
+pub use siggen::{SIGGEN_CTL_START, SIGGEN_CTL_STOP, SIGGEN_CTL_STOP_NOW, SIGGEN_FLAG_DECORR, SIGGEN_FLAG_RAW, SIGGEN_FLAG_WALK, SIGGEN_TYPE_COUNT};
 pub use rta::{RTA_FLOOR_DB, RTA_MAX_BANDS, RTA_MAX_BINS, RTA_MAX_CHANNELS, RTA_TAP_INPUT, RTA_TAP_OUTPUT};

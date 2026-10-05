@@ -13,6 +13,8 @@
         <file>qml/StatsWindow.qml</file>
         <file>qml/SpectrumAnalyserWindow.qml</file>
         <file>qml/GraphWindow.qml</file>
+        <file>qml/SignalGeneratorWindow.qml</file>
+        <file>qml/InterruptMonitorWindow.qml</file>
         <file>qml/SettingsWindow.qml</file>
         <file>qml/Theme.qml</file>
         <file>qml/components/ValueField.qml</file>
@@ -42,6 +44,11 @@
         <file>icons/gauge.svg</file>
         <file>icons/gear.svg</file>
         <file>icons/spectrum.svg</file>
+        <file>icons/signal.svg</file>
+        <file>icons/play.svg</file>
+        <file>icons/pause.svg</file>
+        <file>icons/stop.svg</file>
+        <file>icons/identify.svg</file>
         <file>icons/headphones.svg</file>
         <file>icons/info.svg</file>
         <file>icons/loudness.svg</file>
@@ -111,6 +118,7 @@
         <file>qml/components/PeqShapeChooser.qml</file>
         <file>qml/components/GraphOptionsPopup.qml</file>
         <file>qml/components/PopoverWindow.qml</file>
+        <file>qml/components/SiggenGlyph.qml</file>
         <file>qml/components/SpectrumBarStrip.qml</file>
         <file>qml/components/qmldir</file>
     </qresource>

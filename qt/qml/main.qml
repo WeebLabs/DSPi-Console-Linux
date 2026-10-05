@@ -550,7 +550,8 @@ ApplicationWindow {
         var w = { matrix: matrixWindow, loudness: loudnessWindow, crossfeed: crossfeedWindow,
                   leveller: levellerWindow, psybass: psybassWindow, subharm: subharmWindow,
                   tube: tubeWindow, upmix: upmixWindow, stats: statsWindow,
-                  spectrum: spectrumWindow, graph: graphWindow, settings: settingsWindow }[name]
+                  spectrum: spectrumWindow, graph: graphWindow, siggen: siggenWindow, monitor: monitorWindow,
+                  settings: settingsWindow }[name]
         if (w) { w.visible = true; w.raise(); w.requestActivate() }
     }
 
@@ -594,9 +595,13 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+U"; onActivated: root.openToolWindow("upmix") }
     Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
     Shortcut { sequence: "Ctrl+Shift+A"; onActivated: root.openToolWindow("spectrum") }
+    Shortcut { sequence: "Ctrl+Shift+G"; onActivated: root.openToolWindow("siggen") }
+    Shortcut { sequence: "Ctrl+Shift+I"; onActivated: root.openToolWindow("monitor") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }
     SpectrumAnalyserWindow { id: spectrumWindow; app: root }
     GraphWindow { id: graphWindow }
+    SignalGeneratorWindow { id: siggenWindow }
+    InterruptMonitorWindow { id: monitorWindow }
     SettingsWindow { id: settingsWindow }
 }
