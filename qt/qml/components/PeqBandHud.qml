@@ -146,7 +146,7 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: hud.editor.toggleBandBypass(hud.band)
+                onClicked: hud.editor.toggleBypass(hud.band)
             }
             ToolTip.visible: powerMouse.containsMouse
             ToolTip.delay: 600

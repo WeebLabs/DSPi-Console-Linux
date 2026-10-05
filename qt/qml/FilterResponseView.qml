@@ -88,6 +88,7 @@ Column {
                             items.push({ key: "delete", text: selectionCount > 1 ? "Delete Selected Bands" : "Delete Selected Band", danger: true })
                         }
                     }
+                    graphMenu.band = band
                     graphMenu.items = items
                     graphMenu.openAt(editor, x, y)
                 }
@@ -172,9 +173,10 @@ Column {
     ActionMenu {
         id: graphMenu
         parent: Overlay.overlay
+        property int band: -1             // the band right-clicked, -1 = empty graph
         onTriggered: {
             if (key === "delete") editor.deleteSelection()
-            else if (key === "bypass") editor.toggleBypassSelection()
+            else if (key === "bypass") editor.toggleBypass(band)
             else if (key === "invert") editor.invertGainSelection()
             else if (key === "order1") editor.setOrderSelection(1)
             else if (key === "order2") editor.setOrderSelection(2)

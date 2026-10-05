@@ -77,7 +77,6 @@ public:
     // Context menu actions; each applies to the selection
     Q_INVOKABLE QVariantMap bandInfo(int band) const;
     Q_INVOKABLE void deleteSelection();
-    Q_INVOKABLE void toggleBypassSelection();
     Q_INVOKABLE void invertGainSelection();
     Q_INVOKABLE void setOrderSelection(int order);      // 1 or 2
     Q_INVOKABLE void selectAll();
@@ -89,7 +88,9 @@ public:
     // HUD edits on one band (field: "freq", "gain", "q"), committed at once
     Q_INVOKABLE void setBandValue(int band, const QString &field, double value);
     Q_INVOKABLE void setBandType(int band, int type);
-    Q_INVOKABLE void toggleBandBypass(int band);
+    // Bypass (or enable) the selection when the band is in it, else the band
+    // alone, all to the opposite of the first band (menu, chip, Alt-click)
+    Q_INVOKABLE void toggleBypass(int band);
     // Add a band of this shape where the shape card was opened
     Q_INVOKABLE void createShape(int type, double freq, double gain);
     // The Ctrl-click card closed (picked or dismissed)

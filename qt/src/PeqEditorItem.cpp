@@ -546,12 +546,21 @@ void PeqEditorItem::setBandType(int band, int type) {
     updateHud();
 }
 
-void PeqEditorItem::toggleBandBypass(int band) {
+void PeqEditorItem::toggleBypass(int band) {
     if (band < 0 || band >= BANDS_PER_CHANNEL || !isEditable(band)) return;
-    FilterParams p = m_bands[band];
-    p.bypass = !p.bypass;
-    commitBand(band, p);
+    QVector<int> bands;
+    for (int b = 0; b < BANDS_PER_CHANNEL; b++)
+        if (isEditable(b) && (m_selected[band] ? m_selected[b] : b == band)) bands.append(b);
+    const bool bypass = !m_bands[bands.first()].bypass;
+    QVector<FilterParams> params;
+    for (int b : bands) {
+        m_bands[b].bypass = bypass;
+        params.append(m_bands[b]);
+    }
+    recomputeCombined();
+    m_bridge->commitBands(m_channel, bands, params);
     updateHud();
+    update();
 }
 
 void PeqEditorItem::createShape(int type, double freq, double gain) {
@@ -676,23 +685,6 @@ void PeqEditorItem::deleteSelection() {
     recomputeCombined();
     emit selectionChanged();
     kickEase();
-    m_bridge->commitBands(m_channel, bands, params);
-    updateHud();
-    update();
-}
-
-void PeqEditorItem::toggleBypassSelection() {
-    // All on if any is off; otherwise all off
-    bool anyActive = false;
-    for (int b = 0; b < BANDS_PER_CHANNEL; b++) if (m_selected[b] && !m_bands[b].bypass) anyActive = true;
-    QVector<int> bands; QVector<FilterParams> params;
-    for (int b = 0; b < BANDS_PER_CHANNEL; b++) {
-        if (!m_selected[b]) continue;
-        m_bands[b].bypass = anyActive;
-        bands.append(b); params.append(m_bands[b]);
-    }
-    if (bands.isEmpty()) return;
-    recomputeCombined();
     m_bridge->commitBands(m_channel, bands, params);
     updateHud();
     update();
@@ -853,26 +845,7 @@ void PeqEditorItem::mouseReleaseEvent(QMouseEvent *e) {
     } else if (mode == PressDot) {
         // A click: modifiers decide what it does
         if (m_pressMods & Qt::AltModifier) {
-            if (m_selected[m_pressBand]) {
-                // The whole selection, to the opposite of its first band
-                int first = -1;
-                for (int b = 0; b < BANDS_PER_CHANNEL && first < 0; b++) if (m_selected[b] && isEditable(b)) first = b;
-                const bool bypass = !m_bands[first].bypass;
-                QVector<int> bands; QVector<FilterParams> params;
-                for (int b = 0; b < BANDS_PER_CHANNEL; b++) {
-                    if (!m_selected[b] || !isEditable(b)) continue;
-                    m_bands[b].bypass = bypass;
-                    bands.append(b); params.append(m_bands[b]);
-                }
-                recomputeCombined();
-                m_bridge->commitBands(m_channel, bands, params);
-                updateHud();
-                update();
-            } else {
-                FilterParams p = m_bands[m_pressBand];
-                p.bypass = !p.bypass;
-                commitBand(m_pressBand, p);
-            }
+            toggleBypass(m_pressBand);
         } else if (m_pressMods & Qt::ShiftModifier) {
             selectBand(m_pressBand, false, true);
         } else if (m_pressMods & Qt::ControlModifier) {
