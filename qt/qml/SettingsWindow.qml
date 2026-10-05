@@ -15,8 +15,8 @@ AppWindow {
     id: settingsWindow
     title: "Settings"
     visible: false
-    width: 900
-    height: 640 + titlebarHeight
+    width: 860
+    height: 600 + titlebarHeight
     minimumWidth: 720
     minimumHeight: 480 + titlebarHeight
 
@@ -85,17 +85,19 @@ AppWindow {
     }
     // Control pages appear when the connected firmware has the feature
     function featureAvailable(need) {
-        var m = controlSurfaces.model
         switch (need) {
-        case "cs": return m.supported === true
-        case "groups": return m.supported === true && m.maxGroups > 0
-        case "macros": return m.supported === true && m.maxMacros > 0
-        case "aux": return m.supported === true && m.types.length > 10
+        case "cs": return controlSurfaces.supported
+        case "groups": return controlSurfaces.hasGroups
+        case "macros": return controlSurfaces.hasMacros
+        case "aux": return controlSurfaces.hasAux
         default: return true
         }
     }
+    // Follows the connection only: bridge.connected notifies on every status
+    // poll (the meters), and the sidebar shouldn't re-run with it
+    readonly property bool deviceConnected: bridge.connected
     function pageAvailable(page) {
-        return page && (!page.needsDevice || bridge.connected) && (!page.needs || featureAvailable(page.needs))
+        return page && (!page.needsDevice || deviceConnected) && (!page.needs || featureAvailable(page.needs))
     }
     function matchesSearch(page) {
         var q = search.text.trim().toLowerCase()
@@ -138,7 +140,7 @@ AppWindow {
         target: controlSurfaces
         function onChanged() {
             // Leave a Control page the new device doesn't have (once it has been read)
-            if (controlSurfaces.model.supported !== undefined && settingsWindow.currentPage
+            if (controlSurfaces.loaded && settingsWindow.currentPage
                 && !settingsWindow.pageAvailable(settingsWindow.currentPage))
                 settingsWindow.navigate("about")
         }
@@ -171,8 +173,8 @@ AppWindow {
             // Search
             Rectangle {
                 width: parent.width
-                height: 30
-                radius: 8
+                height: 28
+                radius: 7
                 color: Qt.rgba(1, 1, 1, 0.08)
                 border.color: search.activeFocus ? "#0a7cff" : "transparent"
                 Icon {
@@ -233,7 +235,7 @@ AppWindow {
                     id: group
                     readonly property var groupData: modelData
                     readonly property int shownCount: {
-                        search.text; bridge.connected; controlSurfaces.model
+                        search.text; settingsWindow.deviceConnected; controlSurfaces.revision
                         var n = 0
                         for (var i = 0; i < groupData.pages.length; i++)
                             if (settingsWindow.pageAvailable(groupData.pages[i]) && settingsWindow.matchesSearch(groupData.pages[i])) n++
@@ -246,7 +248,7 @@ AppWindow {
                     Text {
                         text: group.groupData.title
                         leftPadding: 8
-                        topPadding: 10
+                        topPadding: 9
                         bottomPadding: 3
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
@@ -256,8 +258,8 @@ AppWindow {
                         model: group.groupData.pages
                         SettingsSidebarItem {
                             width: group.width
-                            visible: { search.text; bridge.connected; controlSurfaces.model; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
-                            height: visible ? 32 : 0
+                            visible: { search.text; settingsWindow.deviceConnected; controlSurfaces.revision; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
+                            height: visible ? 28 : 0
                             title: modelData.title
                             icon: modelData.icon
                             tint: modelData.tint
@@ -270,7 +272,7 @@ AppWindow {
 
             Text {
                 visible: {
-                    search.text; bridge.connected; controlSurfaces.model
+                    search.text; settingsWindow.deviceConnected; controlSurfaces.revision
                     for (var g = 0; g < settingsWindow.groups.length; g++)
                         for (var p = 0; p < settingsWindow.groups[g].pages.length; p++)
                             if (settingsWindow.pageAvailable(settingsWindow.groups[g].pages[p])
@@ -317,7 +319,7 @@ AppWindow {
         anchors.left: sidebar.right
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: ctx.dirty ? 56 : 0
+        height: ctx.dirty ? 48 : 0
         visible: height > 0
         clip: true
         Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }

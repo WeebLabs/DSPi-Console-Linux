@@ -14,7 +14,7 @@ Item {
     signal revert()
 
     width: parent ? parent.width : 400
-    height: 44
+    height: 40
 
     Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
     Row {
@@ -56,6 +56,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8
         CsButton { text: "Revert"; enabled: row.dirty; onClicked: row.revert() }
-        CsButton { text: "Apply"; primary: true; enabled: row.canApply && bridge.connected; onClicked: row.apply() }
+        CsButton { text: "Apply"; primary: true; enabled: row.canApply; onClicked: row.apply() }
     }
 }

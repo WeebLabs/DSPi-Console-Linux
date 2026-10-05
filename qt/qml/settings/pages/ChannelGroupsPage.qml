@@ -108,7 +108,7 @@ SettingsPage {
             Icon { name: "group"; size: 28; color: Qt.rgba(1, 1, 1, 0.45) }
             action: CsButton {
                 text: "Add Group"; icon: "plus"; primary: true
-                enabled: page.firstFree >= 0 && bridge.connected
+                enabled: page.firstFree >= 0 && cs.connected
                 onClicked: page.addGroup()
             }
         }
@@ -210,7 +210,7 @@ SettingsPage {
             height: 30
             CsButton {
                 text: "Add Group"; icon: "plus"
-                enabled: page.firstFree >= 0 && bridge.connected
+                enabled: page.firstFree >= 0 && cs.connected
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: page.addGroup()
             }

@@ -49,6 +49,7 @@ void CsController::onDeviceChanged() {
     m_snapshot.clear();
     m_displayState.clear();
     m_auxLive.clear();
+    m_revision++;
     emit changed();
     emit displayStateChanged();
     emit auxLiveChanged();
@@ -96,6 +97,7 @@ void CsController::reload() {
     if (snapshot == m_snapshot) return;
     m_snapshot = snapshot;
     m_model = obj.toVariantMap();
+    m_revision++;
     emit changed();
 }
 

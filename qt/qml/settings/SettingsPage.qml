@@ -1,8 +1,9 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
-// A settings page: title, optional subtitle, and a scrolling column of
-// SettingsSection cards. Declare sections as children.
+// A settings page: an optional subtitle and a scrolling column of
+// SettingsSection cards. Declare sections as children. The page title shows
+// in the window's titlebar (as in the macOS toolbar), not on the page.
 Flickable {
     id: page
     property string title: ""
@@ -11,38 +12,33 @@ Flickable {
     default property alias content: body.data
 
     contentWidth: width
-    contentHeight: column.height + 40
+    contentHeight: column.height + 36
     clip: true
     boundsBehavior: Flickable.StopAtBounds
     ScrollBar.vertical: ScrollBar {}
 
     Column {
         id: column
-        x: 32
-        y: 24
-        width: page.width - 64
-        spacing: 6
+        x: 24
+        y: 18
+        width: page.width - 48
+        spacing: 14
 
-        Text {
-            text: page.title
-            font.pixelSize: 24
-            font.weight: Font.Bold
-            color: "white"
-        }
         Text {
             visible: page.subtitle !== ""
             width: parent.width
+            leftPadding: 4
+            rightPadding: 4
             wrapMode: Text.WordWrap
             text: page.subtitle
-            font.pixelSize: 13
+            font.pixelSize: 12
             color: Qt.rgba(1, 1, 1, 0.55)
         }
-        Item { width: 1; height: 12 }
 
         Column {
             id: body
             width: parent.width
-            spacing: 22
+            spacing: 18
         }
     }
 }

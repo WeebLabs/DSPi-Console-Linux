@@ -116,7 +116,7 @@ Column {
                             CsButton {
                                 visible: !sub.learning
                                 text: rb.cs.irConfigured(sub.c) ? "Re-learn" : "Learn Button"
-                                enabled: rb.receiverLive && bridge.connected && rb.host.learningSub < 0
+                                enabled: rb.receiverLive && rb.cs.connected && rb.host.learningSub < 0
                                 onClicked: rb.host.startLearn(sub.k)
                             }
                             CsButton {

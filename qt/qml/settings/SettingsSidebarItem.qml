@@ -10,7 +10,7 @@ Rectangle {
     property bool selected: false
     signal clicked()
 
-    height: 32
+    height: 28
     radius: 7
     color: selected ? "#0a7cff" : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
 
@@ -18,12 +18,12 @@ Rectangle {
         id: tile
         x: 8
         anchors.verticalCenter: parent.verticalCenter
-        width: 22; height: 22; radius: 6
+        width: 20; height: 20; radius: 5
         color: item.tint
         Icon {
             anchors.centerIn: parent
             name: item.icon
-            size: 14
+            size: 13
             color: "white"
         }
     }

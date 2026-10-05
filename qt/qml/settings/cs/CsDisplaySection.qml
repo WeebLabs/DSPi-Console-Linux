@@ -360,7 +360,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             text: "Add Page"
             icon: "plus"
-            enabled: ds.firstFreePage >= 0 && bridge.connected
+            enabled: ds.firstFreePage >= 0 && ds.cs.connected
             onClicked: ds.applyPage(ds.firstFreePage, { noun: ds.pageNouns.length > 0 ? ds.pageNouns[0] : 0, target: 0, index: 0,
                                                         flags: ds.cs.dpageActive })
         }

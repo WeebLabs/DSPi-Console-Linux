@@ -331,7 +331,7 @@ Column {
             text: view.auxPage ? "Add Output" : "Add Control"
             icon: "plus"
             primary: true
-            enabled: view.firstFreeSlot >= 0 && bridge.connected
+            enabled: view.firstFreeSlot >= 0 && cs.connected
             onClicked: addMenu.openAt(emptyAdd, 0, emptyAdd.height + 4)
         }
     }
@@ -355,7 +355,7 @@ Column {
             id: addButton
             text: view.auxPage ? "Add Output" : "Add Control"
             icon: "plus"
-            enabled: view.firstFreeSlot >= 0 && bridge.connected
+            enabled: view.firstFreeSlot >= 0 && cs.connected
             anchors.verticalCenter: parent.verticalCenter
             onClicked: addMenu.openAt(addButton, 0, addButton.height + 4)
         }
@@ -486,7 +486,7 @@ Column {
                 sourceComponent: Column {
                     id: aux
                     width: parent ? parent.width : 400
-                    readonly property bool live: cs.isConfigured(card.liveB) && card.active && bridge.connected
+                    readonly property bool live: cs.isConfigured(card.liveB) && card.active && cs.connected
                     readonly property bool pwm: card.b.type === cs.typeAuxPwm
                     function setB(field, v) { var nb = cs.copy(card.b); nb[field] = v; view.setDraft(card.slot, nb) }
                     function setExtra(mask, on) {
@@ -694,7 +694,7 @@ Column {
                 leading: CsButton {
                     visible: card.b.type === cs.typeIr && card.expanded
                     text: "Add Remote Button"
-                    enabled: view.firstFreeSub >= 0 && bridge.connected
+                    enabled: view.firstFreeSub >= 0 && cs.connected
                     onClicked: view.addIrCommand()
                 }
             }

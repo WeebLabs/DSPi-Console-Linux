@@ -16,7 +16,7 @@ Item {
     readonly property bool firstInCard: parent && parent.children.length > 0 && parent.children[0] === row
 
     width: parent ? parent.width : 400
-    height: Math.max(46, labels.height + 22)
+    height: Math.max(40, labels.height + 16)
     opacity: enabled ? 1.0 : 0.45
 
     // Hover highlight and click target for clickable rows (below the controls)

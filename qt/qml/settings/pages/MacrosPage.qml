@@ -116,7 +116,7 @@ SettingsPage {
             Icon { name: "list-number"; size: 28; color: Qt.rgba(1, 1, 1, 0.45) }
             action: CsButton {
                 text: "Add Macro"; icon: "plus"; primary: true
-                enabled: page.firstFree >= 0 && bridge.connected
+                enabled: page.firstFree >= 0 && cs.connected
                 onClicked: page.addMacro()
             }
         }
@@ -159,7 +159,7 @@ SettingsPage {
                         bare: true
                         icon: card.isRunning ? "stop" : "play"
                         tip: card.isRunning ? "Stop this macro" : "Run this macro now"
-                        enabled: bridge.connected && (card.isRunning || (page.live[card.m] && page.live[card.m].steps.length > 0))
+                        enabled: cs.connected && (card.isRunning || (page.live[card.m] && page.live[card.m].steps.length > 0))
                         onClicked: controlSurfaces.apply({ op: card.isRunning ? "macroCancel" : "macroFire", index: card.m })
                     }
                 }
@@ -255,7 +255,7 @@ SettingsPage {
             height: 30
             CsButton {
                 text: "Add Macro"; icon: "plus"
-                enabled: page.firstFree >= 0 && bridge.connected
+                enabled: page.firstFree >= 0 && cs.connected
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: page.addMacro()
             }

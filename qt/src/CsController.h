@@ -18,6 +18,14 @@ class CsController : public QObject
     Q_OBJECT
     Q_PROPERTY(QVariantMap model READ model NOTIFY changed)
     Q_PROPERTY(bool supported READ supported NOTIFY changed)
+    // What the firmware has, for showing pages (cheap to bind to, unlike `model`)
+    Q_PROPERTY(bool loaded READ loaded NOTIFY changed)
+    Q_PROPERTY(bool hasGroups READ hasGroups NOTIFY changed)
+    Q_PROPERTY(bool hasMacros READ hasMacros NOTIFY changed)
+    Q_PROPERTY(bool hasAux READ hasAux NOTIFY changed)
+    // Bumped on every model change: a dependency token for bindings that
+    // only need to re-run (reading `model` converts the whole map)
+    Q_PROPERTY(int revision READ revision NOTIFY changed)
     // Applied edits the device hasn't saved to flash
     Q_PROPERTY(bool unsaved READ unsaved NOTIFY changed)
     // The display's live state (link, page on screen, I2C errors): polled
@@ -36,6 +44,11 @@ public:
     QVariantMap displayState() const { return m_displayState; }
     QVariantMap auxLive() const { return m_auxLive; }
     bool supported() const { return m_model.value("supported").toBool(); }
+    bool loaded() const { return !m_model.isEmpty(); }
+    bool hasGroups() const { return supported() && m_model.value("maxGroups").toInt() > 0; }
+    bool hasMacros() const { return supported() && m_model.value("maxMacros").toInt() > 0; }
+    bool hasAux() const { return supported() && m_model.value("types").toList().size() > 10; }
+    int revision() const { return m_revision; }
     bool unsaved() const;
     bool watchDisplay() const { return m_displayPoll.isActive(); }
     void setWatchDisplay(bool on);
@@ -80,6 +93,7 @@ private:
     QTimer m_displayPoll;
     QTimer m_macroPoll;
     int m_macroPolls = 0;
+    int m_revision = 0;
 };
 
 #endif // CSCONTROLLER_H

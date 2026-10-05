@@ -36,7 +36,7 @@ Rectangle {
         Item {
             id: header
             width: parent.width
-            height: 52
+            height: 48
 
             MouseArea {
                 anchors.fill: parent

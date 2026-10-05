@@ -22,7 +22,9 @@ SettingsPage {
         return "#807701"
     }
 
-    readonly property var owners: { bridge.hardware; controlSurfaces.model; return bridge.connected ? bridge.pinOwners() : [] }
+    // Not bound to bridge.connected directly: that notifies on every status poll
+    readonly property bool connected: bridge.connected
+    readonly property var owners: { bridge.hardware; controlSurfaces.revision; return connected ? bridge.pinOwners() : [] }
     readonly property var byPin: {
         var m = {}
         for (var i = 0; i < owners.length; i++) if (m[owners[i].pin] === undefined) m[owners[i].pin] = owners[i]

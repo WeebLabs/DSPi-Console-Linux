@@ -10,13 +10,13 @@ Rectangle {
     default property alias art: artRow.data
     property alias action: actionSlot.data
     width: parent ? parent.width : 400
-    height: col.height + 44
+    height: col.height + 36
     radius: 10
     color: Qt.rgba(1, 1, 1, 0.045)
     border.color: Qt.rgba(1, 1, 1, 0.07)
     Column {
         id: col
-        y: 22
+        y: 18
         width: parent.width
         spacing: 12
         Row { id: artRow; anchors.horizontalCenter: parent.horizontalCenter; spacing: 10 }
@@ -27,7 +27,7 @@ Rectangle {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 text: empty.title
-                font.pixelSize: 15
+                font.pixelSize: 14
                 font.weight: Font.DemiBold
                 color: "white"
             }

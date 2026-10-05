@@ -13,7 +13,7 @@ Item {
     default property alias control: trailing.data
 
     width: parent ? parent.width : 400
-    height: Math.max(42, labels.height + 18)
+    height: Math.max(40, labels.height + 16)
     opacity: enabled ? 1.0 : 0.45
 
     Rectangle {

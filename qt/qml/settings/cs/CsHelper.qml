@@ -8,6 +8,9 @@ QtObject {
     id: cs
 
     readonly property var m: controlSurfaces.model
+    // Changes only on connect / disconnect (bridge.connected notifies on
+    // every status poll)
+    readonly property bool connected: bridge.connected
 
     // ── Enums (firmware control_surfaces.h) ──
     readonly property int typeNone: 0

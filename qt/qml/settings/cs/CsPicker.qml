@@ -22,7 +22,8 @@ Rectangle {
     height: 28
     radius: 7
     opacity: enabled ? 1 : 0.45
-    color: mouse.pressed || flat.visible || cascade.visible ? Qt.rgba(1, 1, 1, 0.16)
+    readonly property bool menuOpen: menus.item !== null && (menus.item.flat.visible || menus.item.cascade.visible)
+    color: mouse.pressed || menuOpen ? Qt.rgba(1, 1, 1, 0.16)
          : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
     border.color: Qt.rgba(1, 1, 1, 0.10)
 
@@ -49,23 +50,30 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            if (picker.categories) cascade.toggleAt(picker)
-            else flat.toggleAt(picker)
+            menus.active = true
+            if (picker.categories) menus.item.cascade.toggleAt(picker)
+            else menus.item.flat.toggleAt(picker)
         }
     }
 
-    ChoiceMenu {
-        id: flat
-        parent: Overlay.overlay
-        options: picker.options
-        currentValue: picker.value
-        onChosen: picker.chosen(value)
-    }
-    CascadeMenu {
-        id: cascade
-        parent: Overlay.overlay
-        categories: picker.categories || []
-        currentValue: picker.value
-        onChosen: picker.chosen(value)
+    // The menus are built the first time they're opened: a page holds many
+    // pickers, and each menu has a row per option
+    Loader {
+        id: menus
+        active: false
+        sourceComponent: QtObject {
+            property ChoiceMenu flat: ChoiceMenu {
+                parent: picker.Overlay.overlay
+                options: picker.categories ? [] : picker.options
+                currentValue: picker.value
+                onChosen: picker.chosen(value)
+            }
+            property CascadeMenu cascade: CascadeMenu {
+                parent: picker.Overlay.overlay
+                categories: picker.categories || []
+                currentValue: picker.value
+                onChosen: picker.chosen(value)
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@ Column {
     default property alias rows: card.data
 
     width: parent ? parent.width : 400
-    spacing: 8
+    spacing: 6
 
     Text {
         visible: section.title !== ""
