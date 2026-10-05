@@ -64,8 +64,16 @@ AppWindow {
               source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent dac mute amplifier pop" }
         ]},
         { title: "Control", pages: [
+            { id: "surfaces", title: "Control Surfaces", icon: "cs-pot", tint: "#8354a0", needsDevice: true, needs: "cs",
+              source: "settings/pages/ControlSurfacesPage.qml", keywords: "buttons switches knobs potentiometer fader encoder led ir remote receiver learn display oled lcd gpio bindings" },
             { id: "control", title: "Control Interfaces", icon: "chip", tint: "#8f60ad", needsDevice: true,
-              source: "settings/pages/ControlInterfacesPage.qml", keywords: "uart serial i2c target microcontroller baud address" }
+              source: "settings/pages/ControlInterfacesPage.qml", keywords: "uart serial i2c target microcontroller baud address" },
+            { id: "groups", title: "Channel Groups", icon: "group", tint: "#6c64b7", needsDevice: true, needs: "groups",
+              source: "settings/pages/ChannelGroupsPage.qml", keywords: "group zone stereo pair members control surfaces" },
+            { id: "macros", title: "Macros", icon: "list-number", tint: "#9e528d", needsDevice: true, needs: "macros",
+              source: "settings/pages/MacrosPage.qml", keywords: "macro sequence steps fire run delay control surfaces" },
+            { id: "aux", title: "Auxiliary Outputs", icon: "power", tint: "#7a5aac", needsDevice: true, needs: "aux",
+              source: "settings/pages/AuxOutputsPage.qml", keywords: "aux relay trigger amplifier lamp fan dimmer pwm gpio output" }
         ]}
     ]
 
@@ -75,7 +83,20 @@ AppWindow {
                 if (groups[g].pages[p].id === id) return groups[g].pages[p]
         return null
     }
-    function pageAvailable(page) { return page && (!page.needsDevice || bridge.connected) }
+    // Control pages appear when the connected firmware has the feature
+    function featureAvailable(need) {
+        var m = controlSurfaces.model
+        switch (need) {
+        case "cs": return m.supported === true
+        case "groups": return m.supported === true && m.maxGroups > 0
+        case "macros": return m.supported === true && m.maxMacros > 0
+        case "aux": return m.supported === true && m.types.length > 10
+        default: return true
+        }
+    }
+    function pageAvailable(page) {
+        return page && (!page.needsDevice || bridge.connected) && (!page.needs || featureAvailable(page.needs))
+    }
     function matchesSearch(page) {
         var q = search.text.trim().toLowerCase()
         if (q === "") return true
@@ -110,6 +131,15 @@ AppWindow {
         target: bridge
         function onStatusChanged() {
             if (settingsWindow.currentPage && !settingsWindow.pageAvailable(settingsWindow.currentPage))
+                settingsWindow.navigate("about")
+        }
+    }
+    Connections {
+        target: controlSurfaces
+        function onChanged() {
+            // Leave a Control page the new device doesn't have (once it has been read)
+            if (controlSurfaces.model.supported !== undefined && settingsWindow.currentPage
+                && !settingsWindow.pageAvailable(settingsWindow.currentPage))
                 settingsWindow.navigate("about")
         }
     }
@@ -203,7 +233,7 @@ AppWindow {
                     id: group
                     readonly property var groupData: modelData
                     readonly property int shownCount: {
-                        search.text; bridge.connected
+                        search.text; bridge.connected; controlSurfaces.model
                         var n = 0
                         for (var i = 0; i < groupData.pages.length; i++)
                             if (settingsWindow.pageAvailable(groupData.pages[i]) && settingsWindow.matchesSearch(groupData.pages[i])) n++
@@ -226,7 +256,7 @@ AppWindow {
                         model: group.groupData.pages
                         SettingsSidebarItem {
                             width: group.width
-                            visible: { search.text; bridge.connected; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
+                            visible: { search.text; bridge.connected; controlSurfaces.model; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
                             height: visible ? 32 : 0
                             title: modelData.title
                             icon: modelData.icon
@@ -240,7 +270,7 @@ AppWindow {
 
             Text {
                 visible: {
-                    search.text; bridge.connected
+                    search.text; bridge.connected; controlSurfaces.model
                     for (var g = 0; g < settingsWindow.groups.length; g++)
                         for (var p = 0; p < settingsWindow.groups[g].pages.length; p++)
                             if (settingsWindow.pageAvailable(settingsWindow.groups[g].pages[p])
@@ -291,7 +321,7 @@ AppWindow {
         visible: height > 0
         clip: true
         Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        canRevert: ctx.draftDirty
+        canRevert: ctx.draftDirty || ctx.csDirty
         onSave: ctx.save()
         onRevert: ctx.revert()
     }

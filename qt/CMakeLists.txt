@@ -21,8 +21,10 @@ add_executable(DSPiConsole
     src/RtaViews.cpp
     src/PointerTracker.cpp
     src/SiggenController.cpp
+    src/CsController.cpp
     src/StatsController.cpp
     src/MonitorModel.cpp
+    src/ConfigFiles.cpp
     src/MeterItem.cpp
     src/WindowEffects.cpp
     resources.qrc

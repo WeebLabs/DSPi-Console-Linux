@@ -193,6 +193,8 @@ void DSPiBridge::processNotifications()
     dspi_process_notifications(m_core, &r);
     emit notificationsArrived();
     if (r.flags & NOTIFY_SIGGEN) emit siggenNotified();
+    if (r.flags & (NOTIFY_CS_AUX | NOTIFY_IR_LEARN))
+        emit csNotified(r.flags & NOTIFY_CS_AUX, r.flags & NOTIFY_IR_LEARN);
     if (!(r.flags & NOTIFY_STATE)) return;
 
     if (r.flags & NOTIFY_REFRESHED) {
@@ -1047,6 +1049,25 @@ void DSPiBridge::setInputLinked(int ch, bool linked, int keepCh) {
     emit magnitudesChanged();
 }
 
+void DSPiBridge::restoreInputLinks(uint8_t links) {
+    if (links == m_links) return;
+    m_links = links;
+    saveLinks();
+    emit stateChanged();
+}
+
+void DSPiBridge::markHardwareUnsaved() {
+    if (m_hardwareUnsaved) return;
+    m_hardwareUnsaved = true;
+    emit stateChanged();
+}
+
+void DSPiBridge::refreshAll() {
+    markAllDirty();
+    emit stateChanged();
+    emit magnitudesChanged();
+}
+
 void DSPiBridge::loadLinks() {
     QSettings settings;
     m_links = static_cast<uint8_t>(settings.value("inputLinks/" + m_selectedSerial, 0x01).toUInt());
@@ -1503,6 +1524,11 @@ QVariantList DSPiBridge::pinOwners() const {
         add(s->i2c.sda_pin, "I2C SDA", "control");
         add(s->i2c.scl_pin, "I2C SCL", "control");
     }
+    // Control surface bindings hold their pins while they're live
+    uint8_t pins[2 * 16], bindingSlot[2 * 16];
+    const uint32_t uses = qMin<uint32_t>(dspi_cs_pin_uses(m_core, pins, bindingSlot, 32), 32);
+    for (uint32_t i = 0; i < uses; i++)
+        add(pins[i], QString("Control Surface %1").arg(bindingSlot[i] + 1), "control");
     return owners;
 }
 

@@ -21,6 +21,7 @@ pub const COMPAT_FIRMWARE_TOO_NEW: u8 = 3;
 /// Complete DSP parameter state for the connected device.
 /// Owned by DspiCore; the GUI reads it through `dspi_get_state`.
 #[repr(C)]
+#[derive(Clone)]
 pub struct DspState {
     // ── Device / firmware ───────────────────────────────────────────
     pub platform_id: u8,

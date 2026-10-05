@@ -34,6 +34,8 @@ Popup {
     signal revertRequested()
     signal factoryResetRequested()
     signal openWindow(string name)
+    // importFilters / exportFilters / importConfig / exportConfig
+    signal fileAction(string name)
 
     // The menu button toggles the menu. Pressing the button while the menu is
     // open closes it as an outside press before the click arrives, so a click
@@ -65,6 +67,12 @@ Popup {
           show: bridge.masterVolumeMode === 0 },
         { kind: "item", icon: "chip", text: "Save Output Config", shortcut: "", action: "saveOutputConfig",
           show: bridge.outputConfigMode === 0 },
+        { kind: "sep" },
+        { kind: "header", text: "File" },
+        { kind: "item", icon: "input", text: "Import Filters…", shortcut: "Ctrl+I", action: "importFilters" },
+        { kind: "item", icon: "output", text: "Export Filters…", shortcut: "Ctrl+E", action: "exportFilters" },
+        { kind: "item", icon: "input", text: "Import Device Configuration…", shortcut: "", action: "importConfig" },
+        { kind: "item", icon: "output", text: "Export Device Configuration…", shortcut: "", action: "exportConfig" },
         { kind: "sep" },
         { kind: "header", text: "Tools" },
         { kind: "item", icon: "sliders", text: "Matrix Mixer", shortcut: "Ctrl+Shift+M", window: "matrix" },
@@ -112,6 +120,7 @@ Popup {
         case "saveMasterVolume": bridge.saveMasterVolume(); break
         case "saveOutputConfig": bridge.saveOutputConfig(); break
         case "factoryReset": factoryResetRequested(); break
+        default: fileAction(r.action)
         }
     }
 

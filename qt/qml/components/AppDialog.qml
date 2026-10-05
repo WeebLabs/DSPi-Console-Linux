@@ -6,7 +6,8 @@ import QtQuick.Controls 2.15
 // "destructive" or "secondary" (the default). Emits chosen(key); Esc or a
 // click outside cancels (chosen("cancel")), Enter picks the primary button.
 // hasInput adds a text field under the message (inputText), focused and
-// selected on open (e.g. Rename).
+// selected on open (e.g. Rename). checks adds tick boxes under that:
+// [{ key, text, checked, detail? }]; checkedKeys has the ticked keys.
 Popup {
     id: dlg
     property string title: ""
@@ -17,6 +18,14 @@ Popup {
     // Optional lines in a box under the message: [{ text, color? }]; a
     // colour draws a dot (e.g. a channel's colour)
     property var details: []
+    property var checks: []
+    property var checkedKeys: []
+    onChecksChanged: checkedKeys = checks.filter(function (c) { return c.checked }).map(function (c) { return c.key })
+    function toggleCheck(key) {
+        var k = checkedKeys.slice(), i = k.indexOf(key)
+        if (i >= 0) k.splice(i, 1); else k.push(key)
+        checkedKeys = k
+    }
     property bool hasInput: false
     property alias inputText: input.text
     property string placeholder: ""
@@ -162,6 +171,48 @@ Popup {
                                     font.pixelSize: 12
                                     color: Qt.rgba(1, 1, 1, 0.8)
                                 }
+                            }
+                        }
+                    }
+                }
+                // Tick boxes (scrolls when there are many)
+                Flickable {
+                    visible: dlg.checks.length > 0
+                    width: parent.width
+                    height: Math.min(checkColumn.implicitHeight, 300)
+                    contentHeight: checkColumn.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+                    ScrollBar.vertical: ScrollBar { policy: checkColumn.implicitHeight > 300 ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded }
+                    Column {
+                        id: checkColumn
+                        width: parent.width
+                        spacing: 2
+                        Repeater {
+                            model: dlg.checks
+                            Item {
+                                readonly property bool ticked: dlg.checkedKeys.indexOf(modelData.key) >= 0
+                                width: checkColumn.width
+                                height: Math.max(26, checkText.implicitHeight + 8)
+                                Rectangle {
+                                    id: box
+                                    y: 5
+                                    width: 16; height: 16; radius: 4
+                                    color: parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.06)
+                                    border.color: parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.25)
+                                    Icon { anchors.centerIn: parent; visible: parent.parent.ticked; name: "check"; size: 13; color: "white" }
+                                }
+                                Column {
+                                    id: checkText
+                                    anchors.left: box.right
+                                    anchors.leftMargin: 9
+                                    anchors.right: parent.right
+                                    y: 4
+                                    Text { width: parent.width; wrapMode: Text.WordWrap; text: modelData.text; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+                                    Text { visible: !!modelData.detail; width: parent.width; wrapMode: Text.WordWrap; text: modelData.detail || ""; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                                }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: dlg.toggleCheck(modelData.key) }
                             }
                         }
                     }

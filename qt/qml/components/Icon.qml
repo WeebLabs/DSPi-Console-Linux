@@ -32,6 +32,7 @@ Item {
         "search": '<circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="20.5" y2="20.5"/>',
         "signal": '<path d="M2.5 12c1.6-5.3 3.6-5.3 5.2 0s3.6 5.3 5.2 0 3.6-5.3 5.2 0 2.2 3.5 3.4 2.4"/>',
         "pause": '<rect x="6.5" y="5" width="3.6" height="14" rx="1"/><rect x="13.9" y="5" width="3.6" height="14" rx="1"/>',
+        "check": '<polyline points="5,12.5 10,17.5 19,7"/>',
         "play": '<path d="M7.5 5.2v13.6a.8.8 0 0 0 1.2.7l11-6.8a.8.8 0 0 0 0-1.4l-11-6.8a.8.8 0 0 0-1.2.7z"/>',
         "stop": '<rect x="6" y="6" width="12" height="12" rx="1.6"/>',
         "identify": '<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4"/><path d="M5 5a10 10 0 0 0 0 14"/><path d="M19 5a10 10 0 0 1 0 14"/>',
@@ -58,7 +59,23 @@ Item {
         "pins": '<circle cx="6" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="6" r="1.6" fill="COLOR" stroke="none"/><circle cx="6" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="COLOR" stroke="none"/><circle cx="6" cy="18" r="1.6" fill="COLOR" stroke="none"/><circle cx="12" cy="18" r="1.6" fill="COLOR" stroke="none"/><circle cx="18" cy="18" r="1.6" fill="COLOR" stroke="none"/>',
         "clock": '<circle cx="12" cy="12" r="8.5"/><polyline points="12,7 12,12 15.5,14"/>',
         "waveform": '<polyline points="2,12 6,12 8.5,6 11,18 13.5,4 16,20 18,12 22,12"/>',
-        "xmark": '<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>'
+        "xmark": '<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>',
+        "cs-button": '<path d="M7.5 14v-2.5a4.5 4.5 0 0 1 9 0V14"/><rect x="4" y="14" width="16" height="5.5" rx="1.5"/>',
+        "cs-switch": '<rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="16.5" cy="12" r="3" fill="COLOR"/>',
+        "cs-pot": '<circle cx="12" cy="12" r="7"/><line x1="12" y1="12" x2="12" y2="6.5"/><line x1="5.6" y1="18.4" x2="4" y2="20"/><line x1="18.4" y1="18.4" x2="20" y2="20"/>',
+        "cs-encoder": '<circle cx="12" cy="12" r="5.5"/><line x1="12" y1="12" x2="12" y2="8.5"/><line x1="12" y1="2.5" x2="12" y2="4"/><line x1="21.5" y1="12" x2="20" y2="12"/><line x1="12" y1="21.5" x2="12" y2="20"/><line x1="2.5" y1="12" x2="4" y2="12"/><line x1="18.7" y1="5.3" x2="17.6" y2="6.4"/><line x1="5.3" y1="5.3" x2="6.4" y2="6.4"/><line x1="18.7" y1="18.7" x2="17.6" y2="17.6"/><line x1="5.3" y1="18.7" x2="6.4" y2="17.6"/>',
+        "cs-led": '<path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/><line x1="9.4" y1="18.5" x2="14.6" y2="18.5"/><line x1="10.3" y1="21" x2="13.7" y2="21"/>',
+        "sun": '<circle cx="12" cy="12" r="4"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="21.5" y2="12"/><line x1="5.3" y1="5.3" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="18.7" y2="18.7"/><line x1="5.3" y1="18.7" x2="6.7" y2="17.3"/><line x1="17.3" y1="6.7" x2="18.7" y2="5.3"/>',
+        "cs-ir": '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><circle cx="12" cy="7" r="1.7"/><circle cx="10" cy="12.5" r="0.7" fill="COLOR"/><circle cx="14" cy="12.5" r="0.7" fill="COLOR"/><circle cx="10" cy="16" r="0.7" fill="COLOR"/><circle cx="14" cy="16" r="0.7" fill="COLOR"/>',
+        "cs-display": '<rect x="3" y="4.5" width="18" height="12" rx="1.5"/><line x1="12" y1="16.5" x2="12" y2="20"/><line x1="8.5" y1="20" x2="15.5" y2="20"/>',
+        "group": '<rect x="3" y="4" width="18" height="6.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="6.5" rx="1.5"/>',
+        "list-number": '<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><polyline points="4,5 5.5,4 5.5,8.5"/><path d="M3.8 10.8a1.4 1.4 0 0 1 2.6.7c0 1-2.6 1.8-2.6 3h2.8"/><path d="M3.8 16.6h2.6l-1.3 1.5a1.3 1.3 0 1 1-1.3 1.9"/>',
+        "trash": '<line x1="4" y1="6.5" x2="20" y2="6.5"/><path d="M9.5 6.5V4.5h5v2"/><path d="M6.2 6.5l.9 12.6a1.6 1.6 0 0 0 1.6 1.4h6.6a1.6 1.6 0 0 0 1.6-1.4l.9-12.6"/><line x1="10" y1="10.5" x2="10" y2="16.5"/><line x1="14" y1="10.5" x2="14" y2="16.5"/>',
+        "plus": '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+        "minus-circle": '<circle cx="12" cy="12" r="8.5"/><line x1="8" y1="12" x2="16" y2="12"/>',
+        "arrow-up": '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="6.5,10.5 12,5 17.5,10.5"/>',
+        "arrow-down": '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="6.5,13.5 12,19 17.5,13.5"/>',
+        "eye": '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>'
     })
 
     function svgColor(c) {

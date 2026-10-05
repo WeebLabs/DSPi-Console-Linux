@@ -37,7 +37,9 @@ QtObject {
     // Hardware edits in independent mode are RAM-only until the output
     // config is saved; they share the save bar (but cannot be reverted)
     readonly property bool hardwareDirty: bridge.connected && bridge.hardwareUnsaved
-    readonly property bool dirty: draftDirty || hardwareDirty
+    // Control surfaces: applied edits not yet saved to flash
+    readonly property bool csDirty: bridge.connected && controlSurfaces.unsaved
+    readonly property bool dirty: draftDirty || hardwareDirty || csDirty
 
     function load() {
         startupMode = bridge.presetStartupMode
@@ -69,6 +71,8 @@ QtObject {
             bridge.setDacMute(dacEnabled, dacActiveLow, dacPin, dacHoldMs, dacReleaseMs)
         if (hardwareDirty)
             bridge.saveOutputConfig()
+        if (csDirty)
+            controlSurfaces.save()
         edited = false
     }
 
@@ -122,7 +126,10 @@ QtObject {
         }
     }
 
-    function revert() { load() }
+    function revert() {
+        if (csDirty) controlSurfaces.revert()
+        load()
+    }
 
     // Follow the device while there is no draft
     property Connections bridgeWatch: Connections {

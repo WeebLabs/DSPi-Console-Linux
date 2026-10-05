@@ -46,3 +46,4 @@ GraphOptionsPopup 1.0 GraphOptionsPopup.qml
 SpectrumBarStrip 1.0 SpectrumBarStrip.qml
 PopoverWindow 1.0 PopoverWindow.qml
 SiggenGlyph 1.0 SiggenGlyph.qml
+CascadeMenu 1.0 CascadeMenu.qml

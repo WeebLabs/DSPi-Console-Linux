@@ -413,6 +413,13 @@ public:
     // The core, for the spectrum analyser controller
     FfiCore *core() const { return m_core; }
 
+    // For configuration and filter file imports
+    uint8_t inputLinks() const { return m_links; }
+    void restoreInputLinks(uint8_t links);
+    void markHardwareUnsaved();
+    // Everything changed outside the setters: redraw from the core's state
+    void refreshAll();
+
     // Magnitude curve access for C++ BodePlotItem (app ids)
     void getMagnitudeCurve(int ch, double *out);
     // Phase (degrees) of a channel's PEQ and crossover bands, 201 points
@@ -441,6 +448,8 @@ signals:
     void devicesChanged();
     // The signal generator started or stopped (on the device or elsewhere)
     void siggenNotified();
+    // An aux output changed, or IR learning finished
+    void csNotified(bool aux, bool learn);
     // A batch of device notifications arrived (the Interrupt Monitor reads them)
     void notificationsArrived();
     void deviceArrived(const QString &serial);

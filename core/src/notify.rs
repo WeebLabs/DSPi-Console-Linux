@@ -43,6 +43,8 @@ const EVT_BULK_INVALIDATED: u8 = 0x03;
 const EVT_PRESET_LOADED: u8 = 0x04;
 const EVT_INPUT_FORMAT: u8 = 0x05;
 const EVT_SIGGEN_STATE: u8 = 0x07;
+const EVT_CS_IR_LEARN: u8 = 0x0A;
+const EVT_CS_AUX: u8 = 0x0C;
 /// ParamSource: our own EP0 writes echo back with this tag.
 const SRC_HOST_SET: u8 = 1;
 
@@ -59,6 +61,12 @@ pub const NOTIFY_PRESET: u32 = 1 << 4;
 /// The signal generator started or stopped (re-read its status). Not a
 /// parameter change: comes without NOTIFY_STATE.
 pub const NOTIFY_SIGGEN: u32 = 1 << 5;
+/// An auxiliary output changed state or level (already in the control
+/// surfaces snapshot).
+pub const NOTIFY_CS_AUX: u32 = 1 << 6;
+/// IR learning finished: a code was captured or the window timed out
+/// (the result is in the control surfaces snapshot).
+pub const NOTIFY_IR_LEARN: u32 = 1 << 7;
 
 /// What a batch of notifications changed.
 #[repr(C)]
@@ -230,6 +238,19 @@ impl DspiCore {
                 }
                 EVT_INPUT_FORMAT => r.flags |= NOTIFY_STATE | NOTIFY_INPUT_FORMAT,
                 EVT_SIGGEN_STATE => r.flags |= NOTIFY_SIGGEN,
+                // Our own aux writes are already in the state
+                EVT_CS_AUX if p.len() >= 9 => {
+                    let slot = p[4] as usize;
+                    if slot < 16 && p[8] != SRC_HOST_SET {
+                        self.cs.aux_state[slot] = p[5];
+                        self.cs.aux_level[slot] = read_u16_le(p, 6);
+                        r.flags |= NOTIFY_CS_AUX;
+                    }
+                }
+                EVT_CS_IR_LEARN if p.len() >= 12 => {
+                    self.cs.learn = Some((p[4], p[5], read_u32_le(p, 8)));
+                    r.flags |= NOTIFY_IR_LEARN;
+                }
                 _ => {}
             }
         }

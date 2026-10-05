@@ -44,7 +44,7 @@ Popup {
         }
     }
 
-    function itemEnabled(i) { return items[i] && !items[i].separator && items[i].enabled !== false }
+    function itemEnabled(i) { return !!items[i] && !items[i].separator && items[i].enabled !== false }
 
     // Worked out from the items, not the list: items set just before
     // openAt aren't laid out yet

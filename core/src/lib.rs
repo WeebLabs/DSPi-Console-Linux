@@ -19,6 +19,9 @@ pub mod rta;
 pub mod siggen;
 pub mod stats;
 pub mod monitor;
+pub mod presetfile;
+pub mod filterfile;
+pub mod cs;
 pub mod state;
 pub mod types;
 pub mod usb;
@@ -39,6 +42,7 @@ use crate::types::*;
 pub struct DspiCore {
     pub(crate) device_manager: DeviceManager,
     pub(crate) state: DspState,
+    pub(crate) cs: cs::CsState,
     hotplug_callback: Option<(DeviceEventCallback, *mut c_void)>,
 }
 
@@ -51,6 +55,7 @@ impl DspiCore {
         Self {
             device_manager: DeviceManager::new(),
             state: DspState::default(),
+            cs: cs::CsState::default(),
             hotplug_callback: None,
         }
     }
@@ -167,6 +172,7 @@ pub extern "C" fn dspi_select_device(core: *mut FfiCore, serial: *const c_char) 
         let ok = c.device_manager.select_device(serial).is_ok();
         if ok {
             c.state = DspState::default();
+            c.cs = cs::CsState::default();
         }
         ok
     })
@@ -1283,9 +1289,139 @@ pub extern "C" fn dspi_monitor_clear(core: *mut FfiCore) {
     with_core(core, |c| c.device_manager.notify_hub().monitor.clear());
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FFI — Configuration and filter files
+// ═══════════════════════════════════════════════════════════════════
+
+/// Copy `s` into `buf` (NUL-terminated); returns the bytes needed including
+/// the NUL, so a caller with too small a buffer can retry.
+fn copy_text(s: &str, buf: *mut c_char, len: u32) -> u32 {
+    let needed = s.len() as u32 + 1;
+    if !buf.is_null() && len >= needed {
+        copy_out(s, buf, len);
+    }
+    needed
+}
+
+/// The device's configuration as a `.dspipreset` document. `links` = the
+/// app's input-pair link mask. Returns the length needed (see copy_text).
+#[no_mangle]
+pub extern "C" fn dspi_config_export(core: *mut FfiCore, name: *const c_char, app_version: *const c_char,
+                                     links: u8, buf: *mut c_char, len: u32) -> u32 {
+    let text = with_core(core, |c| presetfile::export(&c.state, c_str(name).unwrap_or(""), c_str(app_version).unwrap_or(""), links));
+    copy_text(&text, buf, len)
+}
+
+/// Check a document and describe it, as JSON {ok, error, name, platform,
+/// firmware, savedUtc}. Returns the length needed.
+#[no_mangle]
+pub extern "C" fn dspi_config_inspect(text: *const c_char, buf: *mut c_char, len: u32) -> u32 {
+    let out = match presetfile::parse(c_str(text).unwrap_or("")) {
+        Ok(v) => {
+            let (name, platform, firmware, saved) = presetfile::provenance(&v);
+            serde_json::json!({ "ok": true, "name": name, "platform": platform, "firmware": firmware, "savedUtc": saved })
+        }
+        Err(e) => serde_json::json!({ "ok": false, "error": e }),
+    };
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// Apply a document (`options`: 1 = volumes, 2 = hardware I/O). Writes JSON
+/// {ok, error, lines, clean, links (or null), hardwareWritten}. Returns the
+/// length needed.
+#[no_mangle]
+pub extern "C" fn dspi_config_import(core: *mut FfiCore, text: *const c_char, options: u32, buf: *mut c_char, len: u32) -> u32 {
+    let out = match presetfile::parse(c_str(text).unwrap_or("")) {
+        Err(e) => serde_json::json!({ "ok": false, "error": e }),
+        Ok(v) => match with_core(core, |c| c.import_preset(&v, options)) {
+            Ok(r) => serde_json::json!({ "ok": true, "lines": r.lines, "clean": r.clean, "links": r.links,
+                                         "hardwareWritten": r.hardware_written }),
+            Err(e) => serde_json::json!({ "ok": false, "error": format!("The device could not be written: {e}.") }),
+        },
+    };
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// Every channel's filters as a text file (`inputs` = live inputs to write).
+#[no_mangle]
+pub extern "C" fn dspi_filters_export(core: *mut FfiCore, inputs: u8, buf: *mut c_char, len: u32) -> u32 {
+    let text = with_core(core, |c| filterfile::export(&c.state, inputs as usize));
+    copy_text(&text, buf, len)
+}
+
+/// What a filter file holds, for the channel picker (JSON).
+#[no_mangle]
+pub extern "C" fn dspi_filters_inspect(core: *mut FfiCore, text: *const c_char, inputs: u8, buf: *mut c_char, len: u32) -> u32 {
+    let out = with_core(core, |c| filterfile::inspect(&c.state, c_str(text).unwrap_or(""), inputs as usize));
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// Apply a filter file to the channels in `wires` (wire indices). Writes
+/// JSON {ok, error, lines}.
+#[no_mangle]
+pub extern "C" fn dspi_filters_import(core: *mut FfiCore, text: *const c_char, wires: *const u8, count: u32,
+                                      buf: *mut c_char, len: u32) -> u32 {
+    let chosen: Vec<usize> = if wires.is_null() { vec![] } else {
+        unsafe { std::slice::from_raw_parts(wires, count as usize) }.iter().map(|&w| w as usize).collect()
+    };
+    let out = match with_core(core, |c| c.import_filters(c_str(text).unwrap_or(""), &chosen)) {
+        Ok(lines) => serde_json::json!({ "ok": true, "lines": lines }),
+        Err(e) => serde_json::json!({ "ok": false, "error": format!("The device could not be written: {e}.") }),
+    };
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// Read the whole control surfaces configuration from the device (bindings,
+/// IR commands, groups, macros, display, aux). Returns false on a transfer
+/// error; firmware without control surfaces reads as unsupported.
+#[no_mangle]
+pub extern "C" fn dspi_cs_fetch(core: *mut FfiCore) -> bool {
+    with_core(core, |c| c.cs_fetch_all().is_ok())
+}
+
+/// The control surfaces configuration as JSON (see cs::cs_snapshot).
+#[no_mangle]
+pub extern "C" fn dspi_cs_snapshot(core: *mut FfiCore, buf: *mut c_char, len: u32) -> u32 {
+    let out = with_core(core, |c| c.cs_snapshot());
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// Perform one control surfaces operation, given as JSON {op, index, ...}.
+/// Writes JSON {ok, status, error, ...}.
+#[no_mangle]
+pub extern "C" fn dspi_cs_apply(core: *mut FfiCore, op: *const c_char, buf: *mut c_char, len: u32) -> u32 {
+    let out = match serde_json::from_str::<serde_json::Value>(c_str(op).unwrap_or("")) {
+        Ok(v) => match with_core(core, |c| c.cs_apply(&v)) {
+            Ok(r) => r,
+            Err(e) => serde_json::json!({ "ok": false, "error": format!("{e}") }),
+        },
+        Err(e) => serde_json::json!({ "ok": false, "error": format!("{e}") }),
+    };
+    copy_text(&out.to_string(), buf, len)
+}
+
+/// GPIOs held by live control surface bindings: fills `pins` and `slots`
+/// (up to `max` each) and returns how many there are.
+#[no_mangle]
+pub extern "C" fn dspi_cs_pin_uses(core: *mut FfiCore, pins: *mut u8, slots: *mut u8, max: u32) -> u32 {
+    let uses = with_core(core, |c| c.cs_pin_uses());
+    if !pins.is_null() && !slots.is_null() {
+        for (i, (p, s)) in uses.iter().take(max as usize).enumerate() {
+            unsafe {
+                *pins.add(i) = *p;
+                *slots.add(i) = *s;
+            }
+        }
+    }
+    uses.len() as u32
+}
+
 // Re-export constants that C consumers need
 pub use protocol::{FLASH_ERR_WRITE, FLASH_OK, PIN_CONFIG_SUCCESS, PRESET_OK};
-pub use notify::{NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_SIGGEN, NOTIFY_STATE};
+pub use notify::{
+    NOTIFY_CS_AUX, NOTIFY_CURVES, NOTIFY_INPUT_FORMAT, NOTIFY_IR_LEARN, NOTIFY_PRESET, NOTIFY_REFRESHED, NOTIFY_SIGGEN,
+    NOTIFY_STATE,
+};
 pub use stats::{
     STAT_CLOCK_HZ, STAT_CORE_MV, STAT_PDM_DMA_OVERRUNS, STAT_PDM_DMA_UNDERRUNS, STAT_PDM_RING_OVERRUNS,
     STAT_PDM_RING_UNDERRUNS, STAT_SAMPLE_RATE, STAT_SPDIF_OVERRUNS, STAT_SPDIF_UNDERRUNS, STAT_STARVATION_FIRST,

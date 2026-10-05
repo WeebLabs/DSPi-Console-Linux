@@ -22,7 +22,7 @@ SettingsPage {
         return "#807701"
     }
 
-    readonly property var owners: { bridge.hardware; return bridge.connected ? bridge.pinOwners() : [] }
+    readonly property var owners: { bridge.hardware; controlSurfaces.model; return bridge.connected ? bridge.pinOwners() : [] }
     readonly property var byPin: {
         var m = {}
         for (var i = 0; i < owners.length; i++) if (m[owners[i].pin] === undefined) m[owners[i].pin] = owners[i]

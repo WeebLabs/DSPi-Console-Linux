@@ -46,6 +46,23 @@
         <file>icons/spectrum.svg</file>
         <file>icons/signal.svg</file>
         <file>icons/play.svg</file>
+        <file>icons/check.svg</file>
+        <file>icons/cs-button.svg</file>
+        <file>icons/cs-switch.svg</file>
+        <file>icons/cs-pot.svg</file>
+        <file>icons/cs-encoder.svg</file>
+        <file>icons/cs-led.svg</file>
+        <file>icons/sun.svg</file>
+        <file>icons/cs-ir.svg</file>
+        <file>icons/cs-display.svg</file>
+        <file>icons/group.svg</file>
+        <file>icons/list-number.svg</file>
+        <file>icons/trash.svg</file>
+        <file>icons/plus.svg</file>
+        <file>icons/minus-circle.svg</file>
+        <file>icons/arrow-up.svg</file>
+        <file>icons/arrow-down.svg</file>
+        <file>icons/eye.svg</file>
         <file>icons/pause.svg</file>
         <file>icons/stop.svg</file>
         <file>icons/identify.svg</file>
@@ -93,6 +110,32 @@
         <file>qml/settings/pages/InputsPage.qml</file>
         <file>qml/settings/pages/I2SPage.qml</file>
         <file>qml/settings/pages/ControlInterfacesPage.qml</file>
+        <file>qml/settings/pages/ControlSurfacesPage.qml</file>
+        <file>qml/settings/pages/ChannelGroupsPage.qml</file>
+        <file>qml/settings/pages/MacrosPage.qml</file>
+        <file>qml/settings/pages/AuxOutputsPage.qml</file>
+        <file>qml/components/CascadeMenu.qml</file>
+        <file>qml/settings/cs/CsApplyRow.qml</file>
+        <file>qml/settings/cs/CsBadge.qml</file>
+        <file>qml/settings/cs/CsBusyDot.qml</file>
+        <file>qml/settings/cs/CsButton.qml</file>
+        <file>qml/settings/cs/CsCard.qml</file>
+        <file>qml/settings/cs/CsCheck.qml</file>
+        <file>qml/settings/cs/CsControlsView.qml</file>
+        <file>qml/settings/cs/CsDelayRow.qml</file>
+        <file>qml/settings/cs/CsDisplaySection.qml</file>
+        <file>qml/settings/cs/CsEmptyState.qml</file>
+        <file>qml/settings/cs/CsHeading.qml</file>
+        <file>qml/settings/cs/CsHelper.qml</file>
+        <file>qml/settings/cs/CsNote.qml</file>
+        <file>qml/settings/cs/CsPicker.qml</file>
+        <file>qml/settings/cs/CsPickerRow.qml</file>
+        <file>qml/settings/cs/CsPill.qml</file>
+        <file>qml/settings/cs/CsRecordEditor.qml</file>
+        <file>qml/settings/cs/CsRemoteButtons.qml</file>
+        <file>qml/settings/cs/CsRow.qml</file>
+        <file>qml/settings/cs/CsSwitchRow.qml</file>
+        <file>qml/settings/cs/qmldir</file>
         <file>qml/components/WindowResizeEdges.qml</file>
         <file>qml/components/AppWindow.qml</file>
         <file>qml/components/ChoiceMenu.qml</file>

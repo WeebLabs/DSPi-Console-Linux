@@ -22,7 +22,7 @@ SettingsRow {
         return null
     }
     readonly property var options: {
-        bridge.hardware                    // re-evaluate when anything changes
+        bridge.hardware; controlSurfaces.model   // re-evaluate when anything changes
         return ctx ? ctx.pinOptions(pin, accept, sharable, allowUnset, unsetText) : []
     }
 

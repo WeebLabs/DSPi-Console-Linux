@@ -568,6 +568,122 @@ ApplicationWindow {
         onRevertRequested: bridge.loadParams()
         onFactoryResetRequested: factoryResetDialog.open()
         onOpenWindow: root.openToolWindow(name)
+        onFileAction: root.fileAction(name)
+    }
+
+    // ── Configuration and filter files ──
+    readonly property url documentsFolder: Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation)
+    property string pendingFileAction: ""
+
+    function fileAction(name) {
+        if (!bridge.connected) return
+        pendingFileAction = name
+        if (name === "exportConfig") {
+            saveDialog.title = "Export Device Configuration"
+            saveDialog.nameFilters = ["DSPi configuration (*.dspipreset)", "JSON (*.json)"]
+            saveDialog.defaultSuffix = "dspipreset"
+            saveDialog.currentFile = documentsFolder + "/DSPi Configuration.dspipreset"
+            saveDialog.open()
+        } else if (name === "exportFilters") {
+            saveDialog.title = "Export Filters"
+            saveDialog.nameFilters = ["Text (*.txt)"]
+            saveDialog.defaultSuffix = "txt"
+            saveDialog.currentFile = documentsFolder + "/DSPi Filters.txt"
+            saveDialog.open()
+        } else if (name === "importConfig") {
+            openDialog.title = "Import Device Configuration"
+            openDialog.nameFilters = ["DSPi configuration (*.dspipreset *.json)", "All files (*)"]
+            openDialog.open()
+        } else if (name === "importFilters") {
+            openDialog.title = "Import Filters"
+            openDialog.nameFilters = ["Filter files (*.txt)", "All files (*)"]
+            openDialog.open()
+        }
+    }
+
+    function showFileResult(title, lines, ok) {
+        fileResult.title = title
+        fileResult.icon = ok ? "check" : "warning"
+        fileResult.iconTint = ok ? "#32d74b" : "#ff9f0a"
+        fileResult.message = lines.join("\n\n")
+        fileResult.open()
+    }
+
+    Platform.FileDialog {
+        id: saveDialog
+        fileMode: Platform.FileDialog.SaveFile
+        folder: root.documentsFolder
+        onAccepted: {
+            var r = root.pendingFileAction === "exportConfig" ? configFiles.exportConfiguration(file)
+                                                               : configFiles.exportFilters(file)
+            if (!r.ok) root.showFileResult("Export Failed", [r.error], false)
+            else if (root.pendingFileAction === "exportConfig") root.showFileResult("Configuration Exported", [r.message], true)
+        }
+    }
+
+    Platform.FileDialog {
+        id: openDialog
+        fileMode: Platform.FileDialog.OpenFile
+        folder: root.documentsFolder
+        onAccepted: {
+            if (root.pendingFileAction === "importConfig") {
+                var info = configFiles.inspectConfiguration(file)
+                if (!info.ok) { root.showFileResult("Import Failed", [info.error], false); return }
+                var lines = []
+                var from = "Saved from " + (info.platform || "a DSPi")
+                         + (info.firmware ? ", firmware " + info.firmware : "") + (info.saved ? ", " + info.saved : "") + "."
+                lines.push(from)
+                if (info.crossPlatform)
+                    lines.push("This file comes from a " + info.platform + "; channels this " + bridge.platformName + " doesn't have are left out.")
+                lines.push("EQ, crossover, delays, gains, routing and the DSP features are always applied.")
+                fileChoice.mode = "config"
+                fileChoice.configFile = file
+                fileChoice.title = "Import Device Configuration"
+                fileChoice.message = lines.join("\n\n")
+                fileChoice.checks = [
+                    { key: "volumes", text: "Volume levels", detail: "Master and listening volume", checked: false },
+                    { key: "hardware", text: "Hardware I/O", detail: "GPIO pins, clocks, ADAT, inputs, output limiters", checked: false }
+                ]
+                fileChoice.buttons = [{ key: "cancel", text: "Cancel" }, { key: "import", text: "Import", role: "primary" }]
+                fileChoice.open()
+            } else {
+                var f = configFiles.inspectFilters(file)
+                if (!f.ok) { root.showFileResult("Import Failed", [f.error], false); return }
+                fileChoice.mode = "filters"
+                fileChoice.title = "Import Filters"
+                fileChoice.message = f.kind === "rew"
+                    ? "Found " + f.filters + (f.filters === 1 ? " filter" : " filters")
+                      + (f.preamp !== null && f.preamp !== undefined ? " and a " + (f.preamp > 0 ? "+" : "") + Number(f.preamp).toFixed(1) + " dB preamp" : "")
+                      + ". Pick the channels to apply them to."
+                    : "Pick the channels to load from the file."
+                fileChoice.checks = f.channels.map(function (c) {
+                    return { key: c.wire, text: c.label, checked: c.checked,
+                             detail: c.bands + (c.bands === 1 ? " band" : " bands") }
+                })
+                fileChoice.buttons = [{ key: "cancel", text: "Cancel" }, { key: "import", text: "Import", role: "primary" }]
+                fileChoice.open()
+            }
+        }
+    }
+
+    AppDialog {
+        id: fileChoice
+        property string mode: ""
+        property url configFile
+        icon: "input"
+        onChosen: {
+            if (key !== "import") return
+            var r = mode === "config"
+                ? configFiles.importConfiguration(configFile, checkedKeys.indexOf("volumes") >= 0, checkedKeys.indexOf("hardware") >= 0)
+                : configFiles.importFilters(checkedKeys)
+            if (!r.ok) root.showFileResult("Import Failed", [r.error], false)
+            else root.showFileResult(r.clean === false ? "Import Finished" : "Import Complete", r.lines, r.clean !== false)
+        }
+    }
+
+    AppDialog {
+        id: fileResult
+        buttons: [{ key: "ok", text: "OK", role: "primary" }]
     }
 
     AppDialog {
@@ -596,6 +712,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+T"; onActivated: root.openToolWindow("stats") }
     Shortcut { sequence: "Ctrl+Shift+A"; onActivated: root.openToolWindow("spectrum") }
     Shortcut { sequence: "Ctrl+Shift+G"; onActivated: root.openToolWindow("siggen") }
+    Shortcut { sequence: "Ctrl+I"; enabled: bridge.connected && !root.textFocused; onActivated: root.fileAction("importFilters") }
+    Shortcut { sequence: "Ctrl+E"; enabled: bridge.connected && !root.textFocused; onActivated: root.fileAction("exportFilters") }
     Shortcut { sequence: "Ctrl+Shift+I"; onActivated: root.openToolWindow("monitor") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
     StatsWindow { id: statsWindow }
