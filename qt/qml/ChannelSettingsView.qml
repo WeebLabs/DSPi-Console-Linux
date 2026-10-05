@@ -98,8 +98,15 @@ Rectangle {
             Layout.fillWidth: true
             from: sec.from; to: sec.to; stepSize: sec.stepSize
             value: sec.shown
-            onMoved: { sec.shown = value; live.push(value) }
-            onPressedChanged: if (!pressed) { live.cancel(); sec.committed(value) }
+            // A press that didn't move commits nothing, so a value set
+            // outside the slider's range elsewhere stays as it is
+            property bool dragged: false
+            onMoved: { dragged = true; sec.shown = value; live.push(value) }
+            onPressedChanged: if (!pressed) {
+                live.cancel()
+                if (dragged) sec.committed(value)
+                dragged = false
+            }
             onReset: sec.reset()
             Throttle { id: live; onFire: sec.moved(value) }
         }
@@ -202,7 +209,7 @@ Rectangle {
         LevelSection {
             id: gainSection
             label: "GAIN"; unit: "dB"; decimals: 1
-            from: -60; to: 10; stepSize: 0.1
+            from: -60; to: 12; stepSize: 0.1      // the firmware's output gain range
             value: gainDB
             onMoved: bridge.sendOutputGainToDevice(outputIndex, v)
             onCommitted: { gainDB = v; bridge.setOutputGain(outputIndex, v) }

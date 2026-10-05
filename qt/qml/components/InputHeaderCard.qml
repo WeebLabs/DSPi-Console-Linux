@@ -135,12 +135,19 @@ Rectangle {
             StyledSlider {
                 id: preampSlider
                 Layout.fillWidth: true
-                from: -60; to: 10
+                from: -24; to: 24     // the firmware's preamp range
                 stepSize: 0.1
                 value: preampDB
-                // Value follows the drag; the device gets live updates
-                onMoved: { preampDB = value; preampLive.push(value) }
-                onPressedChanged: if (!pressed) { preampLive.cancel(); bridge.setInputPreamp(inputIndex, value) }
+                // Value follows the drag; the device gets live updates. A
+                // press that didn't move commits nothing, so a value set
+                // outside the slider's range elsewhere stays as it is
+                property bool dragged: false
+                onMoved: { dragged = true; preampDB = value; preampLive.push(value) }
+                onPressedChanged: if (!pressed) {
+                    preampLive.cancel()
+                    if (dragged) bridge.setInputPreamp(inputIndex, value)
+                    dragged = false
+                }
                 Throttle { id: preampLive; onFire: bridge.setInputPreamp(inputIndex, value, true) }
                 // Right-click resets to 0 dB
                 MouseArea {
@@ -155,8 +162,8 @@ Rectangle {
                 value: preampDB
                 suffix: "dB"
                 decimals: 1
-                minValue: -60
-                maxValue: 10
+                minValue: -24
+                maxValue: 24
                 onValueEdited: bridge.setInputPreamp(inputIndex, newValue)
             }
         }

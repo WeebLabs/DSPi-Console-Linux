@@ -253,7 +253,7 @@ AppWindow {
                                     visible: multichannel
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     fieldWidth: 50; height: 20; suffix: "dB"; decimals: 1
-                                    minValue: -60; maxValue: 12; plainWheel: true
+                                    minValue: -24; maxValue: 24; plainWheel: true
                                     value: { rev; return bridge.inputPreampDB(inputIndex) }
                                     onValueEdited: bridge.setInputPreamp(inputIndex, newValue)
                                 }

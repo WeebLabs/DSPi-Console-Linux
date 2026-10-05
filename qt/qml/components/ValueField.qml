@@ -71,7 +71,10 @@ Row {
         onEditingFinished: {
             var cleaned = text.replace(suffix, "").trim()
             var parsed = parseFloat(cleaned)
-            if (!isNaN(parsed)) {
+            // Only a real edit commits: focus leaving an untouched field must
+            // not write back (or clamp) a value set elsewhere, e.g. +12 dB
+            // from a control surface in a field that stops at +10
+            if (!isNaN(parsed) && cleaned !== formatValue(valueFieldRoot.value)) {
                 parsed = Math.max(minValue, Math.min(maxValue, parsed))
                 valueFieldRoot.valueEdited(parsed)
             }
@@ -103,8 +106,11 @@ Row {
             onWheel: {
                 if (!plainWheel && !(wheel.modifiers & Qt.ControlModifier)) { wheel.accepted = false; return }
                 var delta = wheel.angleDelta.y > 0 ? wheelStep : -wheelStep
-                var newVal = Math.max(minValue, Math.min(maxValue, value + delta))
-                valueFieldRoot.valueEdited(newVal)
+                // A value already outside the range steps from where it is
+                // rather than jumping to the limit
+                var lo = Math.min(minValue, value), hi = Math.max(maxValue, value)
+                var newVal = Math.max(lo, Math.min(hi, value + delta))
+                if (newVal !== value) valueFieldRoot.valueEdited(newVal)
             }
         }
     }
