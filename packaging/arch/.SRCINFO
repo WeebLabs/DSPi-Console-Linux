@@ -23,7 +23,7 @@ pkgbase = dspi-console
 	optdepends = kwayland-integration: blurred sidebar on KDE Plasma (Wayland)
 	optdepends = xdg-desktop-portal: native file dialogs
 	optdepends = udisks2: firmware updates
-	source = dspi-console::git+https://github.com/WeebLabs/DSPi-Console-Linux.git#commit=b1c15497c3cc6399e54fbab6e7ddca38d2dcfb73
+	source = dspi-console::git+https://github.com/WeebLabs/DSPi-Console-Linux.git#commit=35ef2ec139ce23264a37111b4b15e1e520cfdb87
 	sha256sums = SKIP
 
 pkgname = dspi-console
