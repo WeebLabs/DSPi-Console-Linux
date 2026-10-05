@@ -24,6 +24,7 @@
 #include "SiggenController.h"
 #include "CsController.h"
 #include "FirmwareUpdater.h"
+#include "AutoEqLibrary.h"
 #include "StatsController.h"
 #include "MonitorModel.h"
 #include "ConfigFiles.h"
@@ -192,6 +193,7 @@ int main(int argc, char *argv[])
     SiggenController siggen(&bridge);
     CsController controlSurfaces(&bridge);
     FirmwareUpdater firmware(&bridge);
+    AutoEqLibrary autoeq(&bridge);
     StatsController stats(&bridge);
     MonitorModel monitor(&bridge);
     ConfigFiles configFiles(&bridge);
@@ -202,6 +204,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("siggen", &siggen);
     engine.rootContext()->setContextProperty("controlSurfaces", &controlSurfaces);
     engine.rootContext()->setContextProperty("firmware", &firmware);
+    engine.rootContext()->setContextProperty("autoeq", &autoeq);
     // Whether this machine ran Console before (any saved setting): an existing
     // user isn't put through the first-launch wizard on upgrade day
     {

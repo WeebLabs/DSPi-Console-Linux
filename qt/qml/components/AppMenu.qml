@@ -1,33 +1,24 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 
-// The app menu opened from the titlebar's menu button: device summary,
-// device actions, tool windows and settings. Keyboard: Up/Down, Enter, Esc.
+// The app menu opened from the titlebar's menu button, laid out like the
+// macOS menu bar: the device summary, then Device, File, AutoEQ, Effects,
+// Tools and Help, each opening its items in a submenu beside it, then Settings.
+// Keyboard: Up/Down, Right or Enter opens a submenu, Esc closes.
 Popup {
     id: menu
-    // Fits icon + longest label + gap + longest shortcut
     width: Math.ceil(MenuStyle.sideInset + MenuStyle.iconSize + 10 + labelWidest.advanceWidth
-                     + 28 + shortcutWidest.advanceWidth + MenuStyle.sideInset + 2 * MenuStyle.padding)
+                     + 40 + MenuStyle.sideInset + 2 * MenuStyle.padding)
     padding: MenuStyle.padding
+    modal: false
+    focus: true
+    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     TextMetrics {
         id: labelWidest
         font.pixelSize: MenuStyle.fontSize
-        text: {
-            var t = ""
-            for (var i = 0; i < menu.rows.length; i++)
-                if (menu.rows[i].kind === "item" && menu.rows[i].text.length > t.length) t = menu.rows[i].text
-            return t
-        }
+        text: "No device connected   "
     }
-    TextMetrics {
-        id: shortcutWidest
-        font.pixelSize: MenuStyle.smallFontSize
-        text: "Ctrl+Shift+M"
-    }
-    modal: false
-    focus: true
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     // Actions are supplied by the window that hosts the menu
     signal commitRequested()
@@ -36,12 +27,16 @@ Popup {
     signal openWindow(string name)
     // importFilters / exportFilters / importConfig / exportConfig
     signal fileAction(string name)
+    signal autoeqUpdateRequested()
+
+    // While the Getting Started wizard has the window: only Settings and Help
+    property bool restricted: false
 
     // The menu button toggles the menu. Pressing the button while the menu is
     // open closes it as an outside press before the click arrives, so a click
     // right after such a close must not reopen it.
     property real closedAt: 0
-    onClosed: closedAt = Date.now()
+    onClosed: { closedAt = Date.now(); sub.close(); openGroup = -1 }
 
     function toggleAt(anchorItem) {
         if (visible) { close(); return }
@@ -57,90 +52,126 @@ Popup {
         open()
     }
 
-    // ── Rows ──
-    // kind: "header" | "item" | "sep"
-    readonly property var rows: [
-        { kind: "header", text: "Device" },
-        { kind: "item", icon: "save", text: "Commit Parameters", shortcut: "Ctrl+S", action: "commit" },
-        { kind: "item", icon: "revert", text: "Revert to Saved", shortcut: "", action: "revert" },
-        { kind: "item", icon: "speaker", text: "Save Master Volume", shortcut: "", action: "saveMasterVolume",
-          show: bridge.masterVolumeMode === 0 },
-        { kind: "item", icon: "chip", text: "Save Output Config", shortcut: "", action: "saveOutputConfig",
-          show: bridge.outputConfigMode === 0 },
-        { kind: "sep" },
-        { kind: "header", text: "File" },
-        { kind: "item", icon: "input", text: "Import Filters…", shortcut: "Ctrl+I", action: "importFilters" },
-        { kind: "item", icon: "output", text: "Export Filters…", shortcut: "Ctrl+E", action: "exportFilters" },
-        { kind: "item", icon: "input", text: "Import Device Configuration…", shortcut: "", action: "importConfig" },
-        { kind: "item", icon: "output", text: "Export Device Configuration…", shortcut: "", action: "exportConfig" },
-        { kind: "sep" },
-        { kind: "header", text: "Tools" },
-        { kind: "item", icon: "sliders", text: "Matrix Mixer", shortcut: "Ctrl+Shift+M", window: "matrix" },
-        { kind: "item", icon: "loudness", text: "Loudness Compensation", shortcut: "Ctrl+Shift+L", window: "loudness" },
-        { kind: "item", icon: "headphones", text: "Headphone Crossfeed", shortcut: "Ctrl+Shift+X", window: "crossfeed" },
-        { kind: "item", icon: "waveform", text: "Volume Leveller", shortcut: "Ctrl+Shift+V", window: "leveller" },
-        { kind: "item", icon: "bassclef", text: "Psychoacoustic Bass", shortcut: "Ctrl+Shift+P", window: "psybass" },
-        { kind: "item", icon: "subwave", text: "Subharmonic Synthesizer", shortcut: "Ctrl+Shift+S", window: "subharm" },
-        { kind: "item", icon: "tube", text: "Tube Modeller", shortcut: "Ctrl+Shift+D", window: "tube" },
-        { kind: "item", icon: "upmix", text: "Stereo Upmixer", shortcut: "Ctrl+Shift+U", window: "upmix" },
-        { kind: "item", icon: "spectrum", text: "Spectrum Analyser", shortcut: "Ctrl+Shift+A", window: "spectrum" },
-        { kind: "item", icon: "signal", text: "Signal Generator", shortcut: "Ctrl+Shift+G", window: "siggen" },
-        { kind: "item", icon: "info", text: "Stats for Nerds", shortcut: "Ctrl+Shift+T", window: "stats" },
-        { kind: "item", icon: "identify", text: "Interrupt Monitor", shortcut: "Ctrl+Shift+I", window: "monitor" },
-        { kind: "sep" },
-        { kind: "item", icon: "gear", text: "Settings", shortcut: "Ctrl+,", window: "settings" },
-        { kind: "sep" },
-        { kind: "item", icon: "chip", text: "Firmware Update…", shortcut: "", window: "firmware" },
-        { kind: "item", icon: "warning", text: "Factory Reset…", shortcut: "", action: "factoryReset", danger: true },
-
-        { kind: "header", text: "Help" },
-        { kind: "item", icon: "cap", text: "Getting Started…", shortcut: "", window: "gettingStarted", help: true },
-        { kind: "item", icon: "sparkles", text: "What's New in DSPi Console", shortcut: "", window: "whatsNew", help: true },
-        { kind: "item", icon: "github", text: "DSPi Console on GitHub", shortcut: "", window: "url:https://github.com/WeebLabs/DSPi-Console-Linux", help: true },
-        { kind: "item", icon: "github", text: "DSPi Firmware on GitHub", shortcut: "", window: "url:https://github.com/WeebLabs/DSPi", help: true }
+    // ── Menus ──
+    // Items: { icon, text, shortcut, action | window | autoeq, danger,
+    //          help (allowed during setup), always (needs no device),
+    //          enabled: false } or { sep: true }
+    readonly property var groups: [
+        { text: "Device", icon: "chip", items: [
+            { icon: "save", text: "Commit Parameters", shortcut: "Ctrl+S", action: "commit" },
+            { icon: "revert", text: "Revert to Saved", action: "revert" },
+            { sep: true },
+            { icon: "speaker", text: "Save Master Volume", action: "saveMasterVolume" },
+            { icon: "chip", text: "Save Output Config", action: "saveOutputConfig" },
+            { sep: true },
+            { icon: "chip", text: "Firmware Update…", window: "firmware" },
+            { icon: "warning", text: "Factory Reset…", action: "factoryReset", danger: true }
+        ]},
+        { text: "File", icon: "input", items: [
+            { icon: "input", text: "Import Filters…", shortcut: "Ctrl+I", action: "importFilters" },
+            { icon: "output", text: "Export Filters…", shortcut: "Ctrl+E", action: "exportFilters" },
+            { sep: true },
+            { icon: "input", text: "Import Device Configuration…", action: "importConfig" },
+            { icon: "output", text: "Export Device Configuration…", action: "exportConfig" }
+        ]},
+        { text: "AutoEQ", icon: "headphones", items: autoeqItems },
+        { text: "Effects", icon: "sliders", items: [
+            { icon: "loudness", text: "Loudness Compensation", shortcut: "Ctrl+Shift+L", window: "loudness" },
+            { icon: "headphones", text: "Headphone Crossfeed", shortcut: "Ctrl+Shift+X", window: "crossfeed" },
+            { icon: "waveform", text: "Volume Leveller", shortcut: "Ctrl+Shift+V", window: "leveller" },
+            { icon: "bassclef", text: "Psychoacoustic Bass", shortcut: "Ctrl+Shift+P", window: "psybass" },
+            { icon: "subwave", text: "Subharmonic Synthesizer", shortcut: "Ctrl+Shift+S", window: "subharm" },
+            { icon: "tube", text: "Tube Modeller", shortcut: "Ctrl+Shift+D", window: "tube" },
+            { icon: "upmix", text: "Stereo Upmixer", shortcut: "Ctrl+Shift+U", window: "upmix" }
+        ]},
+        { text: "Tools", icon: "wrench", items: [
+            { icon: "sliders", text: "Matrix Mixer", shortcut: "Ctrl+Shift+M", window: "matrix" },
+            { sep: true },
+            { icon: "spectrum", text: "Spectrum Analyser", shortcut: "Ctrl+Shift+A", window: "spectrum" },
+            { icon: "signal", text: "Signal Generator", shortcut: "Ctrl+Shift+G", window: "siggen" },
+            { icon: "info", text: "Stats for Nerds", shortcut: "Ctrl+Shift+T", window: "stats" },
+            { icon: "identify", text: "Interrupt Monitor", shortcut: "Ctrl+Shift+I", window: "monitor" }
+        ]},
+        { text: "Help", icon: "question-circle", help: true, items: [
+            { icon: "cap", text: "Getting Started…", window: "gettingStarted", help: true },
+            { icon: "sparkles", text: "What's New in DSPi Console", window: "whatsNew", help: true },
+            { sep: true },
+            { icon: "github", text: "DSPi Console on GitHub", window: "url:https://github.com/WeebLabs/DSPi-Console-Linux", help: true },
+            { icon: "github", text: "DSPi Firmware on GitHub", window: "url:https://github.com/WeebLabs/DSPi", help: true }
+        ]}
     ]
-
-    // Items that are shown and can be activated, in order
-    readonly property var activeRows: {
-        var out = []
-        for (var i = 0; i < rows.length; i++) {
-            var r = rows[i]
-            if (r.kind === "item" && r.show !== false && rowEnabled(r)) out.push(i)
-        }
-        return out
+    // Browse, the favourites (one click applies), and the database
+    readonly property var autoeqItems: {
+        var list = [{ icon: "search", text: "Browse Profiles…", shortcut: "Ctrl+Shift+B", window: "autoeq" }, { sep: true }]
+        var favs = autoeq.favorites
+        if (favs.length === 0) list.push({ icon: "heart", text: "No favorites yet", enabled: false })
+        for (var i = 0; i < favs.length; i++) list.push({ icon: "heart", text: favs[i].name, autoeq: favs[i].id })
+        list.push({ icon: "xmark", text: "Clear Favorites", action: "clearFavorites", always: true, enabled: favs.length > 0 })
+        list.push({ sep: true })
+        list.push({ icon: "revert", text: "Update Database…", action: "autoeqUpdate", always: true })
+        return list
     }
-    property int current: -1   // index into rows
-
-    // While the Getting Started wizard has the window: only Settings and Help
-    property bool restricted: false
+    readonly property var settingsItem: ({ icon: "gear", text: "Settings", shortcut: "Ctrl+,", window: "settings" })
 
     function rowEnabled(r) {
+        if (r.sep || r.enabled === false) return false
         if (restricted && !r.help && r.window !== "settings") return false
-        if (r.window) return true
+        if (r.window || r.always) return true
         return bridge.connected
     }
+    function groupEnabled(g) {
+        for (var i = 0; i < g.items.length; i++) if (rowEnabled(g.items[i])) return true
+        return false
+    }
 
-    function activate(i) {
-        var r = rows[i]
-        if (!r || r.kind !== "item" || !rowEnabled(r)) return
+    function activateItem(r) {
+        if (!r || !rowEnabled(r)) return
         close()
         if (r.window) { openWindow(r.window); return }
+        if (r.autoeq) { autoeq.apply(r.autoeq); return }
         switch (r.action) {
         case "commit": commitRequested(); break
         case "revert": revertRequested(); break
         case "saveMasterVolume": bridge.saveMasterVolume(); break
         case "saveOutputConfig": bridge.saveOutputConfig(); break
         case "factoryReset": factoryResetRequested(); break
+        case "clearFavorites": autoeq.clearFavorites(); break
+        case "autoeqUpdate": autoeqUpdateRequested(); break
         default: fileAction(r.action)
         }
     }
 
+    // ── Top level: groups, then Settings ──
+    property int current: -1          // 0..groups.length-1, groups.length = Settings
+    property int openGroup: -1
+    readonly property int rowCount: groups.length + 1
+
+    function openSubmenu(i, focusIt) {
+        if (i < 0 || i >= groups.length || !groupEnabled(groups[i])) { sub.close(); openGroup = -1; return }
+        current = i
+        openGroup = i
+        var row = groupRows.itemAt(i)
+        sub.items = groups[i].items.map(function (r, k) {
+            return r.sep ? { separator: true }
+                         : { key: "" + k, text: r.text, icon: r.icon, shortcut: r.shortcut || "",
+                             enabled: rowEnabled(r), danger: r.danger === true }
+        })
+        sub.openAt(row, row.width + MenuStyle.padding + 2, -MenuStyle.padding)
+        if (focusIt) { sub.contentItem.forceActiveFocus(); sub.step(1) }
+    }
     function step(dir) {
-        var list = activeRows
-        if (list.length === 0) return
-        var pos = list.indexOf(current)
-        pos = pos < 0 ? (dir > 0 ? 0 : list.length - 1) : (pos + dir + list.length) % list.length
-        current = list[pos]
+        current = (current < 0 ? (dir > 0 ? -1 : 0) : current) + dir
+        current = (current + rowCount) % rowCount
+    }
+
+    ActionMenu {
+        id: sub
+        parent: menu.parent
+        onTriggered: {
+            var g = menu.groups[menu.openGroup]
+            if (g) menu.activateItem(g.items[parseInt(key)])
+        }
+        onClosed: if (menu.visible && menu.openGroup >= 0) { menu.openGroup = -1; menu.contentItem.forceActiveFocus() }
     }
 
     // ── Open / close animation ──
@@ -183,8 +214,9 @@ Popup {
 
         Keys.onUpPressed: menu.step(-1)
         Keys.onDownPressed: menu.step(1)
-        Keys.onReturnPressed: menu.activate(menu.current)
-        Keys.onEnterPressed: menu.activate(menu.current)
+        Keys.onRightPressed: menu.openSubmenu(menu.current, true)
+        Keys.onReturnPressed: menu.current === menu.groups.length ? menu.activateItem(menu.settingsItem) : menu.openSubmenu(menu.current, true)
+        Keys.onEnterPressed: menu.current === menu.groups.length ? menu.activateItem(menu.settingsItem) : menu.openSubmenu(menu.current, true)
 
         // Device summary: one line; the serial number is in the tooltip
         Item {
@@ -217,6 +249,7 @@ Popup {
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
+                onEntered: { sub.close(); menu.current = -1 }
             }
             ToolTip.visible: deviceMouse.containsMouse && bridge.connected
             ToolTip.delay: 500
@@ -226,100 +259,104 @@ Popup {
         Item { width: 1; height: MenuStyle.padding }
 
         Repeater {
-            model: menu.rows
-
-            Loader {
+            id: groupRows
+            model: menu.groups
+            Item {
+                id: row
                 width: parent.width
-                readonly property var row: modelData
-                readonly property int rowIndex: index
-                active: row.show !== false
-                visible: active
-                sourceComponent: row.kind === "header" ? headerRow : row.kind === "sep" ? sepRow : itemRow
+                height: MenuStyle.rowHeight
+                readonly property bool usable: menu.groupEnabled(modelData)
+                readonly property bool hot: (menu.current === index || menu.openGroup === index) && usable
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.leftMargin: 2
+                    anchors.rightMargin: 2
+                    radius: MenuStyle.rowRadius
+                    color: row.hot ? MenuStyle.highlight : "transparent"
+                }
+                Icon {
+                    id: groupIcon
+                    x: MenuStyle.sideInset
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: modelData.icon
+                    size: MenuStyle.iconSize
+                    color: row.hot ? "white" : row.usable ? MenuStyle.iconColor : Qt.rgba(1, 1, 1, 0.25)
+                }
+                Text {
+                    anchors.left: groupIcon.right
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData.text
+                    font.pixelSize: MenuStyle.fontSize
+                    color: !row.usable ? Qt.rgba(1, 1, 1, 0.3) : row.hot ? "white" : MenuStyle.text
+                }
+                Icon {
+                    anchors.right: parent.right
+                    anchors.rightMargin: MenuStyle.sideInset
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "chev-right"
+                    size: 12
+                    color: row.hot ? "white" : MenuStyle.dimText
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: menu.openSubmenu(index, false)
+                    onClicked: menu.openSubmenu(index, false)
+                }
             }
         }
-    }
 
-    Component {
-        id: headerRow
-        Text {
-            text: row.text.toUpperCase()
-            font.pixelSize: MenuStyle.headerFontSize
-            font.weight: Font.Bold
-            font.letterSpacing: 0.8
-            color: Qt.rgba(1, 1, 1, 0.38)
-            leftPadding: MenuStyle.sideInset
-            topPadding: 6
-            bottomPadding: 3
-        }
-    }
-
-    Component {
-        id: sepRow
         Item {
+            width: parent.width
             height: 7
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                x: 8
-                width: parent.width - 16
-                height: 1
-                color: MenuStyle.separator
-            }
+            Rectangle { anchors.verticalCenter: parent.verticalCenter; x: 8; width: parent.width - 16; height: 1; color: MenuStyle.separator }
         }
-    }
 
-    Component {
-        id: itemRow
+        // Settings
         Item {
-            id: item
+            id: settingsRow
+            width: parent.width
             height: MenuStyle.rowHeight
-            readonly property bool enabled_: menu.rowEnabled(row)
-            readonly property bool hot: menu.current === rowIndex && enabled_
-            readonly property color fg: !enabled_ ? Qt.rgba(1, 1, 1, 0.3)
-                                       : hot ? "white"
-                                       : row.danger ? MenuStyle.dangerText : MenuStyle.text
-
+            readonly property bool hot: menu.current === menu.groups.length
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 2
                 anchors.rightMargin: 2
                 radius: MenuStyle.rowRadius
-                color: item.hot ? (row.danger ? MenuStyle.danger : MenuStyle.highlight) : "transparent"
-                Behavior on color { ColorAnimation { duration: 80 } }
+                color: settingsRow.hot ? MenuStyle.highlight : "transparent"
             }
             Icon {
-                id: rowIcon
+                id: settingsIcon
                 x: MenuStyle.sideInset
                 anchors.verticalCenter: parent.verticalCenter
-                name: row.icon
+                name: "gear"
                 size: MenuStyle.iconSize
-                color: item.hot ? "white" : row.danger && item.enabled_ ? MenuStyle.dangerText
-                     : item.enabled_ ? MenuStyle.iconColor : Qt.rgba(1, 1, 1, 0.25)
+                color: settingsRow.hot ? "white" : MenuStyle.iconColor
             }
             Text {
-                anchors.left: rowIcon.right
+                anchors.left: settingsIcon.right
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
-                text: row.text
+                text: "Settings"
                 font.pixelSize: MenuStyle.fontSize
-                color: item.fg
+                color: settingsRow.hot ? "white" : MenuStyle.text
             }
             Text {
                 anchors.right: parent.right
                 anchors.rightMargin: MenuStyle.sideInset
                 anchors.verticalCenter: parent.verticalCenter
-                text: row.shortcut || ""
+                text: "Ctrl+,"
                 font.pixelSize: MenuStyle.smallFontSize
-                color: item.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
+                color: settingsRow.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
             }
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true
-                cursorShape: item.enabled_ ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onEntered: menu.current = rowIndex
-                onExited: if (menu.current === rowIndex) menu.current = -1
-                onClicked: menu.activate(rowIndex)
+                cursorShape: Qt.PointingHandCursor
+                onEntered: { sub.close(); menu.openGroup = -1; menu.current = menu.groups.length }
+                onClicked: menu.activateItem(menu.settingsItem)
             }
-            ToolTip.visible: false
         }
     }
 }

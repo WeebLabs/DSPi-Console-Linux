@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 if(APPLE)
     set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5")
 endif()
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets Quick QuickControls2 Qml)
+find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets Quick QuickControls2 Qml Network)
 
 set(DSPI_CORE_DIR "${CMAKE_SOURCE_DIR}/..")
 
@@ -23,6 +23,7 @@ add_executable(DSPiConsole
     src/SiggenController.cpp
     src/CsController.cpp
     src/FirmwareUpdater.cpp
+    src/AutoEqLibrary.cpp
     src/StatsController.cpp
     src/MonitorModel.cpp
     src/ConfigFiles.cpp
@@ -37,7 +38,7 @@ target_include_directories(DSPiConsole PRIVATE
 )
 
 target_link_libraries(DSPiConsole PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Quick Qt5::QuickControls2 Qt5::Qml
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Quick Qt5::QuickControls2 Qt5::Qml Qt5::Network
     ${DSPI_CORE_DIR}/target/release/libdspi_core.a
 )
 

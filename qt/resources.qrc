@@ -11,9 +11,12 @@
         <file>qml/LoudnessWindow.qml</file>
         <file>qml/CrossfeedWindow.qml</file>
         <file>qml/StatsWindow.qml</file>
+        <file>qml/AutoEqRebuildWindow.qml</file>
+        <file>qml/AutoEqBrowserWindow.qml</file>
         <file>qml/WhatsNewWindow.qml</file>
         <file>qml/GettingStartedView.qml</file>
         <file>whatsnew.json</file>
+        <file>autoeq/autoeq_database.json</file>
         <file>qml/components/Spinner.qml</file>
         <file>qml/components/AppButton.qml</file>
         <file>qml/components/InstallWritingCard.qml</file>
@@ -57,6 +60,9 @@
         <file>icons/signal.svg</file>
         <file>icons/play.svg</file>
         <file>icons/check.svg</file>
+        <file>icons/heart.svg</file>
+        <file>icons/heart-fill.svg</file>
+        <file>icons/earbuds.svg</file>
         <file>icons/cap.svg</file>
         <file>icons/github.svg</file>
         <file>icons/sparkles.svg</file>

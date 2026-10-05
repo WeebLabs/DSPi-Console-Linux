@@ -220,18 +220,33 @@ Popup {
             }
         }
 
-        // Buttons share the full width equally
-        Row {
+        // Buttons share the full width equally, or stack full width when a
+        // label wouldn't fit (as a macOS alert with many buttons does)
+        TextMetrics {
+            id: widestButton
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
+            text: {
+                var t = ""
+                for (var i = 0; i < dlg.buttons.length; i++) if (dlg.buttons[i].text.length > t.length) t = dlg.buttons[i].text
+                return t
+            }
+        }
+        Grid {
             id: buttonRow
+            readonly property real share: (width - columnSpacing * (dlg.buttons.length - 1)) / Math.max(1, dlg.buttons.length)
+            readonly property bool stacked: widestButton.advanceWidth + 24 > share
             width: parent.width
-            spacing: 8
+            columns: stacked ? 1 : Math.max(1, dlg.buttons.length)
+            columnSpacing: 8
+            rowSpacing: 6
             Repeater {
                 model: dlg.buttons
                 Rectangle {
                     id: btn
                     readonly property string role: modelData.role || "secondary"
                     readonly property bool filled: role === "primary" || role === "destructive"
-                    width: (buttonRow.width - buttonRow.spacing * (dlg.buttons.length - 1)) / dlg.buttons.length
+                    width: buttonRow.stacked ? buttonRow.width : buttonRow.share
                     height: 32
                     radius: 8
                     color: filled ? (role === "destructive" ? (btnMouse.pressed ? "#b52a31" : "#d9363e")

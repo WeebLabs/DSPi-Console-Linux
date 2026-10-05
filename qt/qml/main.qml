@@ -644,6 +644,8 @@ ApplicationWindow {
     TubeModellerWindow { id: tubeWindow }
     UpmixerWindow { id: upmixWindow }
     FirmwareUpdateWindow { id: firmwareWindow; onExportRequested: root.fileAction("exportConfig") }
+    AutoEqBrowserWindow { id: autoeqWindow }
+    AutoEqRebuildWindow { id: autoeqRebuildWindow }
     WhatsNewWindow { id: whatsNewWindow; onVisibleChanged: if (visible) onboarding.whatsNewShown = Qt.application.version }
 
     function openToolWindow(name) {
@@ -653,7 +655,8 @@ ApplicationWindow {
                   leveller: levellerWindow, psybass: psybassWindow, subharm: subharmWindow,
                   tube: tubeWindow, upmix: upmixWindow, stats: statsWindow,
                   spectrum: spectrumWindow, graph: graphWindow, siggen: siggenWindow, monitor: monitorWindow,
-                  settings: settingsWindow, firmware: firmwareWindow, whatsNew: whatsNewWindow }[name]
+                  settings: settingsWindow, firmware: firmwareWindow, whatsNew: whatsNewWindow,
+                  autoeq: autoeqWindow, autoeqRebuild: autoeqRebuildWindow }[name]
         if (w) { w.visible = true; w.raise(); w.requestActivate() }
     }
 
@@ -671,6 +674,7 @@ ApplicationWindow {
         onFactoryResetRequested: factoryResetDialog.open()
         onOpenWindow: root.openToolWindow(name)
         onFileAction: root.fileAction(name)
+        onAutoeqUpdateRequested: autoeqUpdate.open()
         // As on macOS, setup leaves only Settings and Help in the menu
         restricted: root.showWizard
     }
@@ -790,6 +794,47 @@ ApplicationWindow {
         buttons: [{ key: "ok", text: "OK", role: "primary" }]
     }
 
+    // ── AutoEQ database ──
+    AppDialog {
+        id: autoeqUpdate
+        icon: "headphones"
+        title: "Update AutoEQ Database"
+        message: { autoeq.entryCount; return "Current database: " + (autoeq.databaseDate || "Unknown") + "\nEntries: " + autoeq.entryCount + "\n\nChoose an update method:" }
+        onAboutToShow: autoeq.load()
+        buttons: [{ key: "rebuild", text: "Rebuild from GitHub", role: "primary" }, { key: "import", text: "Import File…" }]
+                 .concat(autoeq.hasUserDatabase ? [{ key: "reset", text: "Reset to Built-in" }] : [])
+                 .concat([{ key: "cancel", text: "Cancel" }])
+        onChosen: {
+            if (key === "rebuild") autoeqRebuildConfirm.open()
+            else if (key === "import") autoeqImportDialog.open()
+            else if (key === "reset") { var r = autoeq.resetToBuiltIn(); root.showFileResult(r.ok ? "AutoEQ Database" : "Reset Failed", [r.message], r.ok) }
+        }
+    }
+    AppDialog {
+        id: autoeqRebuildConfirm
+        icon: "warning"
+        iconTint: "#ff9f0a"
+        title: "Rebuild AutoEQ Database"
+        message: "You are about to rebuild the AutoEQ database by downloading all profiles from GitHub.\n\nThis requires an internet connection and may take several minutes.\n\nDo you wish to proceed?"
+        buttons: [{ key: "cancel", text: "Cancel" }, { key: "rebuild", text: "Rebuild", role: "primary" }]
+        onChosen: if (key === "rebuild") { autoeq.startRebuild(); root.openToolWindow("autoeqRebuild") }
+    }
+    Connections {
+        target: autoeq
+        function onRebuildFinished(ok, message) {
+            autoeqRebuildWindow.close()
+            root.showFileResult(ok ? "AutoEQ Database" : "Rebuild Failed", [message], ok)
+        }
+    }
+    Platform.FileDialog {
+        id: autoeqImportDialog
+        title: "Import AutoEQ Database"
+        fileMode: Platform.FileDialog.OpenFile
+        folder: root.documentsFolder
+        nameFilters: ["AutoEQ database (*.json)", "All files (*)"]
+        onAccepted: { var r = autoeq.importFile(file); root.showFileResult(r.ok ? "AutoEQ Database" : "Import Failed", [r.message], r.ok) }
+    }
+
     AppDialog {
         id: factoryResetDialog
         icon: "warning"
@@ -821,6 +866,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+E"; enabled: !root.showWizard && bridge.connected && !root.textFocused; onActivated: root.fileAction("exportFilters") }
     Shortcut { sequence: "Ctrl+Shift+I"; enabled: !root.showWizard; onActivated: root.openToolWindow("monitor") }
     Shortcut { sequence: "Ctrl+,"; onActivated: root.openToolWindow("settings") }
+    Shortcut { sequence: "Ctrl+Shift+B"; enabled: !root.showWizard; onActivated: root.openToolWindow("autoeq") }
     StatsWindow { id: statsWindow }
     SpectrumAnalyserWindow { id: spectrumWindow; app: root }
     GraphWindow { id: graphWindow }
