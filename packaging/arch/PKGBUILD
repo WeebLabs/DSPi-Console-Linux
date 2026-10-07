@@ -3,12 +3,12 @@
 pkgname=dspi-console
 pkgver=1.1.6beta4
 pkgrel=1
-_commit=1753b4885fd9710b8bab3c6e8bd5a2d881cb85a5
+_commit=c52952b7dd4d681d0034fb17ca8796da94c6c0a3
 pkgdesc="Control application for the DSPi audio processor"
 arch=('x86_64')
 url="https://github.com/WeebLabs/DSPi-Console-Linux"
 license=('unknown')
-depends=('qt5-base' 'qt5-declarative' 'qt5-quickcontrols2' 'qt5-svg' 'qt5-wayland'
+depends=('qt5-base' 'qt5-declarative' 'qt5-quickcontrols2' 'qt5-svg' 'qt5-wayland' 'hicolor-icon-theme'
          'kwindowsystem5' 'libusb' 'systemd-libs' 'libx11' 'gcc-libs' 'glibc')
 makedepends=('git' 'cargo' 'cmake')
 optdepends=('kwayland-integration: blurred sidebar on KDE Plasma (Wayland)'

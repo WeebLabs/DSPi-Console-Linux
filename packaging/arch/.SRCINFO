@@ -14,6 +14,7 @@ pkgbase = dspi-console
 	depends = qt5-quickcontrols2
 	depends = qt5-svg
 	depends = qt5-wayland
+	depends = hicolor-icon-theme
 	depends = kwindowsystem5
 	depends = libusb
 	depends = systemd-libs
@@ -23,7 +24,7 @@ pkgbase = dspi-console
 	optdepends = kwayland-integration: blurred sidebar on KDE Plasma (Wayland)
 	optdepends = xdg-desktop-portal: native file dialogs
 	optdepends = udisks2: firmware updates
-	source = dspi-console::git+https://github.com/WeebLabs/DSPi-Console-Linux.git#commit=1753b4885fd9710b8bab3c6e8bd5a2d881cb85a5
+	source = dspi-console::git+https://github.com/WeebLabs/DSPi-Console-Linux.git#commit=c52952b7dd4d681d0034fb17ca8796da94c6c0a3
 	sha256sums = SKIP
 
 pkgname = dspi-console
