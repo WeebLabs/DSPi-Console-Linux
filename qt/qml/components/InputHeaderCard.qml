@@ -39,8 +39,10 @@ Rectangle {
     function refresh() {
         linked = bridge.isInputLinked(channelId)
         pairLive = bridge.pairAvailable(channelId)
-        if (!preampSlider.pressed) preampDB = bridge.inputPreampDB(inputIndex)
+        if (!preampSlider.pressed) preampDB = bridge.inputPreampDB(inputOfApp(channelId))
     }
+    // refresh() ends the bindings above, so a switch to another input re-reads
+    onChannelIdChanged: refresh()
 
     Connections {
         target: bridge

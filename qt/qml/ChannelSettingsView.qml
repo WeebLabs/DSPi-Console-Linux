@@ -20,14 +20,19 @@ Rectangle {
     property bool isMuted: bridge.outputMuted(outputIndex)
     property int routingRev: 0   // bumps on state change so routing bindings re-read
 
+    // The values are assigned from here on, which ends their bindings, so a
+    // switch to another output re-reads them too
+    function refresh() {
+        if (!gainSection.dragging) gainDB = bridge.outputGainDB(outputIndex)
+        if (!delaySection.dragging) delayMS = bridge.outputDelayMS(outputIndex)
+        isMuted = bridge.outputMuted(outputIndex)
+        routingRev++
+    }
+    onOutputIndexChanged: refresh()
+
     Connections {
         target: bridge
-        function onStateChanged() {
-            if (!gainSection.dragging) gainDB = bridge.outputGainDB(outputIndex)
-            if (!delaySection.dragging) delayMS = bridge.outputDelayMS(outputIndex)
-            isMuted = bridge.outputMuted(outputIndex)
-            routingRev++
-        }
+        function onStateChanged() { settingsRoot.refresh() }
     }
 
     component SectionLabel: Text {
