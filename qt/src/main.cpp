@@ -6,6 +6,8 @@
 #include <QPalette>
 #include <QFont>
 #include <QSettings>
+#include <QFile>
+#include <cstdio>
 
 #ifdef Q_OS_MACOS
 #include <objc/runtime.h>
@@ -122,6 +124,88 @@ static void setupPlatformEffects(QQuickWindow *qw)
 #endif
 }
 
+#ifndef Q_OS_MACOS
+// Qt 5's Wayland client takes the cursor theme and size only from
+// XCURSOR_THEME / XCURSOR_SIZE ("default" at 24 or 32 px without them), and
+// Plasma and GNOME on Wayland don't export them. It reads them when it first
+// draws a cursor, so setting them once the platform is up still counts. On
+// X11 Qt follows the desktop itself (XSETTINGS, X resources).
+
+// A key of a KDE config file group: the user's file first, then the system's
+// (the KConfig cascade). Keys may carry "[$e]" style flags after the name.
+static QByteArray kdeConfigValue(const char *file, const QByteArray &group, const QByteArray &key)
+{
+    QByteArrayList dirs;
+    const QByteArray configHome = qgetenv("XDG_CONFIG_HOME");
+    dirs << (configHome.isEmpty() ? qgetenv("HOME") + "/.config" : configHome);
+    const QByteArray configDirs = qgetenv("XDG_CONFIG_DIRS");
+    dirs << (configDirs.isEmpty() ? QByteArray("/etc/xdg") : configDirs).split(':');
+    for (const QByteArray &dir : dirs) {
+        QFile f(QString::fromLocal8Bit(dir + '/' + file));
+        if (dir.isEmpty() || !f.open(QIODevice::ReadOnly)) continue;
+        bool inGroup = false;
+        while (!f.atEnd()) {
+            const QByteArray line = f.readLine().trimmed();
+            if (line.startsWith('[')) { inGroup = line == '[' + group + ']'; continue; }
+            const int eq = line.indexOf('=');
+            if (!inGroup || eq <= 0) continue;
+            QByteArray name = line.left(eq).trimmed();
+            if (name.contains('[')) name.truncate(name.indexOf('['));
+            if (name == key) return line.mid(eq + 1).trimmed();
+        }
+    }
+    return {};
+}
+
+// The cursor theme and size of GNOME's interface settings, through gsettings
+// (GNOME, and the wlroots desktops whose settings tools write the same keys);
+// empty without them. One line per key, empty when a read fails.
+static QByteArrayList gnomeCursorSettings()
+{
+    FILE *p = popen("for k in cursor-theme cursor-size; do"
+                    " gsettings get org.gnome.desktop.interface $k 2>/dev/null || echo; done", "r");
+    if (!p) return {};
+    char buf[256];
+    QByteArray out;
+    while (fgets(buf, sizeof buf, p)) out += buf;
+    pclose(p);
+    QByteArrayList values = out.split('\n');
+    for (QByteArray &v : values) {
+        v = v.trimmed();
+        if (v.size() >= 2 && v.startsWith('\'') && v.endsWith('\''))
+            v = v.mid(1, v.size() - 2);                             // 'Adwaita'
+        else
+            v = v.mid(v.lastIndexOf(' ') + 1);                      // 24, uint32 24
+    }
+    return values;
+}
+
+static void adoptDesktopCursor()
+{
+    const bool needTheme = qEnvironmentVariableIsEmpty("XCURSOR_THEME");
+    const bool needSize = qEnvironmentVariableIsEmpty("XCURSOR_SIZE");
+    if ((!needTheme && !needSize) || !QGuiApplication::platformName().startsWith(QLatin1String("wayland")))
+        return;
+
+    QByteArray theme, size;
+    if (qgetenv("XDG_CURRENT_DESKTOP").split(':').contains("KDE")) {
+        // Plasma's own defaults when the user hasn't chosen
+        theme = kdeConfigValue("kcminputrc", "Mouse", "cursorTheme");
+        size = kdeConfigValue("kcminputrc", "Mouse", "cursorSize");
+        if (theme.isEmpty()) theme = "breeze_cursors";
+        if (size.isEmpty()) size = "24";
+    } else {
+        const QByteArrayList gnome = gnomeCursorSettings();
+        theme = gnome.value(0);
+        size = gnome.value(1);
+    }
+    if (needTheme && !theme.isEmpty() && !theme.contains('/')) qputenv("XCURSOR_THEME", theme);
+    bool ok = false;
+    const int px = size.toInt(&ok);
+    if (needSize && ok && px > 0 && px <= 512) qputenv("XCURSOR_SIZE", QByteArray::number(px));
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 #ifndef Q_OS_MACOS
@@ -139,6 +223,9 @@ int main(int argc, char *argv[])
     QSurfaceFormat::setDefaultFormat(format);
 #endif
     QApplication app(argc, argv);
+#ifndef Q_OS_MACOS
+    adoptDesktopCursor();   // before any window shows a cursor
+#endif
     app.installEventFilter(new TextFocusReleaser(&app));
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
