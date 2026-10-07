@@ -29,6 +29,8 @@ Item {
     function ff(ch, b) { revision; return bridge.filterFreq(ch, b) }
     function fg(ch, b) { revision; return bridge.filterGain(ch, b) }
     function fq(ch, b) { revision; return bridge.filterQ(ch, b) }
+    // Whole ms as before; a fractional delay shows its decimals (up to 4)
+    function delayText(ms) { return String(Math.round(ms * 10000) / 10000) }
     height: 32 + 1 + (bandCount * 24)
 
     // An off band shows a dash, as on macOS
@@ -149,7 +151,7 @@ Item {
                 x: (isStereo ? parent.width / 2 : parent.width - cardRoot.gearSlot) - width - 10
                 Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Delay: " + cardRoot.leftDelay.toFixed(0) + "ms"
+                text: "Delay: " + cardRoot.delayText(cardRoot.leftDelay) + "ms"
                 font.pixelSize: 9
                 font.family: root.monoFont
                 color: Qt.rgba(1, 1, 1, 0.5)
@@ -159,7 +161,7 @@ Item {
                 x: parent.width - cardRoot.gearSlot - width - 10
                 Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Delay: " + cardRoot.rightDelay.toFixed(0) + "ms"
+                text: "Delay: " + cardRoot.delayText(cardRoot.rightDelay) + "ms"
                 font.pixelSize: 9
                 font.family: root.monoFont
                 color: Qt.rgba(1, 1, 1, 0.5)

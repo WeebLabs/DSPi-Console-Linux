@@ -19,6 +19,12 @@ fn val(v: f32) -> String {
     if v == v.round() && v.abs() < 100000.0 { format!("{v:.0}") } else { format!("{v:.1}") }
 }
 
+/// A delay to its stored 0.0001 ms, without trailing zeros ("1", "1.25")
+fn ms(v: f32) -> String {
+    let s = format!("{v:.4}");
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
 fn on(b: bool) -> &'static str {
     if b { "enabled" } else { "disabled" }
 }
@@ -230,7 +236,7 @@ pub fn diff(o: &DspState, n: &DspState) -> Vec<String> {
     // Input channel delays (outputs have their own below)
     for w in 0..ins.min(MAX_CHANNELS) {
         if o.channel_delays[w] != n.channel_delays[w] {
-            c.push(format!("{} delay: {} ms → {} ms", channel_label(n, w), val(o.channel_delays[w]), val(n.channel_delays[w])));
+            c.push(format!("{} delay: {} ms → {} ms", channel_label(n, w), ms(o.channel_delays[w]), ms(n.channel_delays[w])));
         }
     }
 
@@ -257,7 +263,7 @@ pub fn diff(o: &DspState, n: &DspState) -> Vec<String> {
             c.push(format!("{name} gain: {} → {}", db(o.output_gain_db[i]), db(n.output_gain_db[i])));
         }
         if o.output_delay_ms[i] != n.output_delay_ms[i] {
-            c.push(format!("{name} delay: {} ms → {} ms", val(o.output_delay_ms[i]), val(n.output_delay_ms[i])));
+            c.push(format!("{name} delay: {} ms → {} ms", ms(o.output_delay_ms[i]), ms(n.output_delay_ms[i])));
         }
     }
 
@@ -360,6 +366,14 @@ impl DspiCore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn delays_keep_their_decimals() {
+        assert_eq!(ms(0.0), "0");
+        assert_eq!(ms(10.0), "10");
+        assert_eq!(ms(1.02), "1.02");
+        assert_eq!(ms(1.2346), "1.2346");
+    }
 
     #[test]
     fn diff_reports_edits_and_respects_modes() {

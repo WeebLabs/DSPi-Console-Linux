@@ -353,9 +353,9 @@ pub fn quantize_gain(db: f32) -> f32 {
     }
 }
 
-/// Quantize delay to whole milliseconds, mapping −0.0 to 0.0.
+/// Quantize delay to 0.0001 ms (as the Windows Console does), mapping −0.0 to 0.0.
 pub fn quantize_delay(ms: f32) -> f32 {
-    let val = ms.round();
+    let val = (ms * 10000.0).round() / 10000.0;
     if val == 0.0 {
         0.0
     } else {
@@ -482,6 +482,8 @@ mod tests {
         assert_eq!(quantize_gain(3.14), 3.1);
         assert_eq!(quantize_gain(3.15), 3.2);
         assert_eq!(quantize_gain(-0.0).to_bits(), 0.0f32.to_bits());
-        assert_eq!(quantize_delay(-0.2).to_bits(), 0.0f32.to_bits());
+        assert_eq!(quantize_delay(-0.00002).to_bits(), 0.0f32.to_bits());
+        assert_eq!(quantize_delay(0.25), 0.25);
+        assert_eq!(quantize_delay(1.23456), 1.2346);
     }
 }

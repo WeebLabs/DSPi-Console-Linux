@@ -67,6 +67,8 @@ Rectangle {
         property string label: ""
         property string unit: ""
         property int decimals: 1
+        property int maxDecimals: decimals
+        property int fieldWidth: 54
         property real value: 0
         property real from: 0
         property real to: 100
@@ -91,8 +93,9 @@ Rectangle {
             SectionLabel { text: sec.label }
             Item { Layout.fillWidth: true }
             ValueField {
-                fieldWidth: 54; height: 22
-                suffix: sec.unit; decimals: sec.decimals; wheelStep: sec.stepSize
+                fieldWidth: sec.fieldWidth; height: 22
+                suffix: sec.unit; decimals: sec.decimals; maxDecimals: sec.maxDecimals
+                wheelStep: sec.stepSize
                 minValue: sec.from; maxValue: sec.to
                 value: sec.shown
                 onValueEdited: sec.committed(newValue)
@@ -102,6 +105,7 @@ Rectangle {
             id: slider
             Layout.fillWidth: true
             from: sec.from; to: sec.to; stepSize: sec.stepSize
+            snapMode: Slider.SnapAlways   // drags land on the step (whole ms of delay)
             value: sec.shown
             // A press that didn't move commits nothing, so a value set
             // outside the slider's range elsewhere stays as it is
@@ -226,7 +230,9 @@ Rectangle {
         // ── Delay ──
         LevelSection {
             id: delaySection
-            label: "DELAY"; unit: "ms"; decimals: 0
+            // As on Windows: the slider and wheel step whole ms, typing
+            // takes up to 0.0001 ms
+            label: "DELAY"; unit: "ms"; decimals: 2; maxDecimals: 4; fieldWidth: 60
             from: 0; to: bridge.maxDelayMs; stepSize: 1
             value: delayMS
             onMoved: bridge.sendOutputDelayToDevice(outputIndex, v)

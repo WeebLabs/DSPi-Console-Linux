@@ -391,7 +391,7 @@ AppWindow {
                             opacity: outEnabled(index) ? 1.0 : 0.4
                             ValueField {
                                 anchors.centerIn: parent
-                                fieldWidth: 44; height: 22; suffix: "ms"; decimals: 0; wheelStep: 1
+                                fieldWidth: 60; height: 22; suffix: "ms"; decimals: 2; maxDecimals: 4; wheelStep: 1
                                 minValue: 0; maxValue: bridge.maxDelayMs; plainWheel: true
                                 value: { rev; return bridge.outputDelayMS(index) }
                                 onValueEdited: bridge.setOutputDelay(index, newValue)

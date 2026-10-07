@@ -12,6 +12,9 @@ Row {
     property real value: 0
     property string suffix: ""
     property int decimals: 1
+    // Up to this many decimals show when the value has them ("0.00##" for
+    // decimals 2, maxDecimals 4); typed values keep them
+    property int maxDecimals: decimals
     property real minValue: -999
     property real maxValue: 999
     property int fieldWidth: 60
@@ -65,7 +68,11 @@ Row {
 
         function formatValue(v) {
             if (!isNaN(offAt) && Math.abs(v - offAt) < 1e-4) return offText
-            return v <= infinityAt ? "-∞" : v.toFixed(decimals)
+            if (v <= infinityAt) return "-∞"
+            var s = v.toFixed(Math.max(decimals, maxDecimals))
+            for (var extra = maxDecimals - decimals; extra > 0 && s.charAt(s.length - 1) === "0"; extra--)
+                s = s.slice(0, -1)
+            return s.charAt(s.length - 1) === "." ? s.slice(0, -1) : s
         }
 
         onEditingFinished: {
