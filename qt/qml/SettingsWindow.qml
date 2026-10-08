@@ -15,12 +15,17 @@ AppWindow {
     id: settingsWindow
     title: "Settings"
     visible: false
-    width: 860
-    height: 600 + titlebarHeight
-    minimumWidth: 720
-    minimumHeight: 480 + titlebarHeight
+    // macOS: the native Settings window's size (664 x 584 pt, measured)
+    width: isMacOS ? 664 : 860
+    height: isMacOS ? 584 : 600 + titlebarHeight
+    minimumWidth: isMacOS ? 600 : 720
+    minimumHeight: isMacOS ? 480 : 480 + titlebarHeight
 
-    readonly property int sidebarWidth: 232
+    readonly property int sidebarWidth: isMacOS ? 180 : 232
+    // macOS: the sidebar follows System Settings ▸ Appearance ▸ Sidebar icon
+    // size, as the native List does: rows of 24 / 28 / 32 pt with 11 / 13 / 15 pt text
+    readonly property int sidebarRowHeight: isMacOS ? [28, 24, 28, 32][macSidebarSizeMode] : 28
+    readonly property int sidebarFontSize: isMacOS ? [13, 11, 13, 15][macSidebarSizeMode] : 13
 
     // Sidebar runs up under the shared titlebar and is blurred on KDE
     contentUnderTitlebar: true
@@ -42,31 +47,31 @@ AppWindow {
     // keywords: extra search terms; needsDevice: hidden while disconnected.
     readonly property var groups: [
         { title: "Application", pages: [
-            { id: "about", title: "About", icon: "info", tint: isMacOS ? "#646971" : "#8e8e93",
+            { id: "about", title: "About", icon: isMacOS ? "gear" : "info", tint: isMacOS ? "#646971" : "#8e8e93",
               source: "settings/pages/AboutPage.qml", keywords: "version links github discord patreon ko-fi youtube" },
-            { id: "advanced", title: "Advanced", icon: "wrench", tint: isMacOS ? "#727880" : "#636366",
+            { id: "advanced", title: "Advanced", icon: isMacOS ? "gears" : "wrench", tint: isMacOS ? "#727880" : "#636366",
               source: "settings/pages/AdvancedPage.qml", keywords: "channel names reset device serial firmware" }
         ]},
         { title: "Display", pages: [
-            { id: "graphing", title: "Graphing", icon: "chart", tint: isMacOS ? "#587a89" : "#30b0c7",
+            { id: "graphing", title: "Graphing", icon: isMacOS ? "ecg" : "chart", tint: isMacOS ? "#587a89" : "#30b0c7",
               source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid opacity labels range center frequency pop out popout window follow phase readout" },
-            { id: "spectrum", title: "Spectrum Analyser", icon: "spectrum", tint: isMacOS ? "#4c808a" : "#5e5ce6",
+            { id: "spectrum", title: "Spectrum Analyser", icon: isMacOS ? "wave-search" : "spectrum", tint: isMacOS ? "#4c808a" : "#5e5ce6",
               source: "settings/pages/SpectrumPage.qml", keywords: "rta fft spectrum analyser analyzer bars peak hold smoothing floor ceiling transform averaging decay" }
         ]},
         { title: "System", pages: [
-            { id: "overview", title: "Overview", icon: "pins", tint: isMacOS ? "#627080" : "#636366", needsDevice: true,
+            { id: "overview", title: "Overview", icon: isMacOS ? "chip-fill" : "pins", tint: isMacOS ? "#627080" : "#636366", needsDevice: true,
               source: "settings/pages/OverviewPage.qml", keywords: "gpio pins map assignments in use free" },
             { id: "inputs", title: "Inputs", icon: "input", tint: "#04856f", needsDevice: true,
               source: "settings/pages/InputsPage.qml", keywords: "spdif toslink receiver i2s adat clock slave master lock channels lg sound sync tv" },
-            { id: "outputs", title: "Outputs", icon: "output", tint: isMacOS ? "#0278c7" : "#34c759", needsDevice: true,
+            { id: "outputs", title: "Outputs", icon: isMacOS ? "connector" : "output", tint: isMacOS ? "#0278c7" : "#34c759", needsDevice: true,
               source: "settings/pages/OutputsPage.qml", keywords: "pins gpio spdif i2s pdm sub adat optical type reset" },
-            { id: "i2s", title: "I2S Configuration", icon: "clock", tint: "#ba3822", needsDevice: true,
+            { id: "i2s", title: "I2S Configuration", icon: isMacOS ? "waveform" : "clock", tint: "#ba3822", needsDevice: true,
               source: "settings/pages/I2SPage.qml", keywords: "bck lrclk bit clock mck master clock multiplier sample rate split unified" },
-            { id: "global", title: "Global Parameters", icon: "globe", tint: isMacOS ? "#807701" : "#ff9f0a", needsDevice: true,
+            { id: "global", title: "Global Parameters", icon: isMacOS ? "drive" : "globe", tint: isMacOS ? "#807701" : "#ff9f0a", needsDevice: true,
               source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent dac mute amplifier pop" }
         ]},
         { title: "Control", pages: [
-            { id: "surfaces", title: "Control Surfaces", icon: "cs-pot", tint: "#8354a0", needsDevice: true, needs: "cs",
+            { id: "surfaces", title: "Control Surfaces", icon: isMacOS ? "dial" : "cs-pot", tint: "#8354a0", needsDevice: true, needs: "cs",
               source: "settings/pages/ControlSurfacesPage.qml", keywords: "buttons switches knobs potentiometer fader encoder led ir remote receiver learn display oled lcd gpio bindings" },
             { id: "control", title: "Control Interfaces", icon: "chip", tint: "#8f60ad", needsDevice: true,
               source: "settings/pages/ControlInterfacesPage.qml", keywords: "uart serial i2c target microcontroller baud address" },
@@ -172,23 +177,24 @@ AppWindow {
         Column {
             anchors.fill: parent
             anchors.topMargin: settingsWindow.titlebarHeight + 2
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
+            anchors.leftMargin: isMacOS ? 9 : 10
+            anchors.rightMargin: isMacOS ? 11 : 10
             spacing: 2
 
-            // Search
+            // Search (macOS: none - the native sidebar has no search field)
             Rectangle {
+                visible: !isMacOS
                 width: parent.width
-                height: 28
-                radius: 7
+                height: isMacOS ? 22 : 28
+                radius: isMacOS ? 6 : 7
                 color: Qt.rgba(1, 1, 1, 0.08)
                 border.color: search.activeFocus ? "#0a7cff" : "transparent"
                 Icon {
                     id: searchIcon
-                    x: 9
+                    x: isMacOS ? 7 : 9
                     anchors.verticalCenter: parent.verticalCenter
                     name: "search"
-                    size: 14
+                    size: isMacOS ? 12 : 14
                     color: Qt.rgba(1, 1, 1, 0.45)
                 }
                 TextInput {
@@ -232,7 +238,7 @@ AppWindow {
                     MouseArea { anchors.fill: parent; anchors.margins: -4; onClicked: search.text = "" }
                 }
             }
-            Item { width: 1; height: 8 }
+            Item { visible: !isMacOS; width: 1; height: isMacOS ? 0 : 8 }
 
             // Groups and pages
             Repeater {
@@ -249,23 +255,25 @@ AppWindow {
                     }
                     visible: shownCount > 0
                     width: parent.width
-                    spacing: 2
+                    spacing: isMacOS ? 0 : 2
 
+                    // macOS: measured from the native sidebar, the same at every size
                     Text {
                         text: group.groupData.title
-                        leftPadding: 8
-                        topPadding: 9
+                        leftPadding: isMacOS ? 4 : 8
+                        topPadding: isMacOS ? (index === 0 ? 2 : 14) : 9
                         bottomPadding: 3
                         font.pixelSize: 11
-                        font.weight: Font.DemiBold
-                        color: isMacOS ? MacColors.tertiaryLabel : Qt.rgba(1, 1, 1, 0.45)
+                        font.weight: isMacOS ? Font.Bold : Font.DemiBold
+                        color: isMacOS ? Qt.rgba(1, 1, 1, 0.31) : Qt.rgba(1, 1, 1, 0.45)   // macOS: tertiary label, vibrancy-brightened (measured)
                     }
                     Repeater {
                         model: group.groupData.pages
                         SettingsSidebarItem {
                             width: group.width
                             visible: { search.text; settingsWindow.deviceConnected; controlSurfaces.revision; return settingsWindow.pageAvailable(modelData) && settingsWindow.matchesSearch(modelData) }
-                            height: visible ? 28 : 0
+                            height: visible ? settingsWindow.sidebarRowHeight : 0
+                            fontSize: settingsWindow.sidebarFontSize
                             title: modelData.title
                             icon: modelData.icon
                             tint: modelData.tint
@@ -371,7 +379,7 @@ AppWindow {
         Icon {
             id: navIcon
             anchors.centerIn: parent
-            size: 15
+            size: 19
             color: nav.active ? MacColors.label : MacColors.tertiaryLabel
         }
         MouseArea {
@@ -385,15 +393,15 @@ AppWindow {
     Loader {
         active: isMacOS
         anchors.left: sidebar.right
-        anchors.leftMargin: 10
-        height: settingsWindow.titlebarHeight
+        anchors.leftMargin: 3
+        height: settingsWindow.titlebarHeight + 2
         sourceComponent: Row {
-            spacing: 2
+            spacing: 0
             MacNavButton { icon: "chev-left"; tip: "Back"; active: settingsWindow.historyIndex > 0; onClicked: settingsWindow.goBack() }
             MacNavButton { icon: "chev-right"; tip: "Forward"; active: settingsWindow.historyIndex < settingsWindow.history.length - 1; onClicked: settingsWindow.goForward() }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                leftPadding: 8
+                leftPadding: 1.5
                 text: settingsWindow.currentPage ? settingsWindow.currentPage.title : "Settings"
                 font.pixelSize: 13
                 font.weight: Font.Bold
@@ -404,6 +412,6 @@ AppWindow {
 
     Shortcut { sequence: "Alt+Left"; onActivated: settingsWindow.goBack() }
     Shortcut { sequence: "Alt+Right"; onActivated: settingsWindow.goForward() }
-    Shortcut { sequences: [StandardKey.Find]; onActivated: search.forceActiveFocus() }
+    Shortcut { enabled: !isMacOS; sequences: [StandardKey.Find]; onActivated: search.forceActiveFocus() }
     Shortcut { sequence: "Escape"; enabled: !search.activeFocus; onActivated: settingsWindow.close() }
 }

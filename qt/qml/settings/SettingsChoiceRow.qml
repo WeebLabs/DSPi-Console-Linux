@@ -26,7 +26,8 @@ SettingsRow {
     }
 
     StyledComboBox {
-        width: row.menuWidth > 0 ? row.menuWidth : implicitWidth
+        macForm: true      // macOS: the menu Picker of a grouped Form row
+        width: isMacOS ? implicitWidth : row.menuWidth > 0 ? row.menuWidth : implicitWidth
         model: {
             var t = []
             for (var i = 0; i < row.options.length; i++) t.push(row.textAt(i))

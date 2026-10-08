@@ -403,6 +403,7 @@ int main(int argc, char *argv[])
 #ifdef Q_OS_MACOS
     // The native Console's colours, read by the MacColors singleton
     engine.rootContext()->setContextProperty("macSystemColors", macSystemColors());
+    engine.rootContext()->setContextProperty("macSidebarSizeMode", macSidebarSizeMode());
 #endif
 
     // Blur and shadow for the frameless windows (main window, Settings)

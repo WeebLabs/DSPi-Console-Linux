@@ -37,8 +37,8 @@ static void addControlAccents(QVariantMap &colors, const QColor &accent)
         colors.insert("defaultButtonPressed", QColor(t.defaultButtonPressed));
         colors.insert("prominentButton", QColor(t.prominentButton));
         // The selected row of a sidebar List over its material, measured on
-        // screen for blue only
-        if (t.accent == 0x007aff) colors.insert("sidebarSelection", QColor(0x276cd9));
+        // screen (the native Settings window) for blue only
+        if (t.accent == 0x007aff) colors.insert("sidebarSelection", QColor(0x2165d1));
         return;
     }
 }
@@ -159,4 +159,10 @@ public:
 void macUseSrgbWindows(QCoreApplication *app)
 {
     app->installEventFilter(new MacWindows(app));
+}
+
+int macSidebarSizeMode()
+{
+    const NSInteger mode = [NSUserDefaults.standardUserDefaults integerForKey:@"NSTableViewDefaultSizeMode"];
+    return mode >= 1 && mode <= 3 ? int(mode) : 2;
 }

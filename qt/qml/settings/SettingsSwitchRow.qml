@@ -7,8 +7,10 @@ SettingsRow {
     id: row
     property bool checked: false
     signal toggled(bool checked)
+    trailingAtTop: isMacOS && row.detail !== ""
 
     ToggleSwitch {
+        mini: true
         checked: row.checked
         onToggled: row.toggled(checked)
     }

@@ -11,7 +11,7 @@ Rectangle {
     property alias action: actionSlot.data
     width: parent ? parent.width : 400
     height: col.height + 36
-    radius: 10
+    radius: isMacOS ? 5 : 10
     color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
     border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
     Column {

@@ -9,7 +9,7 @@ SettingsPage {
     Rectangle {
         width: parent.width
         height: 116
-        radius: 12
+        radius: isMacOS ? 5 : 12
         color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
         border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
 

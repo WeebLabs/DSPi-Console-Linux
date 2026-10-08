@@ -5,8 +5,12 @@ import QtQuick.Controls 2.15
 // is given; the list shows a check mark on the current item.
 ComboBox {
     id: box
-    implicitHeight: 28
-    implicitWidth: Math.max(96, Math.ceil(widest.advanceWidth) + 56)
+    // macOS: the menu Picker of a grouped Form row - the title, right-aligned,
+    // then the up/down chevrons in a small rounded box, no bezel
+    property bool macForm: false
+    readonly property bool form: isMacOS && macForm
+    implicitHeight: form ? 20 : 28
+    implicitWidth: form ? Math.ceil(widest.advanceWidth) + 22 : Math.max(96, Math.ceil(widest.advanceWidth) + 56)
     font.pixelSize: 13
 
     // Measures the longest option for implicitWidth
@@ -22,27 +26,39 @@ ComboBox {
 
     background: Rectangle {
         radius: 7
+        visible: !box.form
         color: isMacOS ? (!box.enabled ? Qt.rgba(1, 1, 1, 0.125) : box.pressed || box.popup.visible ? Qt.rgba(1, 1, 1, 0.36) : Qt.rgba(1, 1, 1, 0.25)) : box.pressed || box.popup.visible ? Qt.rgba(1, 1, 1, 0.16)
              : box.hovered ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
         border.color: isMacOS ? (box.activeFocus ? MacColors.keyboardFocusIndicator : "transparent") : box.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.10)
     }
 
+    // In the form style the text runs from the left edge to 4 pt before the
+    // chevron box, whatever padding the style gives the control
     contentItem: Text {
-        leftPadding: 10
-        rightPadding: 26
+        leftPadding: box.form ? -box.leftPadding : 10
+        rightPadding: box.form ? 22 - box.rightPadding : 26
         text: box.displayText
         font: box.font
-        color: isMacOS ? (box.enabled ? Qt.rgba(1, 1, 1, 0.89) : Qt.rgba(1, 1, 1, 0.35)) : box.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+        color: isMacOS ? (box.form ? (box.enabled ? MacColors.label : MacColors.tertiaryLabel) : box.enabled ? Qt.rgba(1, 1, 1, 0.89) : Qt.rgba(1, 1, 1, 0.35)) : box.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+        horizontalAlignment: box.form ? Text.AlignRight : Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
 
-    indicator: Column {
-        x: box.width - width - 9
+    indicator: Rectangle {
+        x: box.form ? box.width - 18 : box.width - width - 9
         anchors.verticalCenter: parent.verticalCenter
-        spacing: -4
-        Icon { name: "chev-up"; size: 11; color: isMacOS ? "white" : Qt.rgba(1, 1, 1, 0.6) }
-        Icon { name: "chev-down"; size: 11; color: isMacOS ? "white" : Qt.rgba(1, 1, 1, 0.6) }
+        width: box.form ? 16 : chevrons.width
+        height: box.form ? 16 : chevrons.height
+        radius: 4
+        color: box.form ? Qt.rgba(1, 1, 1, box.enabled ? 0.1 : 0.05) : "transparent"
+        Column {
+            id: chevrons
+            anchors.centerIn: parent
+            spacing: box.form ? -5 : -4
+            Icon { name: "chev-up"; size: box.form ? 10 : 11; color: isMacOS ? (box.form && !box.enabled ? MacColors.tertiaryLabel : "white") : Qt.rgba(1, 1, 1, 0.6) }
+            Icon { name: "chev-down"; size: box.form ? 10 : 11; color: isMacOS ? (box.form && !box.enabled ? MacColors.tertiaryLabel : "white") : Qt.rgba(1, 1, 1, 0.6) }
+        }
     }
 
     delegate: ItemDelegate {

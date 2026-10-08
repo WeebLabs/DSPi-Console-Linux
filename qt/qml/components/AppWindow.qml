@@ -102,6 +102,76 @@ Window {
         z: 950
     }
 
+    // macOS, unified windows: the edge AppKit draws on an opaque window and
+    // leaves off a transparent one (measured from the native Settings): a
+    // 0.5 pt dark outline, then a 1 pt light rim, brighter along the top
+    Loader {
+        active: isMacOS && appWindow.macUnifiedSidebar > 0
+        visible: appWindow.visibility !== Window.FullScreen
+        anchors.fill: parent
+        z: 1000
+        sourceComponent: Item {
+            Rectangle {
+                anchors.fill: parent
+                radius: 10
+                color: "transparent"
+                border.color: Qt.rgba(0, 0, 0, 0.9)
+                border.width: 0.5
+            }
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 0.5
+                radius: 9.5
+                color: "transparent"
+                border.color: Qt.rgba(1, 1, 1, 0.2)
+                border.width: 1
+            }
+            // The top rim, per device pixel (measured: white at 0.36, then 0.29)
+            Rectangle {
+                x: 10; y: 0.5
+                width: parent.width - 20
+                height: 0.5
+                color: Qt.rgba(1, 1, 1, 0.31)
+            }
+            Rectangle {
+                x: 10; y: 1
+                width: parent.width - 20
+                height: 0.5
+                color: Qt.rgba(1, 1, 1, 0.11)
+            }
+            // Around the two top corners the brighter rim fades into the sides
+            // over the first 8 pt (measured): the rim again, in bands
+            Repeater {
+                model: [ { y: 0, h: 5, a: 0.2 }, { y: 5, h: 2, a: 0.1 }, { y: 7, h: 2, a: 0.05 } ]
+                Item {
+                    id: band
+                    readonly property var spec: modelData
+                    anchors.fill: parent
+                    Repeater {
+                        model: 2      // left and right corner
+                        Item {
+                            x: index === 0 ? 0 : parent.width - 10
+                            y: band.spec.y
+                            width: 10
+                            height: band.spec.h
+                            clip: true
+                            Rectangle {
+                                x: index === 0 ? 0.5 : -(parent.parent.width - 10) + 0.5
+                                y: 0.5 - band.spec.y
+                                width: parent.parent.width - 1
+                                height: parent.parent.height - 1
+                                radius: 9.5
+                                color: "transparent"
+                                border.color: Qt.rgba(1, 1, 1, band.spec.a)
+                                border.width: 1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Rectangle {
         visible: !isMacOS && appWindow.visibility !== Window.Maximized
         anchors.fill: parent
