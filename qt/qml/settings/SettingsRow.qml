@@ -10,6 +10,7 @@ Item {
     property string icon: ""           // macOS: a 16 pt icon column before the text
     property int extraPadding: 0       // macOS: a row's own .padding(.vertical)
     property bool trailingAtTop: false // macOS: the control on the first line (Toggle)
+    property real detailTracking: 0    // macOS: letter spacing of the detail (.caption is tighter than .caption2)
     property color titleColor: isMacOS ? MacColors.label : "white"
     property real trailingWidth: trailing.childrenRect.width
     property bool clickable: false     // whole row acts as a button
@@ -81,6 +82,7 @@ Item {
             wrapMode: Text.WordWrap
             text: row.detail
             font.pixelSize: isMacOS ? 10 : 11
+            font.letterSpacing: row.detailTracking
             color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }

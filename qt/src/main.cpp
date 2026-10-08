@@ -18,6 +18,7 @@
 
 #include <QWindow>
 #include <QQuickWindow>
+#include <QFontDatabase>
 #include <QSurfaceFormat>
 
 #include "DSPiBridge.h"
@@ -232,6 +233,9 @@ int main(int argc, char *argv[])
     app.installEventFilter(new TextFocusReleaser(&app));
 #ifdef Q_OS_MACOS
     macUseSrgbWindows(&app);
+    // Text drawn by CoreText, as AppKit draws it, rather than from Qt Quick's
+    // distance-field glyphs (softer, lighter, approximate tracking)
+    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
 #endif
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
@@ -343,7 +347,12 @@ int main(int argc, char *argv[])
 
     // Platform-appropriate default font
 #ifdef Q_OS_MACOS
-    QFont defaultFont(".AppleSystemUIFont", 13);
+    // The system font, SF. Qt 5 offers `.AppleSystemUIFont` in Regular and Bold
+    // only, so medium and semibold text comes out regular or bold. SF Pro,
+    // where Apple's fonts are installed, is the same face (identical advances)
+    // with every weight.
+    const bool sfPro = QFontDatabase().families().contains(QStringLiteral("SF Pro"));
+    QFont defaultFont(sfPro ? QStringLiteral("SF Pro") : QStringLiteral(".AppleSystemUIFont"), 13);
 #else
     QFont defaultFont("Noto Sans", 13);
     // Fallback chain: Noto Sans → Segoe UI → system default

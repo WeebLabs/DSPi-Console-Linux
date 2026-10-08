@@ -265,6 +265,9 @@ AppWindow {
                         bottomPadding: 3
                         font.pixelSize: 11
                         font.weight: isMacOS ? Font.Bold : Font.DemiBold
+                        // macOS: the system font's 13 pt line, whichever SF the app uses
+                        lineHeightMode: isMacOS ? Text.FixedHeight : Text.ProportionalHeight
+                        lineHeight: isMacOS ? 13 : 1.0
                         color: isMacOS ? Qt.rgba(1, 1, 1, 0.31) : Qt.rgba(1, 1, 1, 0.45)   // macOS: tertiary label, vibrancy-brightened (measured)
                     }
                     Repeater {
@@ -405,7 +408,7 @@ AppWindow {
                 text: settingsWindow.currentPage ? settingsWindow.currentPage.title : "Settings"
                 font.pixelSize: 13
                 font.weight: Font.Bold
-                color: MacColors.label
+                color: Qt.rgba(1, 1, 1, 0.9)    // the label colour as the titlebar's vibrancy brightens it (measured)
             }
         }
     }

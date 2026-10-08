@@ -35,7 +35,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 text: section.title
                 font.pixelSize: 13
-                font.weight: Font.Bold
+                font.weight: Font.DemiBold      // measured against the native header
                 color: MacColors.label
             }
         }
