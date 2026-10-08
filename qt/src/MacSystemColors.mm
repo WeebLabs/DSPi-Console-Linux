@@ -103,20 +103,53 @@ QVariantMap macSystemColors()
     return colors;
 }
 
+// A window with a unified, transparent titlebar (the compact toolbar style of
+// the native Settings window) and the sidebar material behind its left
+// `sidebarWidth` points. Qt re-applies its own style mask when it shows a
+// window, so this runs on every show; the material view is added once.
+static void unifyWindow(NSWindow *window, int sidebarWidth)
+{
+    window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    window.titlebarAppearsTransparent = YES;
+    window.titleVisibility = NSWindowTitleHidden;
+    if (!window.toolbar) window.toolbar = [[NSToolbar alloc] initWithIdentifier:@"DSPiUnifiedToolbar"];
+    window.toolbarStyle = NSWindowToolbarStyleUnifiedCompact;
+    window.opaque = NO;
+    window.backgroundColor = NSColor.clearColor;
+
+    NSView *content = window.contentView;
+    NSView *frame = content.superview;
+    for (NSView *v in frame.subviews)
+        if ([v.identifier isEqualToString:@"DSPiSidebarMaterial"]) return;
+    NSVisualEffectView *material = [[NSVisualEffectView alloc]
+        initWithFrame:NSMakeRect(0, 0, sidebarWidth, frame.bounds.size.height)];
+    material.identifier = @"DSPiSidebarMaterial";
+    material.material = NSVisualEffectMaterialSidebar;
+    material.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+    material.state = NSVisualEffectStateFollowsWindowActiveState;
+    material.autoresizingMask = NSViewHeightSizable;
+    [frame addSubview:material positioned:NSWindowBelow relativeTo:content];
+}
+
 // Qt 5 hands its pixels to the display unconverted; the native app's colours
 // are sRGB, converted for the display by AppKit. Tag every window as sRGB, as
-// it is shown, so its colours are converted the same way.
+// it is shown, so its colours are converted the same way. A window that sets
+// the property `macUnifiedSidebar` (its sidebar width) also gets the unified
+// titlebar and sidebar material.
 namespace {
-class SrgbWindows : public QObject
+class MacWindows : public QObject
 {
 public:
     using QObject::QObject;
     bool eventFilter(QObject *object, QEvent *event) override
     {
         if (event->type() == QEvent::Show && object->isWindowType()) {
-            NSView *view = reinterpret_cast<NSView *>(static_cast<QWindow *>(object)->winId());
-            if (view.window && view.window.colorSpace != NSColorSpace.sRGBColorSpace)
-                view.window.colorSpace = NSColorSpace.sRGBColorSpace;
+            NSView *view = (__bridge NSView *)reinterpret_cast<void *>(static_cast<QWindow *>(object)->winId());
+            NSWindow *window = view.window;
+            if (window && window.colorSpace != NSColorSpace.sRGBColorSpace)
+                window.colorSpace = NSColorSpace.sRGBColorSpace;
+            const int sidebarWidth = object->property("macUnifiedSidebar").toInt();
+            if (window && sidebarWidth > 0) unifyWindow(window, sidebarWidth);
         }
         return false;
     }
@@ -125,5 +158,5 @@ public:
 
 void macUseSrgbWindows(QCoreApplication *app)
 {
-    app->installEventFilter(new SrgbWindows(app));
+    app->installEventFilter(new MacWindows(app));
 }

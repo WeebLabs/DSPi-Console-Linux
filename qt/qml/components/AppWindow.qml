@@ -9,8 +9,12 @@ Window {
     id: appWindow
     default property alias content: contentArea.data
 
-    // Titlebar height on Linux (macOS keeps its native titlebar)
-    readonly property int titlebarHeight: isMacOS ? 0 : 30
+    // macOS: the width of a sidebar under a unified, transparent titlebar
+    // (Settings). The window then gets the sidebar material behind that strip
+    // and a compact toolbar-height titlebar over its content (MacSystemColors.mm).
+    property int macUnifiedSidebar: 0
+    // Titlebar height on Linux (macOS keeps its native titlebar, unless unified)
+    readonly property int titlebarHeight: isMacOS ? (macUnifiedSidebar > 0 ? 38 : 0) : 30
     // Content starts under the titlebar (Settings: sidebar runs to the top)
     property bool contentUnderTitlebar: false
     // Width of a translucent, blurred sidebar strip on the left (0 = none)
@@ -26,7 +30,7 @@ Window {
     // The titlebar, for Back/Forward and title overrides
     property alias titleBar: bar
 
-    color: isMacOS ? MacColors.windowBackground : "#1e1e20"
+    color: isMacOS ? (macUnifiedSidebar > 0 ? "transparent" : MacColors.windowBackground) : "#1e1e20"
     flags: isMacOS ? (Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
                    : (Qt.Window | Qt.FramelessWindowHint)
 

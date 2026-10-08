@@ -46,6 +46,7 @@ if(APPLE)
     # The native Console's system colours, read from AppKit
     enable_language(OBJCXX)
     target_sources(DSPiConsole PRIVATE src/MacSystemColors.mm)
+    set_source_files_properties(src/MacSystemColors.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     target_link_libraries(DSPiConsole PRIVATE "-framework AppKit")
 
     # libusb from Homebrew

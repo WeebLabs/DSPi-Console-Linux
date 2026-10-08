@@ -25,6 +25,8 @@ AppWindow {
     // Sidebar runs up under the shared titlebar and is blurred on KDE
     contentUnderTitlebar: true
     blurWidth: sidebarWidth
+    // macOS: unified titlebar over the sidebar material, as the native Settings
+    macUnifiedSidebar: isMacOS ? sidebarWidth : 0
     titleBar.titleText: currentPage ? currentPage.title : "Settings"
     titleBar.showNav: true
     titleBar.canGoBack: historyIndex > 0
@@ -163,7 +165,7 @@ AppWindow {
         id: sidebar
         width: settingsWindow.sidebarWidth
         height: parent.height
-        color: windowEffects.blurAvailable ? Qt.rgba(0.13, 0.13, 0.14, 0.35) : "#262628"
+        color: isMacOS ? "transparent" : windowEffects.blurAvailable ? Qt.rgba(0.13, 0.13, 0.14, 0.35) : "#262628"
 
         Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: isMacOS ? "black" : Qt.rgba(0, 0, 0, 0.6) }
 
@@ -347,6 +349,59 @@ AppWindow {
         color: "#1e1e20"
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
     }
+    // ── macOS titlebar: back / forward and the page name over the page area,
+    // the native toolbar's navigation group (DSPi_ConsoleApp.swift:499) ──
+    component MacNavButton: Item {
+        id: nav
+        property alias icon: navIcon.name
+        property bool active: true
+        property string tip: ""
+        signal clicked()
+        width: 30; height: 24
+        ToolTip.visible: navMouse.containsMouse && nav.active
+        ToolTip.delay: 600
+        ToolTip.text: tip
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        Rectangle {
+            anchors.fill: parent
+            radius: 6
+            color: navMouse.pressed && nav.active ? MacColors.opacity(MacColors.label, 0.18)
+                 : navMouse.containsMouse && nav.active ? MacColors.opacity(MacColors.label, 0.1) : "transparent"
+        }
+        Icon {
+            id: navIcon
+            anchors.centerIn: parent
+            size: 15
+            color: nav.active ? MacColors.label : MacColors.tertiaryLabel
+        }
+        MouseArea {
+            id: navMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            enabled: nav.active
+            onClicked: nav.clicked()
+        }
+    }
+    Loader {
+        active: isMacOS
+        anchors.left: sidebar.right
+        anchors.leftMargin: 10
+        height: settingsWindow.titlebarHeight
+        sourceComponent: Row {
+            spacing: 2
+            MacNavButton { icon: "chev-left"; tip: "Back"; active: settingsWindow.historyIndex > 0; onClicked: settingsWindow.goBack() }
+            MacNavButton { icon: "chev-right"; tip: "Forward"; active: settingsWindow.historyIndex < settingsWindow.history.length - 1; onClicked: settingsWindow.goForward() }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                leftPadding: 8
+                text: settingsWindow.currentPage ? settingsWindow.currentPage.title : "Settings"
+                font.pixelSize: 13
+                font.weight: Font.Bold
+                color: MacColors.label
+            }
+        }
+    }
+
     Shortcut { sequence: "Alt+Left"; onActivated: settingsWindow.goBack() }
     Shortcut { sequence: "Alt+Right"; onActivated: settingsWindow.goForward() }
     Shortcut { sequences: [StandardKey.Find]; onActivated: search.forceActiveFocus() }
