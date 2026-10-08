@@ -10,8 +10,8 @@ Rectangle {
     height: 72
     radius: 10
     // Same surface as the band list below it
-    color: isMacOS ? Qt.rgba(0.21, 0.21, 0.21, 0.6) : nativeAltBaseColor
-    border.color: Qt.rgba(1, 1, 1, 0.1)
+    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : nativeAltBaseColor
+    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
     border.width: 1
 
     property int outputIndex: 0
@@ -39,13 +39,13 @@ Rectangle {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
     component Divider: Rectangle {
         Layout.fillHeight: true
         Layout.preferredWidth: 1
-        color: Qt.rgba(1, 1, 1, 0.08)
+        color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08)
     }
 
     // Slider that resets on right-click
@@ -154,7 +154,7 @@ Rectangle {
                             width: 9; height: 9; radius: 4.5
                             color: route.connected ? route.inputColor : "transparent"
                             border.width: route.connected ? 0 : 1.2
-                            border.color: Qt.rgba(1, 1, 1, 0.45)
+                            border.color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.55) : Qt.rgba(1, 1, 1, 0.45)
                         }
                         Text {
                             anchors.left: dot.right
@@ -165,7 +165,7 @@ Rectangle {
                             text: bridge.channelName(bridge.inputAppId(index))
                             font.pixelSize: 13
                             font.weight: route.connected ? Font.DemiBold : Font.Normal
-                            color: route.connected ? route.inputColor : Qt.rgba(1, 1, 1, 0.75)
+                            color: isMacOS ? (route.connected ? route.inputColor : MacColors.secondaryLabel) : route.connected ? route.inputColor : Qt.rgba(1, 1, 1, 0.75)
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -184,7 +184,7 @@ Rectangle {
                             fieldWidth: 44; height: 22; suffix: "dB"; decimals: 1
                             minValue: -60; maxValue: 12
                             value: route.level
-                            textColor: route.connected ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.5)
+                            textColor: isMacOS ? MacColors.opacity(MacColors.label, route.connected ? 1.0 : 0.55) : route.connected ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.5)
                             onValueEdited: bridge.setMatrixRoute(index, outputIndex, route.connected, newValue, route.inverted)
                         }
                         MouseArea {
@@ -200,7 +200,7 @@ Rectangle {
                         text: "INV"
                         font.pixelSize: 11
                         font.weight: Font.Bold
-                        color: route.inverted ? "#ff9f0a" : Qt.rgba(1, 1, 1, route.connected ? 0.35 : 0.2)
+                        color: isMacOS ? (route.inverted ? MacColors.orange : MacColors.opacity(MacColors.secondaryLabel, route.connected ? 0.45 : 0.3)) : route.inverted ? "#ff9f0a" : Qt.rgba(1, 1, 1, route.connected ? 0.35 : 0.2)
                         MouseArea {
                             anchors.fill: parent
                             anchors.margins: -5
@@ -251,12 +251,12 @@ Rectangle {
 
             Rectangle {
                 width: 36; height: 26; radius: 6
-                color: muteMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                color: isMacOS ? "transparent" : muteMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
                 Icon {
                     anchors.centerIn: parent
                     name: isMuted ? "speaker-mute" : "speaker"
                     size: 18
-                    color: isMuted ? "#ff453a" : Qt.rgba(1, 1, 1, 0.6)
+                    color: isMacOS ? (isMuted ? MacColors.red : MacColors.secondaryLabel) : isMuted ? "#ff453a" : Qt.rgba(1, 1, 1, 0.6)
                 }
                 MouseArea {
                     id: muteMouse

@@ -12,7 +12,7 @@ Rectangle {
     property string placeholder: ""
     property bool nameEditable: true
     property string summary: ""
-    property color summaryColor: Qt.rgba(1, 1, 1, 0.5)
+    property color summaryColor: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     property bool removable: true
     property string removeTip: "Remove"
     default property alias body: bodyColumn.data
@@ -26,8 +26,8 @@ Rectangle {
     width: parent ? parent.width : 400
     height: column.height
     radius: 10
-    color: Qt.rgba(1, 1, 1, 0.045)
-    border.color: Qt.rgba(1, 1, 1, 0.07)
+    color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
+    border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
 
     Column {
         id: column
@@ -49,7 +49,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "chev-right"
                 size: 13
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                 rotation: card.expanded ? 90 : 0
                 Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
             }
@@ -84,8 +84,8 @@ Rectangle {
                     clip: true
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
-                    color: "white"
-                    selectionColor: "#0a7cff"
+                    color: isMacOS ? MacColors.label : "white"
+                    selectionColor: isMacOS ? MacColors.selectedControl : "#0a7cff"
                     onEditingFinished: if (text !== card.name) card.nameEdited(text)
                     Keys.onEscapePressed: { text = card.name; focus = false }
                     Connections {
@@ -96,10 +96,10 @@ Rectangle {
                         z: -1
                         anchors.fill: parent
                         radius: 5
-                        color: nameInput.activeFocus ? Qt.rgba(1, 1, 1, 0.10)
+                        color: isMacOS ? "transparent" : nameInput.activeFocus ? Qt.rgba(1, 1, 1, 0.10)
                              : nameHover.containsMouse && card.nameEditable ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
                         border.width: nameInput.activeFocus ? 1.5 : 0
-                        border.color: "#0a7cff"
+                        border.color: isMacOS ? "transparent" : "#0a7cff"
                     }
                     Text {
                         id: placeholderText
@@ -108,7 +108,7 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         text: card.placeholder
                         font: nameInput.font
-                        color: "white"
+                        color: isMacOS ? MacColors.placeholderText : "white"
                     }
                     MouseArea {
                         id: nameHover

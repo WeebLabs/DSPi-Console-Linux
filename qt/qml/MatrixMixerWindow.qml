@@ -12,11 +12,11 @@ AppWindow {
     visible: false
 
     // ── App palette ──
-    readonly property color accent: "#0a7cff"
-    readonly property color warn: "#ff9f0a"
-    readonly property color danger: "#ff453a"
+    readonly property color accent: isMacOS ? MacColors.blue : "#0a7cff"
+    readonly property color warn: isMacOS ? MacColors.orange : "#ff9f0a"
+    readonly property color danger: isMacOS ? MacColors.red : "#ff453a"
     readonly property color hairline: Qt.rgba(1, 1, 1, 0.07)
-    readonly property color cardFill: Qt.rgba(1, 1, 1, 0.045)
+    readonly property color cardFill: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.4) : Qt.rgba(1, 1, 1, 0.045)
 
     readonly property int colWidth: 80
     readonly property int labelWidth: 96
@@ -49,7 +49,7 @@ AppWindow {
     function inName(i) { return upmixRows && i >= 2 ? ["Upmix C", "Upmix Ls", "Upmix Rs"][i - 2] : bridge.channelName(bridge.inputAppId(i)) }
     function inColor(i) {
         if (upmixRows && i >= 2)
-            return i === 2 && bridge.upmixParams[1] === 2 ? Qt.rgba(1, 1, 1, 0.35)   // centre off: silent row
+            return isMacOS ? [Qt.rgba(0.45, 0.78, 0.55, 1), Qt.rgba(0.93, 0.70, 0.30, 1), Qt.rgba(0.60, 0.55, 0.92, 1)][i - 2] : i === 2 && bridge.upmixParams[1] === 2 ? Qt.rgba(1, 1, 1, 0.35)   // centre off: silent row
                  : ["#32d74b", "#bf5af2", "#ff375f"][i - 2]
         return bridge.channelColor(bridge.inputAppId(i))
     }
@@ -70,7 +70,7 @@ AppWindow {
         leftPadding: 4
         font.pixelSize: 13
         font.weight: Font.DemiBold
-        color: Qt.rgba(1, 1, 1, 0.6)
+        color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : Qt.rgba(1, 1, 1, 0.6)
     }
 
     // Row label on the left of the Output card
@@ -79,7 +79,7 @@ AppWindow {
         horizontalAlignment: Text.AlignRight
         font.pixelSize: 12
         font.weight: Font.DemiBold
-        color: Qt.rgba(1, 1, 1, 0.55)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
     }
 
     component CardButton: Rectangle {
@@ -88,9 +88,9 @@ AppWindow {
         width: lbl.implicitWidth + 22
         height: 26
         radius: 7
-        color: cbMouse.pressed ? Qt.rgba(1, 1, 1, 0.20) : cbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.09)
-        border.color: Qt.rgba(1, 1, 1, 0.10)
-        Text { id: lbl; anchors.centerIn: parent; font.pixelSize: 13; color: "white" }
+        color: isMacOS ? MacColors.control : cbMouse.pressed ? Qt.rgba(1, 1, 1, 0.20) : cbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.09)
+        border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.10)
+        Text { id: lbl; anchors.centerIn: parent; font.pixelSize: 13; color: isMacOS ? MacColors.label : "white" }
         MouseArea { id: cbMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
     }
 
@@ -100,7 +100,7 @@ AppWindow {
         height: cardColumn.implicitHeight
         radius: 10
         color: cardFill
-        border.color: hairline
+        border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.1) : hairline
         Column { id: cardColumn; width: parent.width }
     }
 
@@ -108,7 +108,7 @@ AppWindow {
         x: 14
         width: gridWidth - 28
         height: 1
-        color: hairline
+        color: isMacOS ? MacColors.opacity(MacColors.separator, 0.3) : hairline
     }
 
     Flickable {
@@ -153,7 +153,7 @@ AppWindow {
                             width: colWidth
                             height: 58
                             property bool renaming: false
-                            opacity: outEnabled(index) ? 1.0 : 0.4
+                            opacity: isMacOS ? 1.0 : outEnabled(index) ? 1.0 : 0.4
                             Column {
                                 visible: !hdr.renaming
                                 anchors.centerIn: parent
@@ -165,13 +165,13 @@ AppWindow {
                                     elide: Text.ElideRight
                                     text: { rev; return bridge.channelName(index + 2) }
                                     font.pixelSize: 13; font.weight: Font.DemiBold
-                                    color: "white"
+                                    color: isMacOS ? MacColors.secondaryLabel : "white"
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: "OUT" + (index + 1)
                                     font.pixelSize: 10; font.weight: Font.Bold
-                                    color: bridge.channelColor(index + 2)
+                                    color: isMacOS ? MacColors.opacity(Qt.lighter(bridge.channelColor(index + 2), 1.0), 0.8) : bridge.channelColor(index + 2)
                                 }
                             }
                             TextField {
@@ -269,7 +269,7 @@ AppWindow {
                                     readonly property bool inverted: { rev; return bridge.matrixInvert(inputIndex, o) }
                                     // A PDM column that would displace enabled outputs
                                     readonly property bool conflictRing: o === pdm && !outEnabled(o) && conflicts(o).length > 0
-                                    opacity: outEnabled(o) ? 1.0 : 0.4
+                                    opacity: isMacOS ? (outEnabled(o) ? 1.0 : 0.3) : outEnabled(o) ? 1.0 : 0.4
 
                                     ValueField {
                                         visible: parent.connected
@@ -285,7 +285,7 @@ AppWindow {
                                         width: 22; height: 22; radius: 11
                                         color: parent.connected ? inColor(inputIndex) : "transparent"
                                         border.width: parent.connected ? 0 : 1.5
-                                        border.color: parent.conflictRing ? warn
+                                        border.color: isMacOS ? MacColors.opacity(parent.conflictRing ? MacColors.orange : MacColors.secondaryLabel, parent.conflictRing ? (pointMouse.containsMouse ? 0.5 : 0.35) : (pointMouse.containsMouse ? 0.3 : 0.12)) : parent.conflictRing ? warn
                                                     : pointMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.20)
                                         scale: pointMouse.containsMouse ? 1.08 : 1.0
                                         Behavior on scale { NumberAnimation { duration: 90 } }
@@ -306,7 +306,7 @@ AppWindow {
                                         anchors.bottomMargin: 6
                                         text: "INV"
                                         font.pixelSize: 10; font.weight: Font.Bold
-                                        color: parent.inverted ? warn : Qt.rgba(1, 1, 1, 0.35)
+                                        color: isMacOS ? (parent.inverted ? MacColors.orange : MacColors.opacity(MacColors.secondaryLabel, 0.3)) : parent.inverted ? warn : Qt.rgba(1, 1, 1, 0.35)
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -4
@@ -345,7 +345,7 @@ AppWindow {
                                 anchors.centerIn: parent
                                 name: "power"
                                 size: 20
-                                color: parent.wouldConflict ? warn : parent.isOn ? accent : Qt.rgba(1, 1, 1, 0.3)
+                                color: isMacOS ? (parent.isOn ? MacColors.blue : parent.wouldConflict ? MacColors.opacity(MacColors.orange, 0.4) : MacColors.opacity(MacColors.secondaryLabel, 0.3)) : parent.wouldConflict ? warn : parent.isOn ? accent : Qt.rgba(1, 1, 1, 0.3)
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -366,7 +366,7 @@ AppWindow {
                         model: numOut
                         Item {
                             width: colWidth; height: 40
-                            opacity: outEnabled(index) ? 1.0 : 0.4
+                            opacity: isMacOS ? (outEnabled(index) ? 1.0 : 0.3) : outEnabled(index) ? 1.0 : 0.4
                             ValueField {
                                 anchors.centerIn: parent
                                 fieldWidth: 44; height: 22; suffix: "dB"; decimals: 1
@@ -388,7 +388,7 @@ AppWindow {
                         model: numOut
                         Item {
                             width: colWidth; height: 40
-                            opacity: outEnabled(index) ? 1.0 : 0.4
+                            opacity: isMacOS ? (outEnabled(index) ? 1.0 : 0.3) : outEnabled(index) ? 1.0 : 0.4
                             ValueField {
                                 anchors.centerIn: parent
                                 fieldWidth: 60; height: 22; suffix: "ms"; decimals: 2; maxDecimals: 4; wheelStep: 1
@@ -410,13 +410,13 @@ AppWindow {
                         model: numOut
                         Item {
                             width: colWidth; height: 44
-                            opacity: outEnabled(index) ? 1.0 : 0.4
+                            opacity: isMacOS ? (outEnabled(index) ? 1.0 : 0.3) : outEnabled(index) ? 1.0 : 0.4
                             readonly property bool muted: { rev; return bridge.outputMuted(index) }
                             Icon {
                                 anchors.centerIn: parent
                                 name: parent.muted ? "speaker-mute" : "speaker"
                                 size: 20
-                                color: parent.muted ? danger : Qt.rgba(1, 1, 1, 0.5)
+                                color: isMacOS ? (parent.muted ? MacColors.red : MacColors.opacity(MacColors.secondaryLabel, 0.4)) : parent.muted ? danger : Qt.rgba(1, 1, 1, 0.5)
                             }
                             MouseArea {
                                 anchors.fill: parent

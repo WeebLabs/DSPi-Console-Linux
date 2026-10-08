@@ -59,7 +59,7 @@ Popup {
             font.pixelSize: 10
             font.weight: Font.Bold
             font.letterSpacing: 0.6
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
         }
         Row {
             id: tiles
@@ -74,9 +74,9 @@ Popup {
                     width: (tiles.width - 3 * tiles.spacing) / 4
                     height: 38
                     radius: 6
-                    color: on ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
-                    border.color: on ? Qt.rgba(0.04, 0.49, 1, 0.7) : "transparent"
-                    readonly property color fg: on ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.55)
+                    color: isMacOS ? (on ? MacColors.opacity(MacColors.accent, 0.16) : MacColors.opacity(MacColors.label, 0.05)) : on ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
+                    border.color: isMacOS ? (on ? MacColors.opacity(MacColors.accent, 0.7) : "transparent") : on ? Qt.rgba(0.04, 0.49, 1, 0.7) : "transparent"
+                    readonly property color fg: isMacOS ? (on ? MacColors.accent : MacColors.secondaryLabel) : on ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.55)
                     Column {
                         anchors.centerIn: parent
                         spacing: 4
@@ -129,7 +129,7 @@ Popup {
             text: pop.chosen === 0 ? "Fits as many cards per row as the window allows."
                                    : "Up to " + pop.chosen + (pop.chosen === 1 ? " card" : " cards") + " per row."
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 }

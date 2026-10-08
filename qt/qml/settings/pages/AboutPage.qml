@@ -10,8 +10,8 @@ SettingsPage {
         width: parent.width
         height: 116
         radius: 12
-        color: Qt.rgba(1, 1, 1, 0.045)
-        border.color: Qt.rgba(1, 1, 1, 0.07)
+        color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
+        border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
 
         Rectangle {
             id: appTile
@@ -29,9 +29,9 @@ SettingsPage {
             anchors.leftMargin: 18
             anchors.verticalCenter: parent.verticalCenter
             spacing: 4
-            Text { text: "DSPi Console"; font.pixelSize: 22; font.weight: Font.Bold; color: "white" }
-            Text { text: "Version " + Qt.application.version + " for Linux"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.6) }
-            Text { text: "by Weeb Labs"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.45) }
+            Text { text: "DSPi Console"; font.pixelSize: 22; font.weight: Font.Bold; color: isMacOS ? MacColors.label : "white" }
+            Text { text: "Version " + Qt.application.version + " for Linux"; font.pixelSize: 13; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6) }
+            Text { text: "by Weeb Labs"; font.pixelSize: 13; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
         }
     }
 
@@ -47,6 +47,7 @@ SettingsPage {
             ]
             SettingsRow {
                 title: modelData.title
+                titleColor: isMacOS ? Qt.rgba(0.72, 0.72, 0.72, 1) : "white"
                 detail: modelData.detail
                 clickable: true
                 onActivated: Qt.openUrlExternally(modelData.url)
@@ -59,7 +60,7 @@ SettingsPage {
         width: parent.width
         wrapMode: Text.WordWrap
         font.pixelSize: 12
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         text: "DSPi Firmware and Console are free, open-source software developed in spare time. "
             + "Contributions of any kind - code, feedback, funding, or otherwise - are always immensely appreciated."
     }

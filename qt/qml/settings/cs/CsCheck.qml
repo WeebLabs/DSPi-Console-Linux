@@ -19,11 +19,11 @@ Item {
         Rectangle {
             width: 15; height: 15; radius: 4
             anchors.verticalCenter: parent.verticalCenter
-            color: box.checked ? "#0a7cff" : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
-            border.color: box.checked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.25)
-            Icon { anchors.centerIn: parent; visible: box.checked; name: "check"; size: 12; color: "white" }
+            color: isMacOS ? (box.checked ? MacColors.checkboxOn : MacColors.control) : box.checked ? "#0a7cff" : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.06)
+            border.color: isMacOS ? "transparent" : box.checked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.25)
+            Icon { anchors.centerIn: parent; visible: box.checked; name: "check"; size: 12; color: isMacOS ? MacColors.label : "white" }
         }
-        Text { text: box.text; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+        Text { text: box.text; font.pixelSize: 12; color: isMacOS ? MacColors.label : "white"; anchors.verticalCenter: parent.verticalCenter }
     }
     MouseArea {
         id: mouse

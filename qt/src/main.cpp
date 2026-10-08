@@ -12,6 +12,7 @@
 #ifdef Q_OS_MACOS
 #include <objc/runtime.h>
 #include <objc/message.h>
+#include "MacSystemColors.h"
 #endif
 
 
@@ -35,8 +36,6 @@
 #include "MeterItem.h"
 #include "WindowEffects.h"
 #include "TextFocusReleaser.h"
-
-static const int SIDEBAR_WIDTH = 270;   // default; macOS vibrancy frame (resizes with the view)
 
 static void setPlatformDarkMode()
 {
@@ -90,9 +89,12 @@ static void setupPlatformEffects(QQuickWindow *qw)
     id frameView = reinterpret_cast<id (*)(id, SEL)>(objc_msgSend)(
         contentView, sel_registerName("superview"));
 
-    // Create NSVisualEffectView sized to the sidebar
+    // Create the NSVisualEffectView (the window material)
     typedef struct { double x, y, w, h; } NSRect;
-    NSRect sidebarFrame = {0, 0, (double)SIDEBAR_WIDTH, 900}; // tall enough, autoresizes
+    // Behind the whole window, as in the native app: the sidebar shows it
+    // through, the content area is drawn translucent over it. It follows the
+    // window's size.
+    NSRect sidebarFrame = {0, 0, (double)qw->width(), (double)qw->height()};
     id veView = reinterpret_cast<id (*)(Class, SEL)>(objc_msgSend)(
         objc_getClass("NSVisualEffectView"), sel_registerName("alloc"));
     veView = reinterpret_cast<id (*)(id, SEL, NSRect)>(objc_msgSend)(
@@ -104,12 +106,13 @@ static void setupPlatformEffects(QQuickWindow *qw)
     // blendingMode = NSVisualEffectBlendingModeBehindWindow (0)
     reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
         veView, sel_registerName("setBlendingMode:"), 0);
-    // state = NSVisualEffectStateActive (1)
+    // state = NSVisualEffectStateFollowsWindowActiveState (0): like the native
+    // sidebar list, the material greys out while the window is inactive
     reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(
-        veView, sel_registerName("setState:"), 1);
-    // autoresizingMask = NSViewHeightSizable (16)
+        veView, sel_registerName("setState:"), 0);
+    // autoresizingMask = NSViewWidthSizable (2) | NSViewHeightSizable (16)
     reinterpret_cast<void (*)(id, SEL, unsigned long)>(objc_msgSend)(
-        veView, sel_registerName("setAutoresizingMask:"), 16);
+        veView, sel_registerName("setAutoresizingMask:"), 2 | 16);
 
     // Insert VE view as sibling of contentView, below it in z-order
     // NSWindowBelow = -1
@@ -227,6 +230,9 @@ int main(int argc, char *argv[])
     adoptDesktopCursor();   // before any window shows a cursor
 #endif
     app.installEventFilter(new TextFocusReleaser(&app));
+#ifdef Q_OS_MACOS
+    macUseSrgbWindows(&app);
+#endif
     app.setApplicationName("DSPi Console");
     app.setOrganizationName("DSPi");
     app.setApplicationVersion("1.1.6-beta4");   // firmware release this Console targets
@@ -246,7 +252,9 @@ int main(int argc, char *argv[])
     // Dark palette, hardcoded
 #ifdef Q_OS_MACOS
     QPalette darkPalette;
-    darkPalette.setColor(QPalette::Window, QColor(48, 48, 48));
+    // AppKit's windowBackgroundColor, as behind the native Console's content
+    // pane and setup wizard (QML reads it as nativeWindowColor)
+    darkPalette.setColor(QPalette::Window, macSystemColors().value(QStringLiteral("windowBackground"), QColor(50, 50, 50)).value<QColor>());
     darkPalette.setColor(QPalette::WindowText, Qt::white);
     darkPalette.setColor(QPalette::Base, QColor(42, 42, 42));
     darkPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
@@ -392,6 +400,10 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("monitor", &monitor);
     engine.rootContext()->setContextProperty("configFiles", &configFiles);
     engine.rootContext()->setContextProperty("isMacOS", isMacOS);
+#ifdef Q_OS_MACOS
+    // The native Console's colours, read by the MacColors singleton
+    engine.rootContext()->setContextProperty("macSystemColors", macSystemColors());
+#endif
 
     // Blur and shadow for the frameless windows (main window, Settings)
     WindowEffects windowEffects(isMacOS);

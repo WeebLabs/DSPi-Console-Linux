@@ -30,7 +30,7 @@ Item {
         text: picker.label
         font.pixelSize: 12
         font.weight: Font.Medium
-        color: Qt.rgba(1, 1, 1, 0.6)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -41,7 +41,7 @@ Item {
         width: Math.min(valueRow.implicitWidth + 16, picker.valueRoom)
         height: 24
         radius: 6
-        color: !picker.enabled ? "transparent"
+        color: isMacOS ? (picker.enabled && (menu.visible || mouse.containsMouse) ? MacColors.control : "transparent") : !picker.enabled ? "transparent"
              : menu.visible ? Qt.rgba(1, 1, 1, 0.12)
              : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
 
@@ -56,14 +56,14 @@ Item {
                 elide: Text.ElideRight
                 text: picker.valueText
                 font.pixelSize: 13
-                color: picker.enabled ? "#cccccc" : Qt.rgba(1, 1, 1, 0.4)   // Windows Console secondary text
+                color: isMacOS ? (picker.enabled ? MacColors.label : MacColors.opacity(MacColors.label, 0.4)) : picker.enabled ? "#cccccc" : Qt.rgba(1, 1, 1, 0.4)   // Windows Console secondary text
                 anchors.verticalCenter: parent.verticalCenter
             }
             Icon {
                 visible: picker.enabled
                 name: "chev-down"
                 size: 12
-                color: mouse.containsMouse || menu.visible ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : mouse.containsMouse || menu.visible ? "white" : Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

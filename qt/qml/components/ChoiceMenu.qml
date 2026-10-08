@@ -152,7 +152,7 @@ Popup {
                 font.pixelSize: 10
                 font.weight: Font.Bold
                 font.letterSpacing: 0.8
-                color: Qt.rgba(1, 1, 1, 0.38)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.38)
                 leftPadding: 12
                 topPadding: 6
                 bottomPadding: 6
@@ -178,7 +178,7 @@ Popup {
                         font.pixelSize: 10
                         font.weight: Font.Bold
                         font.letterSpacing: 0.8
-                        color: Qt.rgba(1, 1, 1, 0.38)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.38)
                     }
 
                     Rectangle {
@@ -196,7 +196,7 @@ Popup {
                         anchors.verticalCenter: parent.verticalCenter
                         name: modelData.icon || ""
                         size: MenuStyle.iconSize
-                        color: row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
+                        color: isMacOS ? (row.hot ? "white" : MacColors.label) : row.hot ? "white" : row.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.65)
                     }
                     Text {
                         id: rowPrefix
@@ -207,7 +207,7 @@ Popup {
                         horizontalAlignment: Text.AlignRight
                         text: modelData.prefix !== undefined ? modelData.prefix : ""
                         font.pixelSize: 11
-                        color: row.hot ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.35)
+                        color: isMacOS ? (row.hot ? "white" : MacColors.secondaryLabel) : row.hot ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.35)
                     }
                     Column {
                         visible: !row.isHeader
@@ -221,7 +221,7 @@ Popup {
                             text: modelData.text || ""
                             font.pixelSize: 13
                             font.weight: row.selected ? Font.DemiBold : Font.Normal
-                            color: row.usable ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                            color: isMacOS ? (row.hot ? "white" : row.usable ? MacColors.label : MacColors.tertiaryLabel) : row.usable ? "white" : Qt.rgba(1, 1, 1, 0.3)
                         }
                         Text {
                             visible: !!modelData.detail
@@ -229,7 +229,7 @@ Popup {
                             elide: Text.ElideRight
                             text: modelData.detail || ""
                             font.pixelSize: 11
-                            color: row.hot ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.45)
+                            color: isMacOS ? (row.hot ? "white" : MacColors.secondaryLabel) : row.hot ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.45)
                         }
                     }
                     Text {
@@ -240,7 +240,7 @@ Popup {
                         text: row.selected ? "✓" : ""
                         font.pixelSize: 14
                         font.weight: Font.Bold
-                        color: row.hot ? "white" : "#3a96ff"
+                        color: isMacOS ? (row.hot ? "white" : MacColors.label) : row.hot ? "white" : "#3a96ff"
                     }
                     MouseArea {
                         anchors.fill: parent

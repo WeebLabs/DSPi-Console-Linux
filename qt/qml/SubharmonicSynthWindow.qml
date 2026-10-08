@@ -77,7 +77,7 @@ AppWindow {
         return n
     }
 
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
     ToolHeader {
         id: header
@@ -98,7 +98,7 @@ AppWindow {
                 radius: 6
                 enabled: bridge.connected && win.active
                 opacity: enabled ? 1 : 0.4
-                color: isOn ? "#ff9f0a" : soloMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.1)
+                color: isMacOS ? (isOn ? MacColors.orange : MacColors.opacity(MacColors.secondaryLabel, 0.12)) : isOn ? "#ff9f0a" : soloMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.1)
                 Text {
                     id: soloText
                     anchors.centerIn: parent
@@ -106,7 +106,7 @@ AppWindow {
                     font.pixelSize: 10
                     font.weight: Font.Bold
                     font.letterSpacing: 0.4
-                    color: solo.isOn ? "white" : Qt.rgba(1, 1, 1, 0.7)
+                    color: isMacOS ? (solo.isOn ? "white" : MacColors.secondaryLabel) : solo.isOn ? "white" : Qt.rgba(1, 1, 1, 0.7)
                 }
                 MouseArea {
                     id: soloMouse
@@ -164,8 +164,8 @@ AppWindow {
                     width: parent.width
                     height: 188
                     radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.2)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
                     Canvas {
                         id: graph
@@ -197,8 +197,8 @@ AppWindow {
 
                             // Grid
                             ctx.lineWidth = 1
-                            ctx.strokeStyle = "rgba(255,255,255,0.07)"
-                            ctx.fillStyle = "rgba(255,255,255,0.4)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.15) : "rgba(255,255,255,0.07)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.4)"
                             ctx.font = "9px sans-serif"
                             ctx.textAlign = "center"
                             var fm = [20, 50, 100, 200]
@@ -217,7 +217,7 @@ AppWindow {
 
                             if (!shown) {
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", left + w / 2, h / 2)
                                 return
@@ -232,31 +232,31 @@ AppWindow {
                             for (i = 0; i < bands.length; i++) {
                                 var b = bands[i], isOn = b.lvl > -30
                                 anyOn = anyOn || isOn
-                                ctx.fillStyle = "rgba(255,255,255," + (isOn ? 0.06 : 0.025) + ")"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.label, isOn ? 0.10 : 0.04) : "rgba(255,255,255," + (isOn ? 0.06 : 0.025) + ")"
                                 ctx.fillRect(xOf(b.src[0]), 0, xOf(b.src[1]) - xOf(b.src[0]), h)
                                 if (!isOn) continue
                                 // The divider's own gain: 0 dB comes out 1.4 dB down
                                 var yTop = yOf(b.lvl + 20 * Math.log(0.849) / Math.LN10)
-                                ctx.fillStyle = "rgba(" + b.col + ",0.45)"
-                                ctx.strokeStyle = "rgba(" + b.col + ",0.95)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity([MacColors.accent, MacColors.orange, MacColors.purple][i], 0.4) : "rgba(" + b.col + ",0.45)"
+                                ctx.strokeStyle = isMacOS ? MacColors.opacity([MacColors.accent, MacColors.orange, MacColors.purple][i], 0.9) : "rgba(" + b.col + ",0.95)"
                                 ctx.fillRect(xOf(b.sub[0]), yTop, xOf(b.sub[1]) - xOf(b.sub[0]), h - yTop)
                                 ctx.strokeRect(xOf(b.sub[0]) + 0.5, yTop + 0.5, xOf(b.sub[1]) - xOf(b.sub[0]) - 1, h - yTop - 1)
                                 // ÷2 arrow from source to sub
                                 var ya = 8 + i * 11
                                 ctx.setLineDash([2, 2])
-                                ctx.strokeStyle = "rgba(255,255,255,0.4)"
+                                ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.label, 0.3) : "rgba(255,255,255,0.4)"
                                 ctx.beginPath(); ctx.moveTo(xOf(b.from), ya); ctx.lineTo(xOf(b.to), ya); ctx.stroke()
                                 ctx.setLineDash([])
                                 ctx.beginPath(); ctx.moveTo(xOf(b.to) + 4, ya - 3); ctx.lineTo(xOf(b.to), ya); ctx.lineTo(xOf(b.to) + 4, ya + 3); ctx.stroke()
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.55)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.8) : "rgba(255,255,255,0.55)"
                                 ctx.fillText("÷2", (xOf(b.from) + xOf(b.to)) / 2, ya - 2)
                             }
 
                             // LF boost: a 70 Hz bell, Q 0.9, on the whole output
                             if (boost > 0) {
                                 var A = Math.pow(10, boost / 40), Q = 0.9
-                                ctx.strokeStyle = "#32d74b"
+                                ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.green, 0.8) : "#32d74b"
                                 ctx.lineWidth = 1.5
                                 ctx.beginPath()
                                 for (var px = 0; px <= w; px += 2) {
@@ -273,17 +273,17 @@ AppWindow {
                             if (ceiling < 0) {
                                 var yc = yOf(ceiling)
                                 ctx.setLineDash([4, 3])
-                                ctx.strokeStyle = "#ff453a"
+                                ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.red, 0.65) : "#ff453a"
                                 ctx.beginPath(); ctx.moveTo(left, yc); ctx.lineTo(xOf(80), yc); ctx.stroke()
                                 ctx.setLineDash([])
                                 ctx.textAlign = "left"
-                                ctx.fillStyle = "#ff6961"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.red, 0.8) : "#ff6961"
                                 ctx.fillText("ceiling", xOf(80) + 4, yc + 3)
                             }
 
                             if (!anyOn) {
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("All bands off", left + w / 2, h / 2)
                             }
@@ -300,7 +300,7 @@ AppWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.headroom > 0 ? "+" + win.headroom.toFixed(1) + " dB" : "none"
                         font.pixelSize: 13
-                        color: win.headroom > 0 ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.45)
+                        color: isMacOS ? (win.headroom > 0 ? MacColors.orange : MacColors.secondaryLabel) : win.headroom > 0 ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.45)
                         MouseArea { id: headroomHover; anchors.fill: parent; hoverEnabled: true }
                         ToolTip.visible: headroomHover.containsMouse
                         ToolTip.delay: 500
@@ -347,7 +347,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             // ── Right: selectivity, ceiling, boost, outputs ──
             Column {
@@ -369,7 +369,7 @@ AppWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     text: win.selectMode === 1 ? "A short sub burst after each attack - extends kicks, not the bass line."
                         : win.selectMode === 2 ? "The sub opens once a band has been ringing - extends bass notes, not kicks."
                         : "Every band signal is treated alike."
@@ -457,13 +457,13 @@ AppWindow {
                                 width: Math.max(28, (chips.width - (win.numOut - 1) * chips.spacing) / win.numOut)
                                 height: 3
                                 radius: 1.5
-                                color: Qt.rgba(1, 1, 1, 0.08)
+                                color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.08)
                                 Rectangle {
                                     readonly property bool isOn: (win.mask >> index) & 1
                                     height: parent.height
                                     radius: 1.5
                                     width: parent.width * (isOn && win.meter.length > index ? Math.min(1, win.meter[index]) : 0)
-                                    color: "#0a7cff"
+                                    color: isMacOS ? MacColors.accent : "#0a7cff"
                                 }
                             }
                         }
@@ -476,8 +476,8 @@ AppWindow {
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 1
-                        Text { text: "Link output pairs"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
-                        Text { text: "One sub per pair, from its mono sum."; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: "Link output pairs"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
+                        Text { text: "One sub per pair, from its mono sum."; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                     }
                     ToggleSwitch {
                         anchors.right: parent.right

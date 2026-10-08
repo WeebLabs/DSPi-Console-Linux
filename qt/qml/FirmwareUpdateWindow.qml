@@ -57,9 +57,9 @@ AppWindow {
         case "idle": case "waitingForBoard":
             if (confirmed) return { icon: "search", spin: true, title: "Looking for the board",
                 text: "Waiting for it to appear in bootloader mode. If nothing happens after a few seconds, unplug the board, hold BOOTSEL, and plug it back in." }
-            if (connected) return { icon: "check-circle", tint: "#3a96ff", title: "Ready when you are",
+            if (connected) return { icon: "check-circle", tint: isMacOS ? MacColors.accent : "#3a96ff", title: "Ready when you are",
                 text: "Click " + primaryTitle + " to begin. The device will restart into bootloader mode, and audio will stop until the update finishes. Nothing is written without this click." }
-            return { icon: "plug", tint: Qt.rgba(1, 1, 1, 0.5), title: "Connect a board",
+            return { icon: "plug", tint: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5), title: "Connect a board",
                 text: "No device is connected. Hold the BOOTSEL button while plugging a board in, and it will appear here." }
         case "waitingForVolume":
             return { icon: "drive", spin: true, title: firmware.chipName + " found",
@@ -67,16 +67,16 @@ AppWindow {
         case "ready":
             if (confirmed) return { icon: "drive", spin: true, title: "Preparing to write",
                 text: "Opening the " + firmware.chipName + "'s " + firmware.volumeName + " drive." }
-            return { icon: "drive", tint: "#32d74b", title: firmware.chipName + " ready",
+            return { icon: "drive", tint: isMacOS ? MacColors.green : "#32d74b", title: firmware.chipName + " ready",
                 text: "The board is in bootloader mode and ready to receive firmware " + bundled + ". Click " + primaryTitle + " to begin." }
         case "waitingForDevice":
             return { icon: "revert", spin: true, title: "Firmware written",
                 text: "The board is restarting with its new firmware. This can take up to half a minute; leave it plugged in." }
         case "verified":
-            return { icon: "check-circle", tint: "#32d74b", size: 36, title: "Update complete",
+            return { icon: "check-circle", tint: isMacOS ? MacColors.green : "#32d74b", size: 36, title: "Update complete",
                 text: "The device is back and confirmed running firmware " + firmware.verifiedVersion + "." }
         case "failed":
-            return { icon: firmware.failureMundane ? "question-circle" : "warning", tint: "#ff9f0a",
+            return { icon: firmware.failureMundane ? "question-circle" : "warning", tint: isMacOS ? MacColors.orange : "#ff9f0a",
                 title: firmware.failureMundane ? "Not quite ready" : "The update did not complete", text: firmware.failure }
         default:
             return { icon: "", title: "", text: "" }
@@ -88,8 +88,8 @@ AppWindow {
 
     component Panel: Rectangle {
         radius: 8
-        color: Qt.rgba(1, 1, 1, 0.045)
-        border.color: Qt.rgba(1, 1, 1, 0.07)
+        color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(1, 1, 1, 0.045)
+        border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.07)
     }
     Column {
         anchors.fill: parent
@@ -103,18 +103,18 @@ AppWindow {
                 x: 16
                 anchors.verticalCenter: parent.verticalCenter
                 width: 28; height: 28; radius: 7
-                color: "#0a7cff"
-                Icon { anchors.centerIn: parent; name: "chip"; size: 17; color: "white" }
+                color: isMacOS ? "transparent" : "#0a7cff"
+                Icon { anchors.centerIn: parent; name: "chip"; size: 17; color: isMacOS ? MacColors.accent : "white" }
             }
             Column {
                 anchors.left: tile.right
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 1
-                Text { text: "Firmware Update"; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
-                Text { text: "Install firmware " + win.bundled + " onto a DSPi board"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                Text { text: "Firmware Update"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : "white" }
+                Text { text: "Install firmware " + win.bundled + " onto a DSPi board"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
             }
-            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
         }
 
         Item {
@@ -143,13 +143,13 @@ AppWindow {
                         Row {
                             visible: win.newer
                             spacing: 6
-                            Icon { name: "arrow-down-circle"; size: 13; color: "#ff9f0a"; anchors.verticalCenter: parent.verticalCenter }
+                            Icon { name: "arrow-down-circle"; size: 13; color: isMacOS ? MacColors.orange : "#ff9f0a"; anchors.verticalCenter: parent.verticalCenter }
                             Text {
                                 width: versions.width - 20
                                 wrapMode: Text.WordWrap
                                 text: "The device is newer than this Console, so this would be a downgrade."
                                 font.pixelSize: 11
-                                color: "#ff9f0a"
+                                color: isMacOS ? MacColors.orange : "#ff9f0a"
                             }
                         }
                     }
@@ -172,7 +172,7 @@ AppWindow {
                         anchors.fill: parent
                         visible: win.phase !== "writing"
                         icon: win.card.icon
-                        tint: win.card.tint || "#3a96ff"
+                        tint: isMacOS ? (win.card.tint || MacColors.accent) : win.card.tint || "#3a96ff"
                         spin: win.card.spin === true
                         iconSize: win.card.size || 28
                         title: win.card.title
@@ -197,25 +197,25 @@ AppWindow {
                         id: bootsel
                         visible: win.showBootselHint
                         spacing: 8
-                        Icon { name: "cs-button"; size: 14; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Icon { name: "cs-button"; size: 14; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                         Text {
                             width: hints.width - 22
                             wrapMode: Text.WordWrap
                             text: "Hold the BOOTSEL button on your Pico-compatible device while plugging it into your computer."
                             font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.5)
+                            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                         }
                     }
                     Row {
                         id: manual
                         visible: !win.showBootselHint && win.showManualHint
                         spacing: 4
-                        Text { text: "Flashing a UF2 of your own?"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: "Flashing a UF2 of your own?"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                         Text {
                             text: "Enter bootloader mode without installing"
                             font.pixelSize: 11
                             font.underline: linkMouse.containsMouse
-                            color: "#3a96ff"
+                            color: isMacOS ? MacColors.link : "#3a96ff"
                             MouseArea {
                                 id: linkMouse
                                 anchors.fill: parent
@@ -233,7 +233,7 @@ AppWindow {
         Item {
             width: parent.width
             height: 52
-            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+            Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
             Row {
                 x: 16
                 anchors.verticalCenter: parent.verticalCenter

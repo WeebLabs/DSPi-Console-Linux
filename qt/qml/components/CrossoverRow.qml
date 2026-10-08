@@ -61,17 +61,18 @@ Rectangle {
         BypassDot {
             active: xoRoot.isActive
             bypassed: xoRoot.filterBypass
-            dotColor: "#3a96dd"
+            dotColor: isMacOS ? Qt.rgba(0.5, 0.5, 0.5, 1) : "#3a96dd"
             anchors.verticalCenter: parent.verticalCenter
             onToggled: bridge.setCrossoverBypass(xoRoot.channelId, xoRoot.bandIndex, !xoRoot.filterBypass)
         }
 
         Text {
             width: 24
+            leftPadding: isMacOS ? 12 : 0     // macOS: the native 12 pt gap after the dot
             text: (bandIndex + 1).toString()
             font.pixelSize: 12
             font.family: root.monoFont
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: isMacOS ? (xoRoot.isActive ? MacColors.label : MacColors.opacity(MacColors.secondaryLabel, 0.5)) : Qt.rgba(1, 1, 1, 0.4)
             anchors.verticalCenter: parent.verticalCenter
         }
 

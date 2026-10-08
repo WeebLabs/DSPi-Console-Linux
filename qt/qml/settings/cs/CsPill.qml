@@ -8,7 +8,7 @@ Rectangle {
     width: row.implicitWidth + 16
     height: 20
     radius: 10
-    color: Qt.rgba(tint.r, tint.g, tint.b, 0.13)
+    color: isMacOS ? Qt.rgba(tint.r, tint.g, tint.b, 0.12) : Qt.rgba(tint.r, tint.g, tint.b, 0.13)
     Row {
         id: row
         anchors.centerIn: parent

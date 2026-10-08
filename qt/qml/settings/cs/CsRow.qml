@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "../../components"
 
 // A row inside a Control Surfaces card: title and optional detail on the
 // left, the trailing control (the row's children) on the right, a hairline
@@ -7,7 +8,7 @@ Item {
     id: row
     property string title: ""
     property string detail: ""
-    property color detailColor: Qt.rgba(1, 1, 1, 0.5)
+    property color detailColor: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     property bool hairline: true
     property int indent: 0
     default property alias control: trailing.data
@@ -21,7 +22,7 @@ Item {
         x: 14 + row.indent
         width: parent.width - x
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.07)
+        color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07)
     }
     Column {
         id: labels
@@ -34,7 +35,7 @@ Item {
             wrapMode: Text.WordWrap
             text: row.title
             font.pixelSize: 13
-            color: "white"
+            color: isMacOS ? MacColors.label : "white"
         }
         Text {
             visible: row.detail !== ""

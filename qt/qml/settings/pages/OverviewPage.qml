@@ -58,14 +58,14 @@ SettingsPage {
                         width: 52
                         height: 30
                         radius: 7
-                        color: owner ? Qt.darker(page.roleColor(owner.role), 1.15) : Qt.rgba(1, 1, 1, 0.05)
-                        border.color: owner ? Qt.lighter(page.roleColor(owner.role), 1.3) : Qt.rgba(1, 1, 1, 0.08)
+                        color: isMacOS ? (owner ? page.roleColor(owner.role) : MacColors.opacity(MacColors.secondaryLabel, 0.12)) : owner ? Qt.darker(page.roleColor(owner.role), 1.15) : Qt.rgba(1, 1, 1, 0.05)
+                        border.color: isMacOS ? "transparent" : owner ? Qt.lighter(page.roleColor(owner.role), 1.3) : Qt.rgba(1, 1, 1, 0.08)
                         Text {
                             anchors.centerIn: parent
                             text: "GP" + modelData
                             font.pixelSize: 11
                             font.weight: Font.DemiBold
-                            color: parent.owner ? "white" : Qt.rgba(1, 1, 1, 0.4)
+                            color: isMacOS ? (parent.owner ? "white" : MacColors.secondaryLabel) : parent.owner ? "white" : Qt.rgba(1, 1, 1, 0.4)
                         }
                         MouseArea {
                             id: chipHover
@@ -122,6 +122,6 @@ SettingsPage {
         visible: bridge.connected && page.owners.length === 0
         text: "No GPIOs are currently claimed."
         font.pixelSize: 13
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 }

@@ -56,7 +56,7 @@ Popup {
         property alias wheelStep: vf.wheelStep
         signal edited(real v)
         spacing: 8
-        Text { id: lbl; width: 34; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+        Text { id: lbl; width: 34; font.pixelSize: 12; color: isMacOS ? MacColors.secondaryLabel : "white"; anchors.verticalCenter: parent.verticalCenter }
         ValueField { id: vf; fieldWidth: 64; onValueEdited: parent.edited(newValue) }
     }
 
@@ -64,19 +64,19 @@ Popup {
         width: parent.width
         spacing: 10
 
-        Text { text: "Linkwitz Transform"; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
+        Text { text: "Linkwitz Transform"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : "white" }
 
         Row {
             spacing: 20
             Column {
                 spacing: 6
-                Text { text: "DRIVER"; font.pixelSize: 9; font.weight: Font.Bold; color: Qt.rgba(1, 1, 1, 0.45) }
+                Text { text: "DRIVER"; font.pixelSize: 9; font.weight: Font.Bold; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
                 Field { label: "f0"; suffix: "Hz"; decimals: 1; wheelStep: 1; minValue: 10; maxValue: 500; value: lt.f0; onEdited: lt.f0 = v }
                 Field { label: "Q0"; suffix: ""; decimals: 3; wheelStep: 0.1; minValue: 0.1; maxValue: 20; value: lt.q0; onEdited: lt.q0 = v }
             }
             Column {
                 spacing: 6
-                Text { text: "TARGET"; font.pixelSize: 9; font.weight: Font.Bold; color: Qt.rgba(1, 1, 1, 0.45) }
+                Text { text: "TARGET"; font.pixelSize: 9; font.weight: Font.Bold; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
                 Field { label: "fp"; suffix: "Hz"; decimals: 1; wheelStep: 1; minValue: 10; maxValue: 500; value: lt.fp; onEdited: lt.fp = v }
                 Field { label: "Qp"; suffix: ""; decimals: 3; wheelStep: 0.1; minValue: 0.1; maxValue: 20; value: lt.qp; onEdited: lt.qp = v }
             }
@@ -86,7 +86,7 @@ Popup {
             width: parent.width
             wrapMode: Text.WordWrap
             font.pixelSize: 11
-            color: lt.dcBoost > 15 ? "#ff9800" : Qt.rgba(1, 1, 1, 0.7)
+            color: isMacOS ? (lt.dcBoost > 15 ? MacColors.orange : MacColors.label) : lt.dcBoost > 15 ? "#ff9800" : Qt.rgba(1, 1, 1, 0.7)
             text: "DC boost " + (lt.dcBoost >= 0 ? "+" : "") + lt.dcBoost.toFixed(1) + " dB"
                   + (lt.dcBoost > 15 ? " — large boosts cost headroom and cone excursion" : "")
         }
@@ -98,7 +98,7 @@ Popup {
             Text {
                 text: { lt.rev; return lt.applied ? "Applied" : "Not applied yet" }
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (lt.rev >= 0 && lt.applied ? MacColors.secondaryLabel : MacColors.orange) : Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

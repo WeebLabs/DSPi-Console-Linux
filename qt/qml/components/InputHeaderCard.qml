@@ -9,8 +9,8 @@ Rectangle {
     height: 60
     radius: 10
     // Same surface as the band list below it
-    color: isMacOS ? Qt.rgba(0.21, 0.21, 0.21, 0.6) : nativeAltBaseColor
-    border.color: Qt.rgba(1, 1, 1, 0.1)
+    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : nativeAltBaseColor
+    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
     border.width: 1
 
     property int channelId: 0
@@ -61,10 +61,10 @@ Rectangle {
         implicitWidth: cbRow.implicitWidth + 28
         implicitHeight: 32
         radius: 8
-        color: active ? Qt.rgba(0.04, 0.49, 1, cbMouse.containsMouse ? 0.32 : 0.22)
+        color: isMacOS ? (active ? MacColors.opacity(MacColors.accent, 0.18) : "transparent") : active ? Qt.rgba(0.04, 0.49, 1, cbMouse.containsMouse ? 0.32 : 0.22)
              : cbMouse.pressed ? Qt.rgba(1, 1, 1, 0.12) : cbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
         border.width: 1
-        border.color: active ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.18)
+        border.color: isMacOS ? (active ? MacColors.opacity(MacColors.accent, 0.45) : MacColors.opacity(MacColors.gray, 0.3)) : active ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.18)
         Row {
             id: cbRow
             anchors.centerIn: parent
@@ -73,13 +73,13 @@ Rectangle {
                 visible: cb.icon !== ""
                 name: cb.icon
                 size: 15
-                color: cb.active ? "white" : "#cccccc"
+                color: isMacOS ? (cb.active ? MacColors.accent : MacColors.secondaryLabel) : cb.active ? "white" : "#cccccc"
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 text: cb.text
                 font.pixelSize: cb.fontSize
-                color: cb.active ? "white" : "#cccccc"   // Windows Console secondary text
+                color: isMacOS ? (cb.active ? MacColors.accent : MacColors.secondaryLabel) : cb.active ? "white" : "#cccccc"   // Windows Console secondary text
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -95,7 +95,7 @@ Rectangle {
     component Divider: Rectangle {
         Layout.fillHeight: true
         Layout.preferredWidth: 1
-        color: Qt.rgba(1, 1, 1, 0.08)
+        color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08)
     }
 
     RowLayout {
@@ -132,7 +132,7 @@ Rectangle {
                 text: "Preamp"
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
-                color: Qt.rgba(1, 1, 1, 0.6)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
             }
             StyledSlider {
                 id: preampSlider

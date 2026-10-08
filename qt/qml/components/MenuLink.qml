@@ -13,9 +13,9 @@ Item {
         Text {
             text: link.text
             font.pixelSize: 12
-            color: linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+            color: isMacOS ? MacColors.label : linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
         }
-        Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+        Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
     }
     MouseArea {
         id: linkMouse

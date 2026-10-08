@@ -17,14 +17,14 @@ Row {
             width: Math.max(28, (chips.width - (chips.count - 1) * chips.spacing) / chips.count)
             height: 26
             radius: 6
-            color: isOn ? "#0a7cff" : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
-            border.color: isOn ? "transparent" : Qt.rgba(1, 1, 1, 0.12)
+            color: isMacOS ? (isOn ? MacColors.accent : MacColors.opacity(MacColors.secondaryLabel, 0.12)) : isOn ? "#0a7cff" : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
+            border.color: isMacOS ? (isOn ? "transparent" : MacColors.opacity(MacColors.label, 0.08)) : isOn ? "transparent" : Qt.rgba(1, 1, 1, 0.12)
             Text {
                 anchors.centerIn: parent
                 text: index + 1
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
-                color: parent.isOn ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (parent.isOn ? "white" : MacColors.opacity(MacColors.label, 0.6)) : parent.isOn ? "white" : Qt.rgba(1, 1, 1, 0.5)
             }
             MouseArea {
                 id: chipMouse

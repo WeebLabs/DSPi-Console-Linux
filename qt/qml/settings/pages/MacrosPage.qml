@@ -106,14 +106,14 @@ SettingsPage {
             visible: !cs.supported
             text: "Reading control-surface capabilities from the device..."
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
 
         CsEmptyState {
             visible: cs.supported && page.visibleMacros.length === 0
             title: "No Macros Configured"
             text: "Run a short sequence of changes from a single press: select an input and load a preset, switch monitors, mute after a delay."
-            Icon { name: "list-number"; size: 28; color: Qt.rgba(1, 1, 1, 0.45) }
+            Icon { name: "list-number"; size: 28; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
             action: CsButton {
                 text: "Add Macro"; icon: "plus"; primary: true
                 enabled: page.firstFree >= 0 && cs.connected
@@ -135,13 +135,13 @@ SettingsPage {
                 name: d.name
                 placeholder: "Macro " + (m + 1)
                 summary: page.summary(d, isRunning)
-                summaryColor: isRunning ? "#32d74b" : Qt.rgba(1, 1, 1, 0.5)
+                summaryColor: isMacOS ? (isRunning ? MacColors.green : MacColors.secondaryLabel) : isRunning ? "#32d74b" : Qt.rgba(1, 1, 1, 0.5)
                 removeTip: "Remove this macro"
                 onToggle: page.setMap("expanded", m, expanded ? undefined : true)
                 onNameEdited: { var nd = cs.copy(card.d); nd.name = text; page.setDraft(card.m, nd) }
                 onRemoveClicked: page.removeMacro(m)
 
-                badge: Icon { name: card.isRunning ? "play" : "list-number"; size: 18; color: card.isRunning ? "#32d74b" : "#3a96ff" }
+                badge: Icon { name: card.isRunning ? "play" : "list-number"; size: 18; color: isMacOS ? (card.isRunning ? MacColors.green : MacColors.accent) : card.isRunning ? "#32d74b" : "#3a96ff" }
                 trailing: Row {
                     spacing: 4
                     Icon {
@@ -173,7 +173,7 @@ SettingsPage {
                         Item {
                             width: parent.width
                             height: 36
-                            Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+                            Rectangle { x: 14; width: parent.width - 14; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
                             Text {
                                 id: num
                                 x: 14
@@ -183,7 +183,7 @@ SettingsPage {
                                 text: parent.parent.s + 1
                                 font.pixelSize: 12
                                 font.weight: Font.DemiBold
-                                color: Qt.rgba(1, 1, 1, 0.5)
+                                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                             }
                             Text {
                                 anchors.left: num.right
@@ -194,7 +194,7 @@ SettingsPage {
                                 elide: Text.ElideRight
                                 text: cs.macroStepSummary(parent.parent.st)
                                 font.pixelSize: 12
-                                color: Qt.rgba(1, 1, 1, 0.7)
+                                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.7)
                             }
                             Row {
                                 id: stepButtons
@@ -219,7 +219,7 @@ SettingsPage {
                 Item {
                     width: parent.width
                     height: 42
-                    Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+                    Rectangle { x: 14; width: parent.width - 14; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
                     CsButton {
                         x: 14
                         anchors.verticalCenter: parent.verticalCenter
@@ -235,7 +235,7 @@ SettingsPage {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "A macro holds up to " + cs.stepCount + " steps."
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     }
                 }
 
@@ -265,7 +265,7 @@ SettingsPage {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "All " + cs.macroCount + " macro slots are in use."
                 font.pixelSize: 12
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
     }
@@ -277,6 +277,6 @@ SettingsPage {
         rightPadding: 4
         text: "To fire a macro, bind a push button or remote key to Tools > Macro with the action Set value. Each step can wait before it runs, and can address a channel group. One macro runs at a time - firing another cancels the first at its current step.\n\nMacros are stored on the device alongside the controls and share their Save and Revert."
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
     }
 }

@@ -21,7 +21,19 @@ static const float kMinFreq = 10.0f, kMaxFreqLimit = 21600.0f;
 static const float kMaxGain = 30.0f, kMinQ = 0.1f, kMaxQ = 20.0f;
 static const qreal kDotRadius = 5.0, kHitRadius = 10.0, kDragSlop = 2.0;
 
+#ifdef Q_OS_MACOS
+// PeqBandPalette (PeqGraphModel.swift), sRGB
+static QColor bandColor(int b) {
+    static const float rgb[10][3] = {
+        {0.93f, 0.47f, 0.45f}, {0.95f, 0.64f, 0.36f}, {0.92f, 0.79f, 0.40f}, {0.55f, 0.80f, 0.52f},
+        {0.36f, 0.77f, 0.68f}, {0.44f, 0.68f, 0.94f}, {0.58f, 0.60f, 0.94f}, {0.73f, 0.57f, 0.92f},
+        {0.89f, 0.54f, 0.72f}, {0.80f, 0.62f, 0.50f} };
+    const float *c = rgb[b % 10];
+    return QColor::fromRgbF(c[0], c[1], c[2]);
+}
+#else
 static QColor bandColor(int b) { return QColor(kBandColors[b % 10]); }
+#endif
 // A bypassed band keeps a trace of its colour (macOS: 35% colour, 65% grey)
 static QColor bypassColor(int b) {
     QColor c = bandColor(b);
@@ -985,7 +997,13 @@ void PeqEditorItem::keyPressEvent(QKeyEvent *e) {
 void PeqEditorItem::paint(QPainter *p) {
     if (!m_active || width() < 10 || height() < 10) return;
     p->setRenderHint(QPainter::Antialiasing);
+#ifdef Q_OS_MACOS
+    // Global EQ bypass dims the bands of input channels only (PeqGraphEditor
+    // dimAll; config.flat is set for inputs)
+    if (m_bridge->bypass() && m_bridge->isInputChannel(m_channel)) p->setOpacity(0.5);
+#else
     if (m_bridge->bypass()) p->setOpacity(0.5);   // global EQ bypass
+#endif
 
     // Lobes and outlines: plain bands first, lit ones on top
     for (int pass = 0; pass < 2; pass++)
@@ -1024,7 +1042,14 @@ void PeqEditorItem::paint(QPainter *p) {
             p->setBrush(c);
             p->drawEllipse(at, r, r);
             if (m_selectAmt[b] > 0.01f) {
+#ifdef Q_OS_MACOS
+                // peqNodeColor: the centre mixes in at min(2 x selection, 1)
+                QColor pipColor = m_background;
+                pipColor.setAlphaF(m_background.alphaF() * qMin(2.0f * m_selectAmt[b], 1.0f));
+                p->setBrush(pipColor);
+#else
                 p->setBrush(m_background);
+#endif
                 qreal pip = 2.2 * m_selectAmt[b];
                 p->drawEllipse(at, pip, pip);
             }
@@ -1033,10 +1058,19 @@ void PeqEditorItem::paint(QPainter *p) {
 
     // Marquee
     if (m_mode == Marquee && !m_marquee.isEmpty()) {
+#ifdef Q_OS_MACOS
+        // A layer of its own over the Metal view: never dimmed by the bypass
+        p->setOpacity(1.0);
+        QPen pen(QColor::fromRgbF(1, 1, 1, 0.45), 1.0, Qt::DashLine);
+        pen.setDashPattern({4, 3});
+        p->setPen(pen);
+        p->setBrush(QColor::fromRgbF(1, 1, 1, 0.06));
+#else
         QPen pen(QColor(255, 255, 255, 115), 1.0, Qt::DashLine);
         pen.setDashPattern({4, 3});
         p->setPen(pen);
         p->setBrush(QColor(255, 255, 255, 15));
+#endif
         p->drawRect(m_marquee);
     }
 
@@ -1088,9 +1122,30 @@ void PeqEditorItem::drawBand(QPainter *p, int b, float lift) {
         QColor clear = c, solid = c;
         clear.setAlphaF(0);
         solid.setAlphaF(lineAlpha);
+#ifdef Q_OS_MACOS
+        // peqStroke: the outline fades by smoothstep(2, 10) px from 0 dB
+        Q_UNUSED(fade);
+        lg.setColorAt(0, clear);
+        for (int k = 0; k <= 8; k++) {
+            const qreal d = 2.0 + k;
+            if (d >= span) break;
+            const qreal s = k / 8.0;
+            QColor stop = c;
+            stop.setAlphaF(lineAlpha * s * s * (3 - 2 * s));
+            lg.setColorAt(d / span, stop);
+        }
+        if (span > 10.0) lg.setColorAt(1, solid);
+        else {
+            const qreal s = qBound(0.0, (span - 2.0) / 8.0, 1.0);
+            QColor stop = c;
+            stop.setAlphaF(lineAlpha * s * s * (3 - 2 * s));
+            lg.setColorAt(1, stop);
+        }
+#else
         lg.setColorAt(0, clear);
         lg.setColorAt(fade, solid);
         lg.setColorAt(1, solid);
+#endif
         p->setBrush(Qt::NoBrush);
         p->setPen(QPen(QBrush(lg), 1.25, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         p->drawPath(curve);
@@ -1111,9 +1166,16 @@ void PeqEditorItem::drawReadouts(QPainter *p) {
     p->setFont(font);
     auto pill = [&](const QRectF &r, const QString &text) {
         p->setPen(Qt::NoPen);
+#ifdef Q_OS_MACOS
+        // Axis labels in PeqGraphEditor: sRGB (0.09, 0.09, 0.11) at 0.92, text white at 0.85
+        p->setBrush(QColor::fromRgbF(0.09, 0.09, 0.11, 0.92));
+        p->drawRoundedRect(r, 4, 4);
+        p->setPen(QColor::fromRgbF(1, 1, 1, 0.85));
+#else
         p->setBrush(QColor(23, 23, 28, 235));
         p->drawRoundedRect(r, 4, 4);
         p->setPen(QColor(255, 255, 255, 220));
+#endif
         p->drawText(r, Qt::AlignCenter, text);
     };
     if (m_cardOpen) {

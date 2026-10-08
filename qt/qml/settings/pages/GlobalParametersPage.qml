@@ -91,7 +91,7 @@ SettingsPage {
 
         SettingsRow {
             title: "Adjust only with audio stopped"
-            titleColor: "#ff9f0a"
+            titleColor: isMacOS ? MacColors.label : "#ff9f0a"
             detail: "Changing these settings while audio is playing can send a loud pop or full-level transient to your amplifier and speakers. Stop playback before making changes."
             Icon { name: "warning"; size: 18; color: "#ff9f0a" }
         }

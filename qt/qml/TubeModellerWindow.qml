@@ -112,7 +112,7 @@ AppWindow {
         }
     }
 
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
     // Tube chip in the Basic shelf
     component TubeChip: Rectangle {
@@ -121,14 +121,14 @@ AppWindow {
         width: (parent.width - 3 * 6) / 4
         height: 26
         radius: 6
-        color: isCurrent ? "#0a7cff" : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
-        border.color: isCurrent ? "transparent" : Qt.rgba(1, 1, 1, 0.12)
+        color: isMacOS ? (isCurrent ? MacColors.accent : MacColors.opacity(MacColors.secondaryLabel, 0.12)) : isCurrent ? "#0a7cff" : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.07)
+        border.color: isMacOS ? (isCurrent ? "transparent" : MacColors.opacity(MacColors.label, 0.08)) : isCurrent ? "transparent" : Qt.rgba(1, 1, 1, 0.12)
         Text {
             anchors.centerIn: parent
             text: win.shortName(parent.type)
             font.pixelSize: 11
             font.weight: Font.DemiBold
-            color: parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+            color: isMacOS ? (parent.isCurrent ? "white" : MacColors.opacity(MacColors.label, 0.75)) : parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
         }
         MouseArea {
             id: chipMouse
@@ -216,8 +216,8 @@ AppWindow {
                 width: flick.colWidth
                 height: Math.max(330, basicRight.height)
                 radius: 10
-                color: Qt.rgba(0, 0, 0, 0.2)
-                border.color: Qt.rgba(1, 1, 1, 0.1)
+                color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
                 clip: true
 
                 Column {
@@ -242,8 +242,8 @@ AppWindow {
                                 var ctx = getContext("2d")
                                 ctx.reset()
                                 var g = ctx.createRadialGradient(220, 220, 0, 220, 220, 220)
-                                g.addColorStop(0, "rgba(255,140,40,0.10)")
-                                g.addColorStop(1, "rgba(255,140,40,0)")
+                                g.addColorStop(0, isMacOS ? MacColors.opacity(MacColors.orange, 0.10) : "rgba(255,140,40,0.10)")
+                                g.addColorStop(1, isMacOS ? MacColors.opacity(MacColors.orange, 0) : "rgba(255,140,40,0)")
                                 ctx.fillStyle = g
                                 ctx.fillRect(0, 0, 440, 440)
                             }
@@ -260,7 +260,7 @@ AppWindow {
                         text: win.tubeNames[win.tubeType]
                         font.pixelSize: 16
                         font.weight: Font.DemiBold
-                        color: "white"
+                        color: isMacOS ? MacColors.label : "white"
                     }
                     Text {
                         width: parent.width
@@ -268,12 +268,12 @@ AppWindow {
                         wrapMode: Text.WordWrap
                         text: win.caption(win.tubeType)
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.55)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
                     }
                 }
             }
 
-            Rectangle { width: 1; height: basic.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: basic.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             Column {
                 id: basicRight
@@ -292,7 +292,7 @@ AppWindow {
                     Column {
                         width: basicRight.width
                         spacing: 6
-                        Text { text: modelData.title; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: modelData.title; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                         Flow {
                             width: parent.width
                             spacing: 6
@@ -355,8 +355,8 @@ AppWindow {
                     width: parent.width
                     height: 188
                     radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.2)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
                     Canvas {
                         id: curve
@@ -423,46 +423,46 @@ AppWindow {
                             function yOf(y) { return h / 2 - y / 1.4 * (h / 2) }
 
                             ctx.lineWidth = 1
-                            ctx.strokeStyle = "rgba(255,255,255,0.07)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.15) : "rgba(255,255,255,0.07)"
                             var gl = [-1, -0.5, 0.5, 1]
                             for (var i = 0; i < gl.length; i++) {
                                 ctx.beginPath(); ctx.moveTo(xOf(gl[i]), 0); ctx.lineTo(xOf(gl[i]), h); ctx.stroke()
                                 ctx.beginPath(); ctx.moveTo(0, yOf(gl[i])); ctx.lineTo(w, yOf(gl[i])); ctx.stroke()
                             }
-                            ctx.strokeStyle = "rgba(255,255,255,0.18)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.4) : "rgba(255,255,255,0.18)"
                             ctx.beginPath(); ctx.moveTo(xOf(0), 0); ctx.lineTo(xOf(0), h); ctx.stroke()
                             ctx.beginPath(); ctx.moveTo(0, yOf(0)); ctx.lineTo(w, yOf(0)); ctx.stroke()
-                            ctx.fillStyle = "rgba(255,255,255,0.4)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.4)"
                             ctx.font = "9px sans-serif"
                             ctx.fillText("out", xOf(0) + 4, 10)
                             ctx.fillText("in", w - 12, yOf(0) - 4)
 
                             if (!shown) {
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", w / 2, h / 2 - 12)
                                 return
                             }
                             var t = transfer()
                             // Where the stage runs out of headroom
-                            ctx.fillStyle = "rgba(255,159,10,0.10)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.orange, 0.10) : "rgba(255,159,10,0.10)"
                             var xp = (1 - t.b) / t.m, xn = (-1 / t.rn - t.b) / t.m
                             if (xp < 1) ctx.fillRect(xOf(Math.max(-1, xp)), 0, xOf(1) - xOf(Math.max(-1, xp)), h)
                             if (xn > -1) ctx.fillRect(0, 0, xOf(Math.min(1, xn)), h)
                             // Full scale
                             ctx.setLineDash([3, 3])
-                            ctx.strokeStyle = "rgba(255,69,58,0.6)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.red, 0.3) : "rgba(255,69,58,0.6)"
                             ctx.beginPath(); ctx.moveTo(0, yOf(1)); ctx.lineTo(w, yOf(1)); ctx.stroke()
                             ctx.beginPath(); ctx.moveTo(0, yOf(-1)); ctx.lineTo(w, yOf(-1)); ctx.stroke()
-                            ctx.fillStyle = "rgba(255,105,97,0.8)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.red, 0.5) : "rgba(255,105,97,0.8)"
                             ctx.fillText("0 dBFS", 4, yOf(1) - 3)
                             // Unity reference
-                            ctx.strokeStyle = "rgba(255,255,255,0.25)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.label, 0.25) : "rgba(255,255,255,0.25)"
                             ctx.beginPath(); ctx.moveTo(xOf(-1), yOf(-1)); ctx.lineTo(xOf(1), yOf(1)); ctx.stroke()
                             ctx.setLineDash([])
                             // The curve
-                            ctx.strokeStyle = "#0a7cff"
+                            ctx.strokeStyle = isMacOS ? MacColors.accent : "#0a7cff"
                             ctx.lineWidth = 1.6
                             ctx.beginPath()
                             for (var n = 0; n <= 240; n++) {
@@ -487,11 +487,11 @@ AppWindow {
                             model: [["2nd", curve.h2], ["3rd", curve.h3]]
                             Row {
                                 spacing: 5
-                                Text { text: modelData[0]; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.5) }
+                                Text { text: modelData[0]; font.pixelSize: 12; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                                 Text {
                                     text: !win.active ? "—" : modelData[1] <= -100 ? "none" : modelData[1].toFixed(0) + " dB"
                                     font.pixelSize: 12
-                                    color: Qt.rgba(1, 1, 1, 0.9)
+                                    color: isMacOS ? (modelData[1] > -100 ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, 0.9)
                                 }
                             }
                         }
@@ -508,7 +508,7 @@ AppWindow {
                 Item {
                     width: parent.width
                     height: 28
-                    Text { text: "Tube"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "Tube"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
                     StyledComboBox {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
@@ -526,7 +526,7 @@ AppWindow {
                     wrapMode: Text.WordWrap
                     text: win.caption(win.tubeType)
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                 }
                 ParamRow {
                     id: driveRow
@@ -556,7 +556,7 @@ AppWindow {
                 OutputsSection { width: parent.width }
             }
 
-            Rectangle { width: 1; height: advanced.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: advanced.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             Column {
                 width: flick.colWidth
@@ -571,7 +571,7 @@ AppWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.tubeType > 0 ? "from " + win.tubeNames[win.tubeType] : "custom"
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     }
                 }
                 ParamRow {
@@ -609,7 +609,7 @@ AppWindow {
                 Column {
                     width: parent.width
                     spacing: 6
-                    Text { text: "Rectifier"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+                    Text { text: "Rectifier"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
                     SegmentedControl {
                         width: parent.width
                         model: win.rectifiers
@@ -622,7 +622,7 @@ AppWindow {
                         wrapMode: Text.WordWrap
                         text: win.rectifierNotes[win.rectifier] || ""
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     }
                 }
 
@@ -634,7 +634,7 @@ AppWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 1
                         SectionLabel { text: "OUTPUT STAGE" }
-                        Text { text: "A valve amplifier's loose grip on the speaker."; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: "A valve amplifier's loose grip on the speaker."; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                     }
                     MouseArea {
                         id: stageHover

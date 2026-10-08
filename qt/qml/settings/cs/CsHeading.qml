@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "../../components"
 
 // Small-caps label naming a run of rows inside a card.
 Item {
@@ -6,7 +7,7 @@ Item {
     property int indent: 0
     width: parent ? parent.width : 400
     height: 30
-    Rectangle { x: 14 + parent.indent; width: parent.width - x; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+    Rectangle { x: 14 + parent.indent; width: parent.width - x; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
     Text {
         x: 14 + parent.indent
         anchors.bottom: parent.bottom
@@ -15,6 +16,6 @@ Item {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
     }
 }

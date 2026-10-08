@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "../components"
 
 // Shown while Settings holds changes not yet written to the device.
 Rectangle {
@@ -9,14 +10,14 @@ Rectangle {
 
     height: 48
     color: "#242426"
-    Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.opacity(MacColors.label, 0.08) : Qt.rgba(1, 1, 1, 0.08) }
 
     Column {
         x: 20
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
-        Text { text: "Unsaved changes"; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
-        Text { text: "Saving writes these settings to the device's flash"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+        Text { text: "Unsaved changes"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.secondaryLabel : "white" }
+        Text { text: "Saving writes these settings to the device's flash"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
     }
 
     // A button in the app's style: outlined (secondary) or filled accent
@@ -28,16 +29,17 @@ Rectangle {
         width: Math.max(72, label.implicitWidth + 28)
         height: 28
         radius: 8
-        color: primary ? (mouse.pressed ? "#0060cc" : "#0a7cff")
+        color: isMacOS ? (primary ? (mouse.pressed ? MacColors.defaultButtonPressed : MacColors.prominentButton) : mouse.pressed ? Qt.rgba(1, 1, 1, 0.36) : MacColors.control)
+             : primary ? (mouse.pressed ? "#0060cc" : "#0a7cff")
              : mouse.pressed ? Qt.rgba(1, 1, 1, 0.13) : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
-        border.color: primary ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+        border.color: isMacOS ? "transparent" : primary ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
         Text {
             id: label
             anchors.centerIn: parent
             text: btn.text
             font.pixelSize: 13
             font.weight: btn.primary ? Font.DemiBold : Font.Normal
-            color: "white"
+            color: isMacOS ? MacColors.label : "white"
         }
         MouseArea {
             id: mouse

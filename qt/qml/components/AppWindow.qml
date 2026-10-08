@@ -26,7 +26,7 @@ Window {
     // The titlebar, for Back/Forward and title overrides
     property alias titleBar: bar
 
-    color: "#1e1e20"
+    color: isMacOS ? MacColors.windowBackground : "#1e1e20"
     flags: isMacOS ? (Qt.Window | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
                    : (Qt.Window | Qt.FramelessWindowHint)
 

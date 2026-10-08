@@ -14,8 +14,8 @@ Rectangle {
     default property alias accessory: accessorySlot.data
 
     radius: 8
-    color: Qt.rgba(1, 1, 1, 0.045)
-    border.color: Qt.rgba(1, 1, 1, 0.07)
+    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(1, 1, 1, 0.045)
+    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.07)
 
     Column {
         anchors.centerIn: parent
@@ -34,7 +34,7 @@ Rectangle {
             text: card.title
             font.pixelSize: 13
             font.weight: Font.DemiBold
-            color: "white"
+            color: isMacOS ? MacColors.label : "white"
         }
         Text {
             width: parent.width
@@ -42,7 +42,7 @@ Rectangle {
             wrapMode: Text.WordWrap
             text: card.text
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
         }
         Item {
             id: accessorySlot

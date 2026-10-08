@@ -134,7 +134,13 @@ qreal BodePlotItem::yForDb(float db, qreal h) const {
 
 // A grid line's alpha at the user's grid strength (0.5 = as designed)
 QColor BodePlotItem::gridColor(int alpha) const {
+#ifdef Q_OS_MACOS
+    // GraphView: white at the line's own strength times the grid opacity
+    // (50% by default, so half the designed alpha)
+    return QColor::fromRgbF(1, 1, 1, qBound(0.0, alpha / 255.0 * m_gridOpacity, 1.0));
+#else
     return QColor(255, 255, 255, qBound(0, int(std::lround(alpha * m_gridOpacity * 2.0f)), 255));
+#endif
 }
 
 void BodePlotItem::drawGrid(QPainter *painter, const QRectF &rect) {

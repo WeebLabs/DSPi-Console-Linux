@@ -13,7 +13,7 @@ Rectangle {
     implicitWidth: 240
     height: 26
     radius: 7
-    color: Qt.rgba(1, 1, 1, 0.06)
+    color: isMacOS ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.06)
     border.color: Qt.rgba(1, 1, 1, 0.08)
     opacity: enabled ? 1 : 0.5
 
@@ -27,14 +27,14 @@ Rectangle {
                 width: parent.width / Math.max(1, seg.model.length)
                 height: parent.height
                 radius: 5
-                color: isCurrent ? MenuStyle.highlight
+                color: isMacOS ? (isCurrent ? Qt.rgba(1, 1, 1, 0.29) : "transparent") : isCurrent ? MenuStyle.highlight
                      : segMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                 Text {
                     anchors.centerIn: parent
                     text: modelData
                     font.pixelSize: 12
                     font.weight: parent.isCurrent ? Font.DemiBold : Font.Normal
-                    color: parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                    color: isMacOS ? (parent.isCurrent ? "white" : MacColors.label) : parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
                 }
                 MouseArea {
                     id: segMouse

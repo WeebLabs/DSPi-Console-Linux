@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import "../components"
 
 // A row with an action button. `destructive` colours it red.
 SettingsRow {
@@ -15,7 +16,7 @@ SettingsRow {
         contentItem: Text {
             text: button.text
             font.pixelSize: 13
-            color: row.destructive ? "#ff6961" : "white"
+            color: isMacOS ? (row.destructive ? MacColors.red : MacColors.label) : row.destructive ? "#ff6961" : "white"
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
         }
@@ -23,8 +24,8 @@ SettingsRow {
             implicitWidth: 96
             implicitHeight: 30
             radius: 7
-            color: button.down ? Qt.rgba(1, 1, 1, 0.20) : button.hovered ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.09)
-            border.color: Qt.rgba(1, 1, 1, 0.10)
+            color: isMacOS ? (button.down ? Qt.rgba(1, 1, 1, 0.36) : MacColors.control) : button.down ? Qt.rgba(1, 1, 1, 0.20) : button.hovered ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.09)
+            border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.10)
         }
     }
 }

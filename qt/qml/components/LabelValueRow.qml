@@ -13,14 +13,14 @@ Row {
         font.pixelSize: 10
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
         anchors.verticalCenter: parent.verticalCenter
     }
     Text {
         text: parent.value
         font.pixelSize: 12
         font.weight: Font.Medium
-        color: parent.secondary ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.9)
+        color: isMacOS ? (parent.secondary ? MacColors.secondaryLabel : MacColors.label) : parent.secondary ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.9)
         anchors.verticalCenter: parent.verticalCenter
     }
 }

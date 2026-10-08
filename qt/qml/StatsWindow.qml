@@ -46,37 +46,38 @@ AppWindow {
     function num(v) { return v === undefined || v === null ? dash : String(v) }
 
     // Colours: macOS dark system colours
-    readonly property color green: "#32d74b"
-    readonly property color yellow: "#ffd60a"
-    readonly property color orange: "#ff9f0a"
-    readonly property color red: "#ff453a"
-    readonly property color grey: "#8e8e93"
+    readonly property color green: isMacOS ? MacColors.green : "#32d74b"
+    readonly property color yellow: isMacOS ? MacColors.yellow : "#ffd60a"
+    readonly property color orange: isMacOS ? MacColors.orange : "#ff9f0a"
+    readonly property color red: isMacOS ? MacColors.red : "#ff453a"
+    readonly property color grey: isMacOS ? MacColors.gray : "#8e8e93"
 
     component SectionLabel: Text {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         topPadding: 4
         bottomPadding: 2
     }
-    component Divider: Rectangle { width: parent ? parent.width : 0; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+    component Divider: Rectangle { width: parent ? parent.width : 0; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
 
     // Title left, value right
     component InfoRow: Item {
         property string title: ""
         property string value: ""
-        property color valueColor: Qt.rgba(1, 1, 1, 0.9)
+        property color valueColor: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
         width: parent ? parent.width : 0
         height: 22
-        Text { anchors.verticalCenter: parent.verticalCenter; text: parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.75) }
+        // macOS: the starvation section's per-output and timer rows have secondary titles
+        Text { anchors.verticalCenter: parent.verticalCenter; text: parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: isMacOS ? (/^(Out \d|Time )/.test(parent.title) ? MacColors.secondaryLabel : MacColors.label) : Qt.rgba(1, 1, 1, 0.75) }
         Text {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: parent.value
             font.pixelSize: 12
             font.weight: Font.Bold
-            color: parent.valueColor
+            color: isMacOS ? (/^Time /.test(parent.title) ? MacColors.secondaryLabel : parent.valueColor) : parent.valueColor
         }
     }
     // Title left, a state dot and its name right
@@ -86,13 +87,13 @@ AppWindow {
         property color dot: win.grey
         width: parent ? parent.width : 0
         height: 22
-        Text { anchors.verticalCenter: parent.verticalCenter; text: parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.75) }
+        Text { anchors.verticalCenter: parent.verticalCenter; text: parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.75) }
         Row {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
             Rectangle { width: 6; height: 6; radius: 3; color: parent.parent.dot; anchors.verticalCenter: parent.verticalCenter }
-            Text { text: parent.parent.text; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.6) }
+            Text { text: parent.parent.text; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6) }
         }
     }
     // Over / underrun counters: orange overruns, red underruns when non-zero
@@ -107,8 +108,8 @@ AppWindow {
         Column {
             id: counterTitle
             anchors.verticalCenter: parent.verticalCenter
-            Text { text: parent.parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.85) }
-            Text { text: parent.parent.subtitle; font.pixelSize: 10; color: Qt.rgba(1, 1, 1, 0.45) }
+            Text { text: parent.parent.title; font.pixelSize: 11; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) }
+            Text { text: parent.parent.subtitle; font.pixelSize: 10; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
         }
         Row {
             anchors.right: parent.right
@@ -120,9 +121,9 @@ AppWindow {
                     text: win.num(parent.parent.parent.over)
                     font.pixelSize: 14
                     font.weight: Font.Bold
-                    color: (parent.parent.parent.over || 0) > 0 ? win.orange : Qt.rgba(1, 1, 1, 0.9)
+                    color: isMacOS ? ((parent.parent.parent.over || 0) > 0 ? win.orange : MacColors.label) : (parent.parent.parent.over || 0) > 0 ? win.orange : Qt.rgba(1, 1, 1, 0.9)
                 }
-                Text { anchors.right: parent.right; text: "over"; font.pixelSize: 9; color: Qt.rgba(1, 1, 1, 0.45) }
+                Text { anchors.right: parent.right; text: "over"; font.pixelSize: 9; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
             }
             Column {
                 visible: parent.parent.hasUnder
@@ -131,9 +132,9 @@ AppWindow {
                     text: win.num(parent.parent.parent.under)
                     font.pixelSize: 14
                     font.weight: Font.Bold
-                    color: (parent.parent.parent.under || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
+                    color: isMacOS ? ((parent.parent.parent.under || 0) > 0 ? win.red : MacColors.label) : (parent.parent.parent.under || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
                 }
-                Text { anchors.right: parent.right; text: "under"; font.pixelSize: 9; color: Qt.rgba(1, 1, 1, 0.45) }
+                Text { anchors.right: parent.right; text: "under"; font.pixelSize: 9; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
             }
         }
     }
@@ -153,7 +154,7 @@ AppWindow {
         width: parent ? parent.width : 0
         height: 48
         radius: 5
-        color: Qt.rgba(1, 1, 1, 0.05)
+        color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.07) : Qt.rgba(1, 1, 1, 0.05)
         Row {
             x: 8
             y: 3
@@ -166,12 +167,12 @@ AppWindow {
                 border.width: 1.5
                 border.color: br.tint
             }
-            Text { anchors.verticalCenter: parent.verticalCenter; text: br.title; font.pixelSize: 10; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.85) }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: br.title; font.pixelSize: 10; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: br.levels.min !== undefined && br.levels.max >= br.levels.min ? br.levels.min + "–" + br.levels.max + "%" : ""
                 font.pixelSize: 9
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
                 MouseArea { id: wmHover; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
                 ToolTip.visible: wmHover.containsMouse
                 ToolTip.delay: 600
@@ -263,7 +264,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.07) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
 
             // ── Column 2: starvation and buffer fill ──
             Column {
@@ -279,7 +280,7 @@ AppWindow {
                     Item {
                         width: parent.width
                         height: 26
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: "Total"; font.pixelSize: 11; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.75) }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: "Total"; font.pixelSize: 11; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.75) }
                         Row {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
@@ -289,7 +290,7 @@ AppWindow {
                                 width: deltaText.width + 10
                                 height: 16
                                 radius: 3
-                                color: Qt.rgba(1, 0.27, 0.23, 0.15)
+                                color: isMacOS ? MacColors.opacity(MacColors.red, 0.15) : Qt.rgba(1, 0.27, 0.23, 0.15)
                                 anchors.verticalCenter: parent.verticalCenter
                                 Text { id: deltaText; anchors.centerIn: parent; text: "+" + win.info.starvationDelta; font.pixelSize: 10; font.weight: Font.Bold; color: win.red }
                             }
@@ -297,7 +298,7 @@ AppWindow {
                                 text: win.num(win.info.starvationTotal)
                                 font.pixelSize: 14
                                 font.weight: Font.Bold
-                                color: (win.info.starvationTotal || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
+                                color: isMacOS ? ((win.info.starvationTotal || 0) > 0 ? win.red : MacColors.label) : (win.info.starvationTotal || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
                             }
                         }
                     }
@@ -307,7 +308,7 @@ AppWindow {
                             readonly property var per: win.info.starvationPer || []
                             title: "Out " + (index * 2 + 1) + "/" + (index * 2 + 2)
                             value: per.length > index ? String(per[index]) : win.dash
-                            valueColor: (per[index] || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
+                            valueColor: isMacOS ? ((per[index] || 0) > 0 ? win.red : MacColors.label) : (per[index] || 0) > 0 ? win.red : Qt.rgba(1, 1, 1, 0.9)
                         }
                     }
                     InfoRow { title: "Time since last event"; value: (win.info.lastEventMs || 0) > 0 ? win.span(win.now - win.info.lastEventMs) : win.dash }
@@ -325,9 +326,9 @@ AppWindow {
                         Layout.preferredWidth: resetText.width + 16
                         Layout.preferredHeight: 20
                         radius: 6
-                        color: resetMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : resetMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-                        border.color: Qt.rgba(1, 1, 1, 0.18)
-                        Text { id: resetText; anchors.centerIn: parent; text: "Reset Watermarks"; font.pixelSize: 10; color: Qt.rgba(1, 1, 1, 0.85) }
+                        color: isMacOS ? (resetMouse.pressed ? MacColors.opacity(MacColors.control, 1.6) : MacColors.control) : resetMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : resetMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+                        Text { id: resetText; anchors.centerIn: parent; text: "Reset Watermarks"; font.pixelSize: 10; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) }
                         MouseArea { id: resetMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: stats.resetWatermarks() }
                     }
                 }
@@ -338,7 +339,7 @@ AppWindow {
                         Row {
                             spacing: 5
                             Rectangle { width: 6; height: 6; radius: 3; color: modelData.on ? win.green : win.grey; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.t; font.pixelSize: 10; color: Qt.rgba(1, 1, 1, 0.55) }
+                            Text { text: modelData.t; font.pixelSize: 10; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55) }
                         }
                     }
                 }
@@ -377,7 +378,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.07) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
 
             // ── Column 3: inputs and links, when they apply ──
             Column {
@@ -501,14 +502,14 @@ AppWindow {
         anchors.bottom: parent.bottom
         width: parent.width
         height: 30
-        color: Qt.rgba(1, 1, 1, 0.03)
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+        color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.03)
+        Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
         Row {
             x: 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 7
             Rectangle { width: 6; height: 6; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: bridge.connected ? win.green : win.red }
-            Text { text: bridge.connected ? "Connected" : "Disconnected"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.55) }
+            Text { text: bridge.connected ? "Connected" : "Disconnected"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55) }
         }
         Text {
             anchors.right: parent.right
@@ -516,7 +517,7 @@ AppWindow {
             anchors.verticalCenter: parent.verticalCenter
             text: "Updated every 2 seconds"
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.4)
         }
     }
 }

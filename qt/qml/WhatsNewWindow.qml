@@ -67,14 +67,14 @@ AppWindow {
                             text: modelData.headline
                             font.pixelSize: 13
                             font.weight: Font.DemiBold
-                            color: "white"
+                            color: isMacOS ? MacColors.label : "white"
                         }
                         Text {
                             id: version
                             anchors.right: parent.right
                             text: modelData.version
                             font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.45)
+                            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
                         }
                     }
                     Repeater {
@@ -82,14 +82,14 @@ AppWindow {
                         Row {
                             width: notes.width
                             spacing: 8
-                            Text { text: "•"; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.45) }
+                            Text { text: "•"; font.pixelSize: 12; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
                             Text {
                                 width: parent.width - 16
                                 wrapMode: Text.WordWrap
                                 text: modelData
                                 font.pixelSize: 12
                                 lineHeight: 1.1
-                                color: Qt.rgba(1, 1, 1, 0.85)
+                                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85)
                             }
                         }
                     }
@@ -99,7 +99,7 @@ AppWindow {
                 visible: win.releases.length === 0
                 text: "No release notes are available in this build."
                 font.pixelSize: 12
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
     }
@@ -108,7 +108,7 @@ AppWindow {
         anchors.bottom: parent.bottom
         width: parent.width
         height: 52
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
         AppButton {
             anchors.right: parent.right
             anchors.rightMargin: 16

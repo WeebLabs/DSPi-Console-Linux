@@ -16,12 +16,21 @@
 #include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef Q_OS_MACOS
+#include <sys/mount.h>
+#include <vector>
+#endif
 
 extern "C" {
 #include "dspi_core.h"
 }
 
 namespace {
+#ifdef Q_OS_MACOS
+int syncData(int fd) { return ::fsync(fd); }
+#else
+int syncData(int fd) { return ::fdatasync(fd); }
+#endif
 // How long the board may sit on the bus with no drive before that's a failure
 constexpr int kVolumeWaitMs = 8000;
 // How long to wait for the device to come back after a write (reboot, USB
@@ -150,6 +159,20 @@ void FirmwareUpdater::stopWatching() {
 // table, which touches no filesystem: a board that rebooted mid-write can
 // leave a dead mount behind, and stat-ing one can block.
 QString FirmwareUpdater::mountPointOf(const QString &device, const QString &label) {
+#ifdef Q_OS_MACOS
+    // macOS mounts the drive itself under /Volumes; MNT_NOWAIT reads the
+    // cached table without asking any filesystem
+    Q_UNUSED(device);
+    const int n = getfsstat(nullptr, 0, MNT_NOWAIT);
+    if (n <= 0) return QString();
+    std::vector<struct statfs> mounts(static_cast<size_t>(n));
+    const int got = getfsstat(mounts.data(), int(mounts.size() * sizeof(struct statfs)), MNT_NOWAIT);
+    for (int i = 0; i < got; ++i) {
+        const QString mountPoint = QFile::decodeName(mounts[size_t(i)].f_mntonname);
+        if (QFileInfo(mountPoint).fileName() == label) return mountPoint;
+    }
+    return QString();
+#endif
     QFile f("/proc/self/mountinfo");
     if (!f.open(QIODevice::ReadOnly)) return QString();
     const QStringList lines = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
@@ -305,7 +328,7 @@ void FirmwareUpdater::install() {
             const qint64 total = data.size();
             while (written < total) {
                 const int n = int(qMin<qint64>(kChunk, total - written));
-                const bool ok = ::write(fd, data.constData() + written, size_t(n)) == n && ::fdatasync(fd) == 0;
+                const bool ok = ::write(fd, data.constData() + written, size_t(n)) == n && syncData(fd) == 0;
                 if (!ok) {
                     const double fraction = double(written) / double(total);
                     if (fraction < kRebootThreshold && (device.isEmpty() || QFileInfo::exists(device)))

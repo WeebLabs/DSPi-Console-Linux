@@ -10,7 +10,7 @@ Rectangle {
     property string icon: ""
     property bool primary: false
     property bool bare: false
-    property color glyphColor: Qt.rgba(1, 1, 1, 0.6)
+    property color glyphColor: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
     property string tip: ""
     signal clicked()
 
@@ -20,9 +20,10 @@ Rectangle {
     height: implicitHeight
     radius: bare ? 6 : 8
     opacity: enabled ? 1 : 0.4
-    color: primary ? (mouse.pressed ? "#0060cc" : "#0a7cff")
+    color: isMacOS ? (primary ? (mouse.pressed ? MacColors.defaultButtonPressed : MacColors.prominentButton) : bare ? "transparent" : mouse.pressed ? Qt.rgba(1, 1, 1, 0.36) : MacColors.control)
+         : primary ? (mouse.pressed ? "#0060cc" : "#0a7cff")
          : mouse.pressed ? Qt.rgba(1, 1, 1, 0.13) : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
-    border.color: primary || bare ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+    border.color: isMacOS ? "transparent" : primary || bare ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
 
     Row {
         id: row
@@ -32,7 +33,7 @@ Rectangle {
             visible: btn.icon !== ""
             name: btn.icon
             size: btn.bare ? 14 : 13
-            color: btn.bare ? (mouse.containsMouse && btn.enabled ? "white" : btn.glyphColor) : "white"
+            color: isMacOS ? (btn.bare ? btn.glyphColor : MacColors.label) : btn.bare ? (mouse.containsMouse && btn.enabled ? "white" : btn.glyphColor) : "white"
             anchors.verticalCenter: parent.verticalCenter
         }
         Text {
@@ -40,7 +41,7 @@ Rectangle {
             text: btn.text
             font.pixelSize: 13
             font.weight: btn.primary ? Font.DemiBold : Font.Normal
-            color: "white"
+            color: isMacOS ? MacColors.label : "white"
             anchors.verticalCenter: parent.verticalCenter
         }
     }

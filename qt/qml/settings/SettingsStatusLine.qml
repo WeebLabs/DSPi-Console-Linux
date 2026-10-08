@@ -14,7 +14,7 @@ Row {
         id: mark
         name: line.error ? "warning" : "chev-right"
         size: 15
-        color: line.error ? "#ff9f0a" : "#32d74b"
+        color: isMacOS ? (line.error ? MacColors.orange : MacColors.green) : line.error ? "#ff9f0a" : "#32d74b"
         anchors.verticalCenter: parent.verticalCenter
     }
     Text {
@@ -22,7 +22,7 @@ Row {
         wrapMode: Text.WordWrap
         text: line.text
         font.pixelSize: 12
-        color: line.error ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.7)
+        color: isMacOS ? (line.error ? MacColors.orange : MacColors.secondaryLabel) : line.error ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.7)
         anchors.verticalCenter: parent.verticalCenter
     }
 }

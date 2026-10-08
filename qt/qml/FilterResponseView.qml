@@ -45,7 +45,7 @@ Column {
             anchors.rightMargin: 16
             radius: 8
             // The dark row colour of the dashboard cards, as on macOS
-            color: isMacOS ? "#252525" : nativeAltBaseColor
+            color: isMacOS ? Qt.tint(MacColors.mainContentOpaque, MacColors.opacity(MacColors.controlBackground, 0.6)) : nativeAltBaseColor
             border.color: Qt.rgba(1, 1, 1, 0.1)
             border.width: 1
             clip: true
@@ -192,7 +192,7 @@ Column {
                 opacity: plotPointer.containsPointer || graphOptions.visible ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
-                color: gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse || graphOptions.visible
+                color: isMacOS ? "transparent" : gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse || graphOptions.visible
                        ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                 Icon {
                     anchors.centerIn: parent

@@ -4,6 +4,9 @@
 #include <QDateTime>
 #include <QPainter>
 #include <QPainterPath>
+#ifdef Q_OS_MACOS
+#include "MacSystemColors.h"
+#endif
 #include <algorithm>
 
 namespace {
@@ -265,7 +268,16 @@ void BufferTraceItem::paint(QPainter *p) {
         p->fillRect(QRectF(0, yFor(m_bandMax), w, yFor(m_bandMin) - yFor(m_bandMax)), band);
     }
     // 50 % guide
+#ifdef Q_OS_MACOS
+    // BufferTraceView: the 50% guide in separatorColor
+    static const QColor separator = [] {
+        const QVariant v = macSystemColors().value(QStringLiteral("separator"));
+        return v.isValid() ? v.value<QColor>() : QColor::fromRgbF(1, 1, 1, 0.098);
+    }();
+    QPen guide(separator, 0.5, Qt::CustomDashLine);
+#else
     QPen guide(QColor(255, 255, 255, 40), 0.5, Qt::CustomDashLine);
+#endif
     guide.setDashPattern({ 4, 6 });
     p->setPen(guide);
     p->drawLine(QPointF(0, yFor(50)), QPointF(w, yFor(50)));

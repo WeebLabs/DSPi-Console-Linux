@@ -22,9 +22,9 @@ ComboBox {
 
     background: Rectangle {
         radius: 7
-        color: box.pressed || box.popup.visible ? Qt.rgba(1, 1, 1, 0.16)
+        color: isMacOS ? (!box.enabled ? Qt.rgba(1, 1, 1, 0.125) : box.pressed || box.popup.visible ? Qt.rgba(1, 1, 1, 0.36) : Qt.rgba(1, 1, 1, 0.25)) : box.pressed || box.popup.visible ? Qt.rgba(1, 1, 1, 0.16)
              : box.hovered ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
-        border.color: box.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.10)
+        border.color: isMacOS ? (box.activeFocus ? MacColors.keyboardFocusIndicator : "transparent") : box.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.10)
     }
 
     contentItem: Text {
@@ -32,7 +32,7 @@ ComboBox {
         rightPadding: 26
         text: box.displayText
         font: box.font
-        color: box.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+        color: isMacOS ? (box.enabled ? Qt.rgba(1, 1, 1, 0.89) : Qt.rgba(1, 1, 1, 0.35)) : box.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
@@ -41,8 +41,8 @@ ComboBox {
         x: box.width - width - 9
         anchors.verticalCenter: parent.verticalCenter
         spacing: -4
-        Icon { name: "chev-up"; size: 11; color: Qt.rgba(1, 1, 1, 0.6) }
-        Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6) }
+        Icon { name: "chev-up"; size: 11; color: isMacOS ? "white" : Qt.rgba(1, 1, 1, 0.6) }
+        Icon { name: "chev-down"; size: 11; color: isMacOS ? "white" : Qt.rgba(1, 1, 1, 0.6) }
     }
 
     delegate: ItemDelegate {
@@ -57,19 +57,19 @@ ComboBox {
                 width: 14
                 text: index === box.currentIndex ? "✓" : ""
                 font.pixelSize: 12
-                color: "white"
+                color: isMacOS ? (opt.highlighted ? "white" : MacColors.label) : "white"
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 text: box.textRole ? (Array.isArray(box.model) ? modelData[box.textRole] : model[box.textRole]) : modelData
                 font: box.font
-                color: "white"
+                color: isMacOS ? (opt.highlighted ? "white" : MacColors.label) : "white"
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
         background: Rectangle {
             radius: 6
-            color: opt.highlighted ? "#0a7cff" : "transparent"
+            color: isMacOS ? (opt.highlighted ? MacColors.selectedContentBackground : "transparent") : opt.highlighted ? "#0a7cff" : "transparent"
         }
     }
 

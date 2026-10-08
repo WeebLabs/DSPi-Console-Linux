@@ -134,7 +134,7 @@ Popup {
                 anchors.leftMargin: 2
                 anchors.rightMargin: 2
                 radius: MenuStyle.rowRadius
-                color: row.hot ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                color: isMacOS ? (row.hot ? MenuStyle.highlight : "transparent") : row.hot ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
             }
             // Row name: picks the usual slope
             MouseArea {
@@ -152,7 +152,7 @@ Popup {
                 text: row.selected ? "✓" : ""
                 font.pixelSize: 12
                 font.weight: Font.Bold
-                color: "#3a96ff"
+                color: isMacOS ? (row.hot ? "white" : MacColors.label) : "#3a96ff"
             }
             Text {
                 anchors.left: check.right
@@ -160,7 +160,7 @@ Popup {
                 text: entry.text
                 font.pixelSize: MenuStyle.fontSize
                 font.weight: row.selected ? Font.DemiBold : Font.Normal
-                color: entry.types[0] === 0 && !row.selected ? Qt.rgba(1, 1, 1, 0.6) : "white"
+                color: isMacOS ? (row.hot ? "white" : MacColors.label) : entry.types[0] === 0 && !row.selected ? Qt.rgba(1, 1, 1, 0.6) : "white"
             }
             // Slope chips
             Row {
@@ -177,7 +177,7 @@ Popup {
                         width: 44
                         height: 20
                         radius: 5
-                        color: isCurrent ? MenuStyle.highlight
+                        color: isMacOS ? (isCurrent ? (row.hot ? Qt.rgba(1, 1, 1, 0.25) : MenuStyle.highlight) : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.07)) : isCurrent ? MenuStyle.highlight
                              : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.07)
                         Text {
                             anchors.centerIn: parent

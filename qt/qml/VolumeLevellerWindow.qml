@@ -30,16 +30,16 @@ AppWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
     // Row name with a grey note after it ("Detector  sets the shared gain")
     component RowTitle: Row {
         property string text: ""
         property string note: ""
         spacing: 6
-        Text { id: rt; text: parent.text; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
-        Text { text: parent.note; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5); anchors.baseline: rt.baseline }
+        Text { id: rt; text: parent.text; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
+        Text { text: parent.note; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5); anchors.baseline: rt.baseline }
     }
 
     ToolHeader {
@@ -92,9 +92,9 @@ AppWindow {
                             Text {
                                 text: "Presets"
                                 font.pixelSize: 12
-                                color: presetMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                                color: isMacOS ? MacColors.label : presetMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
                             }
-                            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                            Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
                         }
                         MouseArea {
                             id: presetMouse
@@ -143,7 +143,7 @@ AppWindow {
             Column {
                 width: parent.width
                 spacing: 6
-                Text { text: "Speed"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+                Text { text: "Speed"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
                 Rectangle {
                     width: parent.width
                     height: 26
@@ -160,14 +160,14 @@ AppWindow {
                                 width: parent.width / 3
                                 height: parent.height
                                 radius: 5
-                                color: isCurrent ? MenuStyle.highlight
+                                color: isMacOS ? (isCurrent ? MacColors.control : "transparent") : isCurrent ? MenuStyle.highlight
                                      : speedMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                                 Text {
                                     anchors.centerIn: parent
                                     text: modelData
                                     font.pixelSize: 12
                                     font.weight: parent.isCurrent ? Font.DemiBold : Font.Normal
-                                    color: parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                                    color: isMacOS ? (parent.isCurrent ? "white" : MacColors.label) : parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
                                 }
                                 MouseArea {
                                     id: speedMouse
@@ -185,7 +185,7 @@ AppWindow {
                     wrapMode: Text.WordWrap
                     text: speedCaptions[Math.max(0, Math.min(2, bridge.levellerSpeed))]
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                 }
             }
             Divider {}
@@ -217,8 +217,8 @@ AppWindow {
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
-                    Text { text: "Lookahead"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
-                    Text { width: parent.width; wrapMode: Text.WordWrap; text: "Adds 5 ms latency. Improves transient handling."; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                    Text { text: "Lookahead"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
+                    Text { width: parent.width; wrapMode: Text.WordWrap; text: "Adds 5 ms latency. Improves transient handling."; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                 }
                 ToggleSwitch {
                     id: lookSwitch

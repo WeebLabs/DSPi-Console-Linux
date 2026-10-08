@@ -98,14 +98,14 @@ SettingsPage {
             visible: !cs.supported
             text: "Reading control-surface capabilities from the device..."
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
 
         CsEmptyState {
             visible: cs.supported && page.visibleGroups.length === 0
             title: "No Channel Groups Configured"
             text: "Name a set of channels so one control can drive them together - a stereo pair, a zone, every output at once."
-            Icon { name: "group"; size: 28; color: Qt.rgba(1, 1, 1, 0.45) }
+            Icon { name: "group"; size: 28; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45) }
             action: CsButton {
                 text: "Add Group"; icon: "plus"; primary: true
                 enabled: page.firstFree >= 0 && cs.connected
@@ -131,7 +131,7 @@ SettingsPage {
                 onNameEdited: { var nd = cs.copy(card.d); nd.name = text; page.setDraft(card.g, nd) }
                 onRemoveClicked: page.removeGroup(g)
 
-                badge: Icon { name: "group"; size: 18; color: "#3a96ff" }
+                badge: Icon { name: "group"; size: 18; color: isMacOS ? MacColors.accent : "#3a96ff" }
                 trailing: Icon {
                     visible: card.health !== 0 && cs.groupConfigured(page.live[card.g])
                     name: "warning"
@@ -164,7 +164,7 @@ SettingsPage {
                         x: 14
                         text: "No channels of this type on the connected device."
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     }
                     Grid {
                         id: grid
@@ -220,7 +220,7 @@ SettingsPage {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "All " + cs.groupCount + " group slots are in use."
                 font.pixelSize: 12
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
     }
@@ -232,6 +232,6 @@ SettingsPage {
         rightPadding: 4
         text: "Choose a group in a control's Channel or Group menu. Relative moves (an encoder, a button) step every member from its own value, so the balance between them survives. A knob moves the group's average and keeps those offsets unless \"Match Members Exactly\" is on.\n\nGroups are stored on the device alongside the controls and share their Save and Revert."
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
     }
 }

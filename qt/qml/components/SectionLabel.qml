@@ -5,5 +5,5 @@ Text {
     font.pixelSize: 11
     font.weight: Font.Bold
     font.letterSpacing: 0.4
-    color: Qt.rgba(1, 1, 1, 0.5)
+    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
 }

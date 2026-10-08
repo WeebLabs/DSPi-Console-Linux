@@ -12,8 +12,8 @@ Rectangle {
     width: parent ? parent.width : 400
     height: col.height + 36
     radius: 10
-    color: Qt.rgba(1, 1, 1, 0.045)
-    border.color: Qt.rgba(1, 1, 1, 0.07)
+    color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
+    border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
     Column {
         id: col
         y: 18
@@ -29,7 +29,7 @@ Rectangle {
                 text: empty.title
                 font.pixelSize: 14
                 font.weight: Font.DemiBold
-                color: "white"
+                color: isMacOS ? MacColors.label : "white"
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -38,7 +38,7 @@ Rectangle {
                 wrapMode: Text.WordWrap
                 text: empty.text
                 font.pixelSize: 12
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
             }
         }
         Item {

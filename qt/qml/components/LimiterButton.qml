@@ -9,7 +9,7 @@ Rectangle {
     width: 36
     height: 24
     radius: 6
-    color: hover.containsMouse || popup.visible ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+    color: isMacOS ? "transparent" : hover.containsMouse || popup.visible ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
 
     property int outputIndex: 0
     property bool enabled_: bridge.limiterEnabled(outputIndex)
@@ -34,7 +34,7 @@ Rectangle {
         anchors.centerIn: parent
         name: "gauge"
         size: 18
-        color: !btn.enabled_ ? Qt.rgba(1, 1, 1, 0.4) : btn.limiting ? "#ff9f0a" : "#3a96dd"
+        color: isMacOS ? (!btn.enabled_ ? MacColors.secondaryLabel : btn.limiting ? MacColors.orange : MacColors.accent) : !btn.enabled_ ? Qt.rgba(1, 1, 1, 0.4) : btn.limiting ? "#ff9f0a" : "#3a96dd"
     }
 
     MouseArea {
@@ -66,7 +66,7 @@ Rectangle {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.5)
     }
 
     component OutlineButton: Rectangle {
@@ -81,7 +81,7 @@ Rectangle {
         Row {
             anchors.centerIn: parent
             spacing: 5
-            Text { text: ob.text; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: ob.text; font.pixelSize: 12; color: isMacOS ? MacColors.label : "white"; anchors.verticalCenter: parent.verticalCenter }
             Icon { visible: ob.chevron; name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
         }
         MouseArea { id: obMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ob.clicked() }
@@ -148,14 +148,14 @@ Rectangle {
                         text: "Output Limiter"
                         font.pixelSize: 13
                         font.weight: Font.DemiBold
-                        color: "white"
+                        color: isMacOS ? MacColors.label : "white"
                     }
                     Text {
                         text: !btn.enabled_ ? "Off"
                             : btn.limiting ? "Reducing by " + btn.reduction.toFixed(1) + " dB"
                             : "On · not limiting"
                         font.pixelSize: 11
-                        color: btn.limiting ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? (btn.limiting ? MacColors.orange : MacColors.secondaryLabel) : btn.limiting ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
                     }
                 }
                 ToggleSwitch {
@@ -164,7 +164,7 @@ Rectangle {
                 }
             }
 
-            Rectangle { width: parent.width; height: 1; color: MenuStyle.separator }
+            Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : MenuStyle.separator }
 
             // Threshold
             Column {
@@ -236,8 +236,8 @@ Rectangle {
                     width: parent.width
                     height: 26
                     radius: 7
-                    color: Qt.rgba(1, 1, 1, 0.06)
-                    border.color: Qt.rgba(1, 1, 1, 0.08)
+                    color: isMacOS ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.06)
+                    border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.13) : Qt.rgba(1, 1, 1, 0.08)
                     Row {
                         anchors.fill: parent
                         anchors.margins: 2
@@ -248,14 +248,14 @@ Rectangle {
                                 width: parent.width / 5
                                 height: parent.height
                                 radius: 5
-                                color: isCurrent ? MenuStyle.highlight
+                                color: isMacOS ? (isCurrent ? Qt.rgba(1, 1, 1, 0.29) : "transparent") : isCurrent ? MenuStyle.highlight
                                      : segMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                                 Text {
                                     anchors.centerIn: parent
                                     text: modelData
                                     font.pixelSize: 12
                                     font.weight: parent.isCurrent ? Font.DemiBold : Font.Normal
-                                    color: parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                                    color: isMacOS ? MacColors.label : parent.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
                                 }
                                 MouseArea {
                                     id: segMouse
@@ -271,7 +271,7 @@ Rectangle {
 
             }
 
-            Rectangle { width: parent.width; height: 1; color: MenuStyle.separator }
+            Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : MenuStyle.separator }
 
             // Actions
             RowLayout {

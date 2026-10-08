@@ -70,12 +70,12 @@ SettingsPage {
         property bool enabledInFlash: false
         property bool live: false
         readonly property string label: !enabledInFlash ? "Disabled" : live ? "Active" : "Inactive"
-        readonly property color tint: !enabledInFlash ? Qt.rgba(1, 1, 1, 0.4) : live ? "#32d74b" : "#ff9f0a"
+        readonly property color tint: isMacOS ? (!enabledInFlash ? MacColors.secondaryLabel : live ? MacColors.green : MacColors.orange) : !enabledInFlash ? Qt.rgba(1, 1, 1, 0.4) : live ? "#32d74b" : "#ff9f0a"
         width: pillText.implicitWidth + 16
         height: 20
         radius: 10
-        color: Qt.rgba(tint.r, tint.g, tint.b, 0.15)
-        border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.5)
+        color: isMacOS ? MacColors.opacity(tint, 0.15) : Qt.rgba(tint.r, tint.g, tint.b, 0.15)
+        border.color: isMacOS ? "transparent" : Qt.rgba(tint.r, tint.g, tint.b, 0.5)
         Text {
             id: pillText
             anchors.centerIn: parent
@@ -95,22 +95,22 @@ SettingsPage {
         signal apply()
         signal revert()
         title: edited ? "Unapplied changes" : result !== "" ? result : "Applied"
-        titleColor: edited ? "white" : resultError ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.7)
+        titleColor: isMacOS ? (resultError && !edited ? MacColors.orange : MacColors.secondaryLabel) : edited ? "white" : resultError ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.7)
         Row {
             spacing: 8
             Rectangle {
                 visible: applyRow.edited
                 width: 80; height: 28; radius: 8
-                color: revertMouse.pressed ? Qt.rgba(1, 1, 1, 0.12) : revertMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
-                border.color: Qt.rgba(1, 1, 1, 0.18)
-                Text { anchors.centerIn: parent; text: "Revert"; font.pixelSize: 13; color: "white" }
+                color: isMacOS ? "transparent" : revertMouse.pressed ? Qt.rgba(1, 1, 1, 0.12) : revertMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+                Text { anchors.centerIn: parent; text: "Revert"; font.pixelSize: 13; color: isMacOS ? MacColors.accent : "white" }
                 MouseArea { id: revertMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: applyRow.revert() }
             }
             Rectangle {
                 width: 80; height: 28; radius: 8
                 opacity: applyRow.edited ? 1 : 0.4
-                color: applyMouse.pressed ? "#0060cc" : "#0a7cff"
-                Text { anchors.centerIn: parent; text: "Apply"; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
+                color: isMacOS ? (applyMouse.pressed ? Qt.rgba(1, 1, 1, 0.36) : MacColors.control) : applyMouse.pressed ? "#0060cc" : "#0a7cff"
+                Text { anchors.centerIn: parent; text: "Apply"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : "white" }
                 MouseArea { id: applyMouse; anchors.fill: parent; enabled: applyRow.edited; cursorShape: Qt.PointingHandCursor; onClicked: applyRow.apply() }
             }
         }
@@ -122,7 +122,7 @@ SettingsPage {
         wrapMode: Text.WordWrap
         text: bridge.connected ? "The connected firmware has no UART or I2C control interface." : "Connect a DSPi to set up its control interfaces."
         font.pixelSize: 13
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
     // ── UART ──

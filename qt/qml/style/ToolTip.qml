@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Templates 2.15 as T
+import "../components"
 
 // App-wide tooltip (the custom style only overrides this control; the rest
 // falls back to Fusion): a small dark card in the menu style, 12 px text,
@@ -32,7 +33,7 @@ T.ToolTip {
         text: control.text
         font: control.font
         wrapMode: Text.Wrap
-        color: Qt.rgba(1, 1, 1, 0.9)
+        color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
     }
 
     background: Item {

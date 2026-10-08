@@ -5,8 +5,8 @@ Slider {
     id: sliderRoot
     height: 12
 
-    property color trackColor: Qt.rgba(0.5, 0.5, 0.5, 0.2)
-    property color activeColor: "#0078d4"
+    property color trackColor: isMacOS ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0.5, 0.5, 0.5, 0.2)
+    property color activeColor: isMacOS ? MacColors.sliderFill : "#0078d4"
 
     background: Rectangle {
         x: sliderRoot.leftPadding
@@ -20,7 +20,7 @@ Slider {
             width: sliderRoot.visualPosition * parent.width
             height: parent.height
             radius: 2
-            color: sliderRoot.enabled ? activeColor : Qt.rgba(0.5, 0.5, 0.5, 0.3)
+            color: isMacOS ? (sliderRoot.enabled ? activeColor : MacColors.opacity(activeColor, 0.5)) : sliderRoot.enabled ? activeColor : Qt.rgba(0.5, 0.5, 0.5, 0.3)
         }
     }
 
@@ -30,6 +30,6 @@ Slider {
         width: 12
         height: 12
         radius: 6
-        color: sliderRoot.enabled ? "white" : Qt.rgba(0.7, 0.7, 0.7, 1.0)
+        color: isMacOS ? (sliderRoot.enabled ? Qt.rgba(0.6, 0.6, 0.6, 1) : Qt.rgba(0.408, 0.408, 0.408, 1)) : sliderRoot.enabled ? "white" : Qt.rgba(0.7, 0.7, 0.7, 1.0)
     }
 }

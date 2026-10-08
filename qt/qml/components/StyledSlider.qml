@@ -4,7 +4,7 @@ import QtQuick.Controls 2.15
 // Thin-track slider with a round knob.
 Slider {
     id: sl
-    property color accent: "#0a7cff"
+    property color accent: isMacOS ? MacColors.sliderFill : "#0a7cff"
     implicitHeight: 22
     topPadding: 0
     bottomPadding: 0
@@ -15,12 +15,12 @@ Slider {
         width: sl.availableWidth
         height: 4
         radius: 2
-        color: Qt.rgba(1, 1, 1, 0.14)
+        color: isMacOS ? (sl.enabled ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.05)) : Qt.rgba(1, 1, 1, 0.14)
         Rectangle {
             width: sl.visualPosition * parent.width
             height: parent.height
             radius: 2
-            color: sl.enabled ? sl.accent : Qt.rgba(1, 1, 1, 0.3)
+            color: isMacOS ? (sl.enabled ? sl.accent : MacColors.opacity(sl.accent, 0.5)) : sl.enabled ? sl.accent : Qt.rgba(1, 1, 1, 0.3)
         }
     }
     handle: Rectangle {
@@ -29,7 +29,7 @@ Slider {
         width: 18
         height: 18
         radius: 9
-        color: sl.pressed ? "#e8e8e8" : "white"
+        color: isMacOS ? (sl.enabled ? Qt.rgba(0.6, 0.6, 0.6, 1) : Qt.rgba(0.408, 0.408, 0.408, 1)) : sl.pressed ? "#e8e8e8" : "white"
         border.color: Qt.rgba(0, 0, 0, 0.25)
     }
 }

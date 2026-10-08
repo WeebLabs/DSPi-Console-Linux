@@ -43,8 +43,8 @@ Item {
             x: 2
             anchors.verticalCenter: parent.verticalCenter
             width: 15; height: 16; radius: 4
-            color: backMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
-            Icon { anchors.centerIn: parent; name: "chev-left"; size: 10; color: Qt.rgba(1, 1, 1, 0.75) }
+            color: isMacOS ? (backMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent") : backMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+            Icon { anchors.centerIn: parent; name: "chev-left"; size: 10; color: isMacOS ? Qt.rgba(1, 1, 1, 0.82) : Qt.rgba(1, 1, 1, 0.75) }
             MouseArea {
                 id: backMouse
                 anchors.fill: parent
@@ -91,7 +91,7 @@ Item {
                 width: body.cellW - 2
                 height: body.cellH - 2
                 radius: 5
-                color: marked ? Qt.rgba(chooser.markColor.r, chooser.markColor.g, chooser.markColor.b, 0.18)
+                color: isMacOS ? (marked ? Qt.rgba(1, 1, 1, 0.16) : cellMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent") : marked ? Qt.rgba(chooser.markColor.r, chooser.markColor.g, chooser.markColor.b, 0.18)
                      : cellMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
                 PeqShapeGlyph {
                     anchors.centerIn: parent
@@ -127,7 +127,7 @@ Item {
                 readonly property var shape: chooser.pending >= 0 ? chooser.shapes[chooser.pending] : null
                 readonly property bool marked: chooser.pending === chooser.ownShape && order === chooser.ownOrder
                 width: 40; height: 18; radius: 5
-                color: marked ? Qt.rgba(chooser.markColor.r, chooser.markColor.g, chooser.markColor.b, 0.22)
+                color: isMacOS ? (marked ? Qt.rgba(1, 1, 1, 0.16) : orderMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.07)) : marked ? Qt.rgba(chooser.markColor.r, chooser.markColor.g, chooser.markColor.b, 0.22)
                      : orderMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.13) : Qt.rgba(1, 1, 1, 0.07)
                 Text {
                     anchors.centerIn: parent

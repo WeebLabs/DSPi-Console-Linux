@@ -19,8 +19,8 @@ Row {
     property real maxValue: 999
     property int fieldWidth: 60
     property int fontSize: 13
-    property color textColor: Qt.rgba(1, 1, 1, 0.9)
-    property color unitColor: Qt.rgba(1, 1, 1, 0.45)
+    property color textColor: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
+    property color unitColor: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
     property int unitSize: Math.max(10, fontSize - 2)
     // Values at or below this read as -∞ (e.g. the master volume mute sentinel)
     property real infinityAt: -1e9
@@ -43,8 +43,8 @@ Row {
         width: fieldWidth
         height: parent.height
         font.pixelSize: valueFieldRoot.fontSize
-        color: valueFieldRoot.textColor
-        selectionColor: "#0a7cff"
+        color: isMacOS ? (textField.activeFocus ? MacColors.accent : valueFieldRoot.textColor) : valueFieldRoot.textColor
+        selectionColor: isMacOS ? MacColors.selectedControl : "#0a7cff"
         selectedTextColor: "white"
         horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
@@ -57,10 +57,10 @@ Row {
 
         background: Rectangle {
             radius: 5
-            color: textField.activeFocus ? Qt.rgba(1, 1, 1, 0.10)
+            color: isMacOS ? "transparent" : textField.activeFocus ? Qt.rgba(1, 1, 1, 0.10)
                  : textField.hovered && textField.enabled ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
             border.width: textField.activeFocus ? 1.5 : 0
-            border.color: "#0a7cff"
+            border.color: isMacOS ? MacColors.keyboardFocusIndicator : "#0a7cff"
             Behavior on color { ColorAnimation { duration: 90 } }
         }
 

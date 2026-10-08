@@ -25,10 +25,10 @@ PopoverWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
-    component Divider: Rectangle { width: parent ? parent.width : 0; height: 1; color: MenuStyle.separator }
+    component Divider: Rectangle { width: parent ? parent.width : 0; height: 1; color: isMacOS ? MacColors.separator : MenuStyle.separator }
 
     // A switch row; `icon` is optional
     component SwitchRow: Item {
@@ -45,8 +45,8 @@ PopoverWindow {
             anchors.leftMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
-            Icon { visible: sr.icon !== ""; name: sr.icon; size: 15; color: Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: sr.text; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+            Icon { visible: sr.icon !== ""; name: sr.icon; size: 15; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
+            Text { text: sr.text; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
         }
         ToggleSwitch {
             anchors.right: parent.right
@@ -68,14 +68,14 @@ PopoverWindow {
         width: (parent ? parent.width : 0) - 12
         height: 28
         radius: 6
-        color: arMouse.containsMouse ? MenuStyle.highlight : "transparent"
+        color: isMacOS ? (arMouse.containsMouse ? MacColors.accent : "transparent") : arMouse.containsMouse ? MenuStyle.highlight : "transparent"
         Row {
             anchors.left: parent.left
             anchors.leftMargin: 6
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
-            Icon { name: ar.icon; size: 15; color: arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: ar.text; font.pixelSize: 13; color: arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+            Icon { name: ar.icon; size: 15; color: isMacOS ? (arMouse.containsMouse ? "white" : MacColors.label) : arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
+            Text { text: ar.text; font.pixelSize: 13; color: isMacOS ? (arMouse.containsMouse ? "white" : MacColors.label) : arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
         }
         Icon {
             visible: ar.chevron
@@ -84,7 +84,7 @@ PopoverWindow {
             anchors.verticalCenter: parent.verticalCenter
             name: "chev-right"
             size: 11
-            color: arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.4)
+            color: isMacOS ? (arMouse.containsMouse ? "white" : MacColors.opacity(MacColors.label, 0.5)) : arMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.4)
         }
         MouseArea { id: arMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ar.clicked() }
     }
@@ -103,7 +103,7 @@ PopoverWindow {
         width: (parent ? parent.width : 0) - 24
         height: 26
         opacity: enabled ? 1 : 0.4
-        Text { id: slLabel; width: 70; text: slr.text; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+        Text { id: slLabel; width: 70; text: slr.text; font.pixelSize: 12; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
         StyledSlider {
             id: slider
             anchors.left: slLabel.right
@@ -121,7 +121,7 @@ PopoverWindow {
             horizontalAlignment: Text.AlignRight
             text: slr.valueText
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
         }
     }
 
@@ -163,7 +163,7 @@ PopoverWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     font.pixelSize: 12
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.55)
                     text: bridge.connected ? "This firmware has no spectrum analyser." : "Connect a DSPi to show its spectrum."
                 }
 
@@ -184,9 +184,9 @@ PopoverWindow {
                             width: (parent.width - 6) / 2
                             height: 24
                             radius: 6
-                            color: on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22)
+                            color: isMacOS ? (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22) : MacColors.opacity(MacColors.label, 0.05)) : on ? Qt.rgba(tint.r, tint.g, tint.b, 0.22)
                                  : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
-                            border.color: on ? Qt.rgba(tint.r, tint.g, tint.b, 0.75) : Qt.rgba(1, 1, 1, 0.08)
+                            border.color: isMacOS ? (on ? Qt.rgba(tint.r, tint.g, tint.b, 0.75) : MacColors.opacity(MacColors.label, 0.08)) : on ? Qt.rgba(tint.r, tint.g, tint.b, 0.75) : Qt.rgba(1, 1, 1, 0.08)
                             Behavior on color { ColorAnimation { duration: 120 } }
                             Row {
                                 anchors.left: parent.left
@@ -195,14 +195,14 @@ PopoverWindow {
                                 anchors.rightMargin: 6
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 6
-                                Rectangle { width: 7; height: 7; radius: 3.5; color: chip.tint; anchors.verticalCenter: parent.verticalCenter }
+                                Rectangle { width: 7; height: 7; radius: 3.5; color: isMacOS ? MacColors.opacity(chip.tint, chip.on ? 1.0 : 0.4) : chip.tint; anchors.verticalCenter: parent.verticalCenter }
                                 Text {
                                     width: parent.width - 13
                                     elide: Text.ElideRight
                                     text: bridge.channelName(chip.app)
                                     font.pixelSize: 11
                                     font.weight: chip.on ? Font.DemiBold : Font.Normal
-                                    color: Qt.rgba(1, 1, 1, chip.on ? 0.95 : 0.7)
+                                    color: isMacOS ? (chip.on ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, chip.on ? 0.95 : 0.7)
                                 }
                             }
                             MouseArea {
@@ -222,7 +222,7 @@ PopoverWindow {
                     Text {
                         Layout.fillWidth: true
                         font.pixelSize: 11
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                         text: pop.sel.channels.length === 0 ? "Spectrum hidden"
                             : pop.sel.channels.length === 1 ? "1 channel" : pop.sel.channels.length + " channels"
                     }
@@ -230,7 +230,7 @@ PopoverWindow {
                         visible: pop.sel.channels.length > 0
                         text: "Clear"
                         font.pixelSize: 11
-                        color: clearMouse.containsMouse ? "white" : "#3a96ff"
+                        color: isMacOS ? MacColors.accent : clearMouse.containsMouse ? "white" : "#3a96ff"
                         MouseArea { id: clearMouse; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pop.app.rtaClear() }
                     }
                 }
@@ -288,7 +288,7 @@ PopoverWindow {
                     text: "Graph Setup"
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
-                    color: Qt.rgba(1, 1, 1, 0.9)
+                    color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
                 }
                 Row {
                     id: backRow
@@ -296,8 +296,8 @@ PopoverWindow {
                     anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
-                    Icon { name: "chev-left"; size: 12; color: backMouse.containsMouse ? "white" : "#3a96ff"; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: "Back"; font.pixelSize: 12; color: backMouse.containsMouse ? "white" : "#3a96ff"; anchors.verticalCenter: parent.verticalCenter }
+                    Icon { name: "chev-left"; size: 12; color: isMacOS ? MacColors.accent : backMouse.containsMouse ? "white" : "#3a96ff"; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "Back"; font.pixelSize: 12; color: isMacOS ? MacColors.accent : backMouse.containsMouse ? "white" : "#3a96ff"; anchors.verticalCenter: parent.verticalCenter }
                 }
                 MouseArea { id: backMouse; anchors.fill: backRow; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pop.page = 0 }
             }
@@ -315,7 +315,7 @@ PopoverWindow {
                     anchors.bottomMargin: 6
                     text: "Reset"
                     font.pixelSize: 11
-                    color: resetMouse.containsMouse ? "white" : "#3a96ff"
+                    color: isMacOS ? MacColors.accent : resetMouse.containsMouse ? "white" : "#3a96ff"
                     MouseArea {
                         id: resetMouse
                         anchors.fill: parent
@@ -338,7 +338,7 @@ PopoverWindow {
                 x: 12
                 width: parent.width - 24
                 height: 30
-                Text { id: freqLabel; width: 70; text: "Frequency"; font.pixelSize: 12; color: Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+                Text { id: freqLabel; width: 70; text: "Frequency"; font.pixelSize: 12; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
                 Row {
                     anchors.left: freqLabel.right
                     anchors.verticalCenter: parent.verticalCenter
@@ -353,7 +353,7 @@ PopoverWindow {
                         currentIndex: pop.app ? values.indexOf(pop.app.graphMinFreq) : 1
                         onActivated: pop.app.graphMinFreq = values[index]
                     }
-                    Text { text: "to"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "to"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
                     StyledComboBox {
                         width: 80
                         leftPadding: 0

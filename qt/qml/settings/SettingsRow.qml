@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "../components"
 
 // One row in a SettingsSection: title and optional detail on the left,
 // a trailing control (the row's children) on the right.
@@ -6,7 +7,7 @@ Item {
     id: row
     property string title: ""
     property string detail: ""
-    property color titleColor: "white"
+    property color titleColor: isMacOS ? MacColors.label : "white"
     property real trailingWidth: trailing.childrenRect.width
     property bool clickable: false     // whole row acts as a button
     signal activated()
@@ -41,7 +42,7 @@ Item {
         x: 14
         width: parent.width - 14
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.07)
+        color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07)
     }
 
     Column {
@@ -63,7 +64,7 @@ Item {
             wrapMode: Text.WordWrap
             text: row.detail
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 

@@ -51,9 +51,9 @@ AppWindow {
     readonly property var centerWire: [2, 0, 1]
     readonly property var surroundWire: [0, 1, 2]
 
-    readonly property color centerColor: "#32d74b"
-    readonly property color lsColor: "#bf5af2"
-    readonly property color rsColor: "#ff375f"
+    readonly property color centerColor: isMacOS ? MacColors.green : "#32d74b"
+    readonly property color lsColor: isMacOS ? MacColors.purple : "#bf5af2"
+    readonly property color rsColor: isMacOS ? MacColors.pink : "#ff375f"
 
     // Live status, polled while the window is open
     property var status: ({})
@@ -91,12 +91,12 @@ AppWindow {
         return parts.join(", ") + "."
     }
 
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
     component Note: Text {
         width: parent.width
         wrapMode: Text.WordWrap
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
     component StatusLine: Row {
@@ -104,13 +104,13 @@ AppWindow {
         Rectangle {
             width: 8; height: 8; radius: 4
             anchors.verticalCenter: parent.verticalCenter
-            color: !bridge.connected ? Qt.rgba(1, 1, 1, 0.3) : win.processing ? "#32d74b" : "#ff9f0a"
+            color: isMacOS ? (!bridge.connected ? MacColors.secondaryLabel : win.processing ? MacColors.green : MacColors.orange) : !bridge.connected ? Qt.rgba(1, 1, 1, 0.3) : win.processing ? "#32d74b" : "#ff9f0a"
         }
         Text {
             text: win.statusText()
             font.pixelSize: 12
             font.weight: Font.Medium
-            color: win.processing ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.6)
+            color: isMacOS ? (win.processing ? MacColors.label : MacColors.secondaryLabel) : win.processing ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.6)
         }
     }
 
@@ -120,7 +120,7 @@ AppWindow {
         property string label: ""
         property real fraction: 0
         property string reading: ""
-        property color barColor: "#0a7cff"
+        property color barColor: isMacOS ? MacColors.accent : "#0a7cff"
         width: parent.width
         height: 18
         Text {
@@ -129,7 +129,7 @@ AppWindow {
             anchors.verticalCenter: parent.verticalCenter
             text: gauge.label
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.6)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
         }
         Rectangle {
             anchors.left: gaugeLabel.right
@@ -138,7 +138,7 @@ AppWindow {
             anchors.verticalCenter: parent.verticalCenter
             height: 6
             radius: 3
-            color: Qt.rgba(1, 1, 1, 0.1)
+            color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.15) : Qt.rgba(1, 1, 1, 0.1)
             Rectangle {
                 height: parent.height
                 radius: 3
@@ -155,7 +155,7 @@ AppWindow {
             horizontalAlignment: Text.AlignRight
             text: gauge.reading
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.8)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.8)
         }
     }
 
@@ -173,7 +173,7 @@ AppWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.label
                     font.pixelSize: 13
-                    color: Qt.rgba(1, 1, 1, 0.9)
+                    color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
                 }
                 SegmentedControl {
                     anchors.right: parent.right
@@ -239,14 +239,14 @@ AppWindow {
             y: 40
             width: win.width - 32
             spacing: 6
-            Icon { name: "warning"; size: 22; color: "#ff9f0a"; anchors.horizontalCenter: parent.horizontalCenter }
+            Icon { name: "warning"; size: 22; color: isMacOS ? MacColors.secondaryLabel : "#ff9f0a"; anchors.horizontalCenter: parent.horizontalCenter }
             Text {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 text: bridge.connected ? "Requires an RP2350 device with firmware wire format V25 or newer." : "No device connected"
                 font.pixelSize: 13
-                color: Qt.rgba(1, 1, 1, 0.85)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.85)
             }
             Text {
                 width: parent.width
@@ -254,7 +254,7 @@ AppWindow {
                 wrapMode: Text.WordWrap
                 text: "The upmixer runs on stereo input at 48 kHz or below."
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
 
@@ -311,7 +311,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: basic.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: basic.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             Column {
                 id: basicRight
@@ -462,7 +462,7 @@ AppWindow {
                 Note { text: win.routingText }
             }
 
-            Rectangle { width: 1; height: advanced.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: advanced.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             Column {
                 width: flick.colWidth

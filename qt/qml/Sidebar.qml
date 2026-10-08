@@ -7,7 +7,7 @@ import "components"
 // icons, preset / source / volume, CPU meters.
 Rectangle {
     id: sidebarRoot
-    color: windowEffects.blurAvailable ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#262628"
+    color: isMacOS ? "transparent" : windowEffects.blurAvailable ? Qt.rgba(0.15, 0.15, 0.15, 0.30) : "#262628"
 
     Settings {
         id: volumeSettings
@@ -27,7 +27,7 @@ Rectangle {
     component SectionHeader: Text {
         font.pixelSize: 12
         font.weight: Font.DemiBold
-        color: "#666666"   // as on Windows: headers at 12 px from the edge, names at 22 px
+        color: isMacOS ? MacColors.tertiaryLabel : "#666666"   // as on Windows: headers at 12 px from the edge, names at 22 px
         leftPadding: 16
         topPadding: 10
         bottomPadding: 4
@@ -46,13 +46,13 @@ Rectangle {
         Rectangle {
             anchors.fill: parent
             radius: 5
-            color: qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            color: isMacOS ? "transparent" : qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
         }
         Icon {
             anchors.centerIn: parent
             name: qb.icon
             size: 18
-            color: qb.lit ? qb.litColor : (qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.5))
+            color: isMacOS ? (qb.lit ? "white" : qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.7) : MacColors.opacity(MacColors.secondaryLabel, 0.6)) : qb.lit ? qb.litColor : (qbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.5))
         }
         MouseArea {
             id: qbMouse
@@ -70,7 +70,7 @@ Rectangle {
     component GlobalLabel: Text {
         font.pixelSize: 12
         font.weight: Font.Medium
-        color: Qt.rgba(1, 1, 1, 0.6)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
     }
 
     Column {
@@ -231,7 +231,7 @@ Rectangle {
                 }
             }
 
-            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
+            Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.1) }
 
             // Preset / Source / Volume
             Column {
@@ -343,13 +343,13 @@ Rectangle {
                             spacing: 4
                             GlobalLabel {
                                 text: volumeSettings.showMaster ? "Master Volume" : "User Volume"
-                                color: volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.6)
+                                color: isMacOS ? MacColors.secondaryLabel : volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.6)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Icon {
                                 name: "chev-down"
                                 size: 12
-                                color: volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                                color: isMacOS ? MacColors.secondaryLabel : volHeadMouse.containsMouse || volumeMenu.visible ? "white" : Qt.rgba(1, 1, 1, 0.5)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -374,7 +374,7 @@ Rectangle {
                     }
                     ValueField {
                         fieldWidth: 64
-                        textColor: "#cccccc"
+                        textColor: isMacOS ? MacColors.label : "#cccccc"
                         value: volumeSlider.pressed ? volumeSlider.dbAt(volumeSlider.value)
                              : volumeSettings.showMaster ? bridge.masterVolumeDB : bridge.userVolumeDB
                         suffix: "dB"
@@ -467,12 +467,12 @@ Rectangle {
                         width: volumeSlider.availableWidth
                         height: 4
                         radius: 2
-                        color: Qt.rgba(1, 1, 1, 0.12)
+                        color: isMacOS ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.12)
                         Rectangle {
                             width: volumeSlider.visualPosition * parent.width
                             height: parent.height
                             radius: 2
-                            color: volumeSettings.showMaster ? "#E04848" : "#3A79DE"
+                            color: isMacOS ? (volumeSettings.showMaster ? MacColors.redSliderFill : MacColors.sliderFill) : volumeSettings.showMaster ? "#E04848" : "#3A79DE"
                         }
                     }
                     handle: Rectangle {
@@ -481,13 +481,13 @@ Rectangle {
                         width: 18
                         height: 18
                         radius: 9
-                        color: "#d8d8d8"
+                        color: isMacOS ? Qt.rgba(0.6, 0.6, 0.6, 1) : "#d8d8d8"
                         border.color: Qt.rgba(0, 0, 0, 0.3)
                     }
                 }
             }
 
-            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.1) }
+            Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.1) }
 
             CpuSection {
                 width: parent.width

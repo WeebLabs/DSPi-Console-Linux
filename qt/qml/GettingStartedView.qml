@@ -8,7 +8,7 @@ import "components"
 // install happens right here, through the same updater as Firmware Update.
 Rectangle {
     id: wiz
-    color: nativeWindowColor
+    color: isMacOS ? MacColors.windowMaterial : nativeWindowColor
     signal finished()
 
     readonly property var stages: ["Welcome", "Board", "Done"]
@@ -87,13 +87,13 @@ Rectangle {
         case "idle": case "waitingForBoard":
             if (confirmed) return { spin: true, title: "Looking for your Pico",
                 text: "Waiting for it to appear in bootloader mode. If nothing happens after a few seconds, unplug it, hold BOOTSEL, and plug it back in." }
-            if (connectedMatch === 1) return { icon: "check-circle", tint: "#32d74b", size: 36, title: "Firmware " + bundled + " already installed",
+            if (connectedMatch === 1) return { icon: "check-circle", tint: isMacOS ? MacColors.green : "#32d74b", size: 36, title: "Firmware " + bundled + " already installed",
                 text: "Your DSPi is running the firmware this Console ships, so there is nothing to install. Continue to finish setup." }
             if (connectedMatch === 2) return { icon: "arrow-up", title: "Firmware update available",
                 text: "Your DSPi is running firmware " + firmware.deviceVersion + "; this Console pairs with " + bundled
                       + ". The device will restart into bootloader mode and come back updated. Audio stops until it finishes.",
                 action: "Update DSPi Firmware", actionPrimary: true }
-            if (connectedMatch === 3) return { icon: "arrow-down-circle", tint: "#ff9f0a", title: "This would be a downgrade",
+            if (connectedMatch === 3) return { icon: "arrow-down-circle", tint: isMacOS ? MacColors.orange : "#ff9f0a", title: "This would be a downgrade",
                 text: "Your DSPi is running firmware " + firmware.deviceVersion + ", which is newer than this Console expects (" + bundled
                       + "). A newer Console is the better fix, but you can downgrade the device to match this one.",
                 action: "Downgrade Firmware", actionPrimary: false }
@@ -105,17 +105,17 @@ Rectangle {
         case "ready":
             if (confirmed) return { spin: true, title: "Preparing to write",
                 text: "Opening the " + firmware.chipName + "'s " + firmware.volumeName + " drive." }
-            return { icon: "drive", tint: "#32d74b", title: firmware.chipName + " ready",
+            return { icon: "drive", tint: isMacOS ? MacColors.green : "#32d74b", title: firmware.chipName + " ready",
                 text: "The device is now in bootloader mode and ready to receive firmware.",
                 action: "Install DSPi Firmware", actionPrimary: true }
         case "waitingForDevice":
             return { spin: true, title: "Firmware written",
                 text: "The board is restarting with its new firmware. This can take up to half a minute; leave it plugged in." }
         case "verified":
-            return { icon: "check-circle", tint: "#32d74b", size: 36, title: "Firmware " + firmware.verifiedVersion + " installed",
+            return { icon: "check-circle", tint: isMacOS ? MacColors.green : "#32d74b", size: 36, title: "Firmware " + firmware.verifiedVersion + " installed",
                 text: "That was the whole job. Continue to finish setup." }
         case "failed":
-            return { icon: firmware.failureMundane ? "question-circle" : "warning", tint: "#ff9f0a",
+            return { icon: firmware.failureMundane ? "question-circle" : "warning", tint: isMacOS ? MacColors.orange : "#ff9f0a",
                 title: firmware.failureMundane ? "Not quite ready" : "The update did not complete", text: firmware.failure,
                 action: "Try Again", actionPrimary: false }
         default:
@@ -135,13 +135,13 @@ Rectangle {
         property string text: ""
         width: parent ? parent.width : 400
         spacing: 10
-        Icon { name: parent.icon; size: 16; color: "#3a96ff" }
+        Icon { name: parent.icon; size: 16; color: isMacOS ? MacColors.accent : "#3a96ff" }
         Text {
             width: parent.width - 26
             wrapMode: Text.WordWrap
             text: parent.text
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.85)
+            color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85)
         }
     }
 
@@ -155,16 +155,16 @@ Rectangle {
             x: 24
             y: 14
             width: 28; height: 28; radius: 7
-            color: "#0a7cff"
-            Icon { anchors.centerIn: parent; name: "cap"; size: 18; color: "white" }
+            color: isMacOS ? "transparent" : "#0a7cff"
+            Icon { anchors.centerIn: parent; name: "cap"; size: 18; color: isMacOS ? MacColors.accent : "white" }
         }
         Column {
             anchors.left: tile.right
             anchors.leftMargin: 10
             anchors.verticalCenter: tile.verticalCenter
             spacing: 1
-            Text { text: "Getting Started"; font.pixelSize: 14; font.weight: Font.DemiBold; color: "white" }
-            Text { text: "Step " + (wiz.stage + 1) + " of " + wiz.stages.length; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+            Text { text: "Getting Started"; font.pixelSize: 14; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : "white" }
+            Text { text: "Step " + (wiz.stage + 1) + " of " + wiz.stages.length; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
         }
         StepStrip {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -173,7 +173,7 @@ Rectangle {
             labels: wiz.stages
             current: wiz.stage
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
     }
 
     // ── Content ──
@@ -200,7 +200,7 @@ Rectangle {
                 text: wiz.stage === 0 ? "Welcome to DSPi Console" : wiz.stage === 1 ? wiz.boardTitle : "You are set up"
                 font.pixelSize: 20
                 font.weight: Font.DemiBold
-                color: "white"
+                color: isMacOS ? MacColors.label : "white"
             }
             Text {
                 width: parent.width
@@ -211,7 +211,7 @@ Rectangle {
                       : "Your Pico is running the DSPi firmware, and the console is ready whenever it is plugged in. A few places worth knowing about:"
                 font.pixelSize: 13
                 lineHeight: 1.15
-                color: Qt.rgba(1, 1, 1, 0.6)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
             }
 
             // Welcome
@@ -233,7 +233,7 @@ Rectangle {
                     anchors.fill: parent
                     visible: wiz.phase !== "writing"
                     icon: wiz.card.icon || ""
-                    tint: wiz.card.tint || "#3a96ff"
+                    tint: isMacOS ? wiz.card.tint || MacColors.accent : wiz.card.tint || "#3a96ff"
                     spin: wiz.card.spin === true
                     iconSize: wiz.card.size || 28
                     title: wiz.card.title
@@ -273,7 +273,7 @@ Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width
         height: 56
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
         // Always there, one click, and it never comes back
         AppButton {
             x: 24

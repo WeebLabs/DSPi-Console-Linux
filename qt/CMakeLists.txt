@@ -43,6 +43,11 @@ target_link_libraries(DSPiConsole PRIVATE
 )
 
 if(APPLE)
+    # The native Console's system colours, read from AppKit
+    enable_language(OBJCXX)
+    target_sources(DSPiConsole PRIVATE src/MacSystemColors.mm)
+    target_link_libraries(DSPiConsole PRIVATE "-framework AppKit")
+
     # libusb from Homebrew
     find_library(LIBUSB usb-1.0 HINTS /opt/homebrew/opt/libusb/lib)
     target_include_directories(DSPiConsole PRIVATE /opt/homebrew/opt/libusb/include)

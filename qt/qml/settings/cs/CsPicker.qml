@@ -23,9 +23,10 @@ Rectangle {
     radius: 7
     opacity: enabled ? 1 : 0.45
     readonly property bool menuOpen: menus.item !== null && (menus.item.flat.visible || menus.item.cascade.visible)
-    color: mouse.pressed || menuOpen ? Qt.rgba(1, 1, 1, 0.16)
+    color: isMacOS ? (!picker.categories ? "transparent" : mouse.pressed || menuOpen ? Qt.rgba(1, 1, 1, 0.36) : MacColors.control)
+         : mouse.pressed || menuOpen ? Qt.rgba(1, 1, 1, 0.16)
          : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
-    border.color: Qt.rgba(1, 1, 1, 0.10)
+    border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.10)
 
     Text {
         id: label
@@ -35,14 +36,14 @@ Rectangle {
         text: picker.text
         elide: Text.ElideRight
         font.pixelSize: 13
-        color: "white"
+        color: isMacOS ? MacColors.label : "white"
     }
     Column {
         x: parent.width - width - 9
         anchors.verticalCenter: parent.verticalCenter
         spacing: -4
-        Icon { name: "chev-up"; size: 11; color: Qt.rgba(1, 1, 1, 0.6) }
-        Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6) }
+        Icon { name: "chev-up"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6) }
+        Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6) }
     }
     MouseArea {
         id: mouse

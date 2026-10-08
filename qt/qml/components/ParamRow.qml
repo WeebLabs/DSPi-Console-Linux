@@ -37,7 +37,7 @@ Column {
             Text {
                 text: row.label
                 font.pixelSize: 13
-                color: Qt.rgba(1, 1, 1, 0.9)
+                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
                 MouseArea {
                     id: labelHover
                     anchors.fill: parent
@@ -52,7 +52,7 @@ Column {
                 visible: row.subtitle !== ""
                 text: row.subtitle
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
         ValueField {
@@ -98,8 +98,8 @@ Column {
         visible: row.leftHint !== "" || row.rightHint !== ""
         width: parent.width
         height: 14
-        Text { text: row.leftHint; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
-        Text { anchors.right: parent.right; text: row.rightHint; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+        Text { text: row.leftHint; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
+        Text { anchors.right: parent.right; text: row.rightHint; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
     }
 
     Text {
@@ -108,6 +108,6 @@ Column {
         wrapMode: Text.WordWrap
         text: row.caption
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 }

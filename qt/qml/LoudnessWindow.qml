@@ -63,9 +63,9 @@ AppWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
     ToolHeader {
         id: header
@@ -107,8 +107,8 @@ AppWindow {
                     // As tall as the parameter column, like macOS
                     height: Math.max(200, rightColumn.height - 32)
                     radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.2)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
                     Canvas {
                         id: graph
@@ -142,8 +142,8 @@ AppWindow {
 
                             // Grid: decades and 5 dB lines
                             ctx.lineWidth = 1
-                            ctx.strokeStyle = "rgba(255,255,255,0.07)"
-                            ctx.fillStyle = "rgba(255,255,255,0.4)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.15) : "rgba(255,255,255,0.07)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.4)"
                             ctx.font = "10px sans-serif"
                             ctx.textAlign = "center"
                             var marks = [[100, "100"], [1000, "1k"], [10000, "10k"]]
@@ -162,13 +162,13 @@ AppWindow {
 
                             if (!active) {
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", left + w / 2, h / 2)
                                 return
                             }
 
-                            ctx.strokeStyle = "#0a7cff"
+                            ctx.strokeStyle = isMacOS ? MacColors.accent : "#0a7cff"
                             ctx.lineWidth = 2
                             ctx.lineJoin = "round"
                             ctx.beginPath()
@@ -189,7 +189,7 @@ AppWindow {
                         width: curveTag.implicitWidth + 14
                         height: 20
                         radius: 5
-                        color: Qt.rgba(0.04, 0.49, 1, 0.85)
+                        color: isMacOS ? MacColors.opacity(MacColors.accent, 0.8) : Qt.rgba(0.04, 0.49, 1, 0.85)
                         Text {
                             id: curveTag
                             anchors.centerIn: parent
@@ -202,7 +202,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             // ── Right: parameters and outputs ──
             Column {
@@ -247,9 +247,9 @@ AppWindow {
                             Text {
                                 text: "Presets"
                                 font.pixelSize: 12
-                                color: outMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                                color: isMacOS ? MacColors.label : outMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
                             }
-                            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                            Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
                         }
                         MouseArea {
                             id: outMouse
@@ -265,7 +265,7 @@ AppWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     text: "Compensate only the outputs feeding your low-level listening chain. Keep bass-managed pairs (mains + sub) together so the crossover stays coherent."
                 }
 

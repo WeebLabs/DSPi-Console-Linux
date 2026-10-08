@@ -255,7 +255,7 @@ Popup {
             ToolTip.delay: 500
             ToolTip.text: "Serial " + bridge.selectedSerial
         }
-        Rectangle { width: parent.width; height: 1; color: MenuStyle.separator }
+        Rectangle { width: parent.width; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.15) : MenuStyle.separator }
         Item { width: 1; height: MenuStyle.padding }
 
         Repeater {
@@ -280,7 +280,7 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     name: modelData.icon
                     size: MenuStyle.iconSize
-                    color: row.hot ? "white" : row.usable ? MenuStyle.iconColor : Qt.rgba(1, 1, 1, 0.25)
+                    color: isMacOS ? (row.hot ? "white" : row.usable ? MenuStyle.iconColor : MacColors.tertiaryLabel) : row.hot ? "white" : row.usable ? MenuStyle.iconColor : Qt.rgba(1, 1, 1, 0.25)
                 }
                 Text {
                     anchors.left: groupIcon.right
@@ -288,7 +288,7 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text
                     font.pixelSize: MenuStyle.fontSize
-                    color: !row.usable ? Qt.rgba(1, 1, 1, 0.3) : row.hot ? "white" : MenuStyle.text
+                    color: isMacOS ? (!row.usable ? MacColors.tertiaryLabel : row.hot ? "white" : MenuStyle.text) : !row.usable ? Qt.rgba(1, 1, 1, 0.3) : row.hot ? "white" : MenuStyle.text
                 }
                 Icon {
                     anchors.right: parent.right
@@ -296,7 +296,7 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "chev-right"
                     size: 12
-                    color: row.hot ? "white" : MenuStyle.dimText
+                    color: isMacOS ? (row.hot ? "white" : Qt.rgba(1, 1, 1, 0.75)) : row.hot ? "white" : MenuStyle.dimText
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -310,7 +310,7 @@ Popup {
         Item {
             width: parent.width
             height: 7
-            Rectangle { anchors.verticalCenter: parent.verticalCenter; x: 8; width: parent.width - 16; height: 1; color: MenuStyle.separator }
+            Rectangle { anchors.verticalCenter: parent.verticalCenter; x: 8; width: parent.width - 16; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.15) : MenuStyle.separator }
         }
 
         // Settings
@@ -348,7 +348,7 @@ Popup {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Ctrl+,"
                 font.pixelSize: MenuStyle.smallFontSize
-                color: settingsRow.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
+                color: isMacOS ? (settingsRow.hot ? "white" : MenuStyle.dimText) : settingsRow.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
             }
             MouseArea {
                 anchors.fill: parent

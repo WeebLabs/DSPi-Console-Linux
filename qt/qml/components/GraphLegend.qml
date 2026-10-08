@@ -68,7 +68,7 @@ Item {
         radius: 100
         color: {
             var isVis = legendRoot.isVisible(eqChannel)
-            return isVis ? Qt.rgba(parsedColor.r, parsedColor.g, parsedColor.b, 0.15) : Qt.rgba(0.5, 0.5, 0.5, 0.1)
+            return isMacOS ? (isVis ? Qt.rgba(parsedColor.r, parsedColor.g, parsedColor.b, 0.15) : MacColors.opacity(MacColors.gray, 0.1)) : isVis ? Qt.rgba(parsedColor.r, parsedColor.g, parsedColor.b, 0.15) : Qt.rgba(0.5, 0.5, 0.5, 0.1)
         }
         border.color: {
             var isVis = legendRoot.isVisible(eqChannel)
@@ -85,7 +85,7 @@ Item {
                 width: 6; height: 6; radius: 3
                 color: {
                     var isVis = legendRoot.isVisible(eqChannel)
-                    return isVis ? pillColor : Qt.rgba(0.5, 0.5, 0.5, 0.5)
+                    return isMacOS ? (isVis ? pillColor : MacColors.opacity(MacColors.gray, 0.5)) : isVis ? pillColor : Qt.rgba(0.5, 0.5, 0.5, 0.5)
                 }
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -94,7 +94,7 @@ Item {
                 text: label
                 font.pixelSize: 10
                 font.weight: Font.Bold
-                color: legendRoot.isVisible(eqChannel) ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (legendRoot.isVisible(eqChannel) ? MacColors.label : MacColors.secondaryLabel) : legendRoot.isVisible(eqChannel) ? "white" : Qt.rgba(1, 1, 1, 0.5)
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

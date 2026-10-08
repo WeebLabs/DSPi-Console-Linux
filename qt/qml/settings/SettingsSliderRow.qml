@@ -37,7 +37,7 @@ SettingsRow {
             text: row.format(slider.value)
             font.pixelSize: 12
             font.family: "monospace"
-            color: Qt.rgba(1, 1, 1, 0.75)
+            color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.75)
             anchors.verticalCenter: parent.verticalCenter
         }
     }

@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import "../components"
 
 // A titled card of settings rows, with an optional footnote underneath.
 // Rows are separated by hairlines automatically.
@@ -17,15 +18,15 @@ Column {
         leftPadding: 4
         font.pixelSize: 13
         font.weight: Font.DemiBold
-        color: Qt.rgba(1, 1, 1, 0.6)
+        color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6)
     }
 
     Rectangle {
         width: parent.width
         height: card.height
         radius: 10
-        color: Qt.rgba(1, 1, 1, 0.045)
-        border.color: Qt.rgba(1, 1, 1, 0.07)
+        color: isMacOS ? "#2b2b2b" : Qt.rgba(1, 1, 1, 0.045)
+        border.color: isMacOS ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.07)
 
         Column {
             id: card
@@ -41,6 +42,6 @@ Column {
         rightPadding: 4
         text: section.footnote
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.45)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
     }
 }

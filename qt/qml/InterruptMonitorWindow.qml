@@ -30,14 +30,14 @@ AppWindow {
         implicitWidth: tbRow.width + 20
         height: 26
         radius: 8
-        color: tbMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : tbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-        border.color: Qt.rgba(1, 1, 1, 0.18)
+        color: isMacOS ? (tbMouse.pressed ? MacColors.opacity(MacColors.control, 1.6) : MacColors.control) : tbMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : tbMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+        border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
         Row {
             id: tbRow
             anchors.centerIn: parent
             spacing: 6
-            Icon { visible: tb.icon !== ""; name: tb.icon; size: 13; color: Qt.rgba(1, 1, 1, 0.8); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: tb.text; font.pixelSize: 12; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+            Icon { visible: tb.icon !== ""; name: tb.icon; size: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.8); anchors.verticalCenter: parent.verticalCenter }
+            Text { text: tb.text; font.pixelSize: 12; color: isMacOS ? MacColors.label : "white"; anchors.verticalCenter: parent.verticalCenter }
         }
         MouseArea { id: tbMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tb.clicked() }
         ToolTip.visible: tbMouse.containsMouse && tip !== ""
@@ -77,16 +77,16 @@ AppWindow {
                 Text {
                     text: !win.listening ? "Inactive" : monitor.paused ? "Paused" : "Listening"
                     font.pixelSize: 11
-                    color: !win.listening ? Qt.rgba(1, 1, 1, 0.5) : monitor.paused ? "#ff9f0a" : "#32d74b"
+                    color: isMacOS ? (!win.listening ? MacColors.secondaryLabel : monitor.paused ? MacColors.orange : MacColors.green) : !win.listening ? Qt.rgba(1, 1, 1, 0.5) : monitor.paused ? "#ff9f0a" : "#32d74b"
                 }
             }
             Text {
                 text: monitor.count + (monitor.count === 1 ? " event" : " events")
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
     }
 
     // Hidden helper for the clipboard
@@ -120,7 +120,7 @@ AppWindow {
                 text: model.time
                 font.family: "monospace"
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.45)
             }
             TextEdit {
                 text: model.text
@@ -128,8 +128,8 @@ AppWindow {
                 selectByMouse: true
                 font.family: "monospace"
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.88)
-                selectionColor: "#0a7cff"
+                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.88)
+                selectionColor: isMacOS ? MacColors.selectedControl : "#0a7cff"
             }
         }
 

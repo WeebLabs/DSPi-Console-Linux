@@ -12,7 +12,7 @@ Rectangle {
 
     height: 28
     radius: 7
-    color: selected ? "#0a7cff" : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+    color: isMacOS ? (selected ? MacColors.sidebarSelection : "transparent") : selected ? "#0a7cff" : mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
 
     Rectangle {
         id: tile
@@ -36,7 +36,7 @@ Rectangle {
         elide: Text.ElideRight
         text: item.title
         font.pixelSize: 13
-        color: "white"
+        color: isMacOS ? (item.selected ? "white" : MacColors.label) : "white"
     }
     MouseArea {
         id: mouse

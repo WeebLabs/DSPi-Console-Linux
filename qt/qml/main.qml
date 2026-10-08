@@ -375,7 +375,7 @@ ApplicationWindow {
         Rectangle {
             width: parent.width - root.sidebarWidth
             height: parent.height
-            color: isMacOS ? "transparent" : nativeWindowColor
+            color: isMacOS ? MacColors.mainContent : nativeWindowColor
 
             Column {
                 anchors.fill: parent
@@ -417,8 +417,8 @@ ApplicationWindow {
                     x: 16
                     height: visible ? Math.max(versionText.implicitHeight + 16, 40) : 0
                     radius: 8
-                    color: Qt.rgba(1, 0.62, 0.04, 0.12)
-                    border.color: Qt.rgba(1, 0.62, 0.04, 0.45)
+                    color: isMacOS ? MacColors.opacity(MacColors.orange, 0.12) : Qt.rgba(1, 0.62, 0.04, 0.12)
+                    border.color: isMacOS ? "transparent" : Qt.rgba(1, 0.62, 0.04, 0.45)
 
                     Icon {
                         id: versionIcon
@@ -426,7 +426,7 @@ ApplicationWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         name: "warning"
                         size: 15
-                        color: "#ff9f0a"
+                        color: isMacOS ? MacColors.orange : "#ff9f0a"
                     }
                     Text {
                         id: versionText
@@ -437,7 +437,7 @@ ApplicationWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         wrapMode: Text.WordWrap
                         font.pixelSize: 12
-                        color: "white"
+                        color: isMacOS ? MacColors.label : "white"
                         text: firmware.match === 3
                               ? "This device runs firmware " + firmware.deviceVersion + ", which is newer than DSPi Console "
                                 + firmware.expectedVersion + ". Some of its features may not be shown."
@@ -455,9 +455,9 @@ ApplicationWindow {
                                 width: label.implicitWidth + 20
                                 height: 24
                                 radius: 7
-                                color: bannerMouse.pressed ? Qt.rgba(1, 1, 1, 0.13) : bannerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-                                border.color: Qt.rgba(1, 1, 1, 0.18)
-                                Text { id: label; anchors.centerIn: parent; text: modelData; font.pixelSize: 12; color: "white" }
+                                color: isMacOS ? (bannerMouse.pressed ? MacColors.opacity(MacColors.control, 1.6) : MacColors.control) : bannerMouse.pressed ? Qt.rgba(1, 1, 1, 0.13) : bannerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                                border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+                                Text { id: label; anchors.centerIn: parent; text: modelData; font.pixelSize: 12; color: isMacOS ? MacColors.label : "white" }
                                 MouseArea {
                                     id: bannerMouse
                                     anchors.fill: parent

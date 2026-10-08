@@ -20,7 +20,7 @@ Item {
             width: strip.slot - 26
             height: 2
             radius: 1
-            color: index + 1 <= strip.current ? Qt.rgba(0.04, 0.49, 1, 0.6) : Qt.rgba(1, 1, 1, 0.12)
+            color: isMacOS ? (index + 1 <= strip.current ? MacColors.opacity(MacColors.accent, 0.6) : MacColors.opacity(MacColors.secondaryLabel, 0.2)) : index + 1 <= strip.current ? Qt.rgba(0.04, 0.49, 1, 0.6) : Qt.rgba(1, 1, 1, 0.12)
         }
     }
     Repeater {
@@ -32,7 +32,7 @@ Item {
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 14; height: 14; radius: 7
-                color: index < strip.current ? "#0a7cff"
+                color: isMacOS ? (index < strip.current ? MacColors.accent : index === strip.current ? (strip.current === strip.last ? MacColors.green : MacColors.accent) : MacColors.opacity(MacColors.secondaryLabel, 0.25)) : index < strip.current ? "#0a7cff"
                      : index === strip.current ? (strip.current === strip.last ? "#32d74b" : "#0a7cff")
                      : Qt.rgba(1, 1, 1, 0.15)
                 Icon {
@@ -48,7 +48,7 @@ Item {
                 text: modelData
                 font.pixelSize: 10
                 font.weight: index === strip.current ? Font.Bold : Font.Normal
-                color: index === strip.current ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (index === strip.current ? MacColors.label : MacColors.secondaryLabel) : index === strip.current ? "white" : Qt.rgba(1, 1, 1, 0.5)
             }
         }
     }

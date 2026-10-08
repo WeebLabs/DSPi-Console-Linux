@@ -17,7 +17,7 @@ Column {
         Text {
             text: rb.host.visibleSubs.length + "/" + rb.cs.irCount
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
     CsNote {
@@ -43,8 +43,8 @@ Column {
                 width: parent.width - 28
                 height: inner.height
                 radius: 8
-                color: Qt.rgba(1, 1, 1, 0.04)
-                border.color: Qt.rgba(1, 1, 1, 0.06)
+                color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.06) : Qt.rgba(1, 1, 1, 0.04)
+                border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.06)
 
                 Column {
                     id: inner
@@ -64,7 +64,7 @@ Column {
                             anchors.verticalCenter: parent.verticalCenter
                             name: "chev-right"
                             size: 12
-                            color: Qt.rgba(1, 1, 1, 0.5)
+                            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                             rotation: sub.open ? 90 : 0
                             Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                         }
@@ -78,14 +78,14 @@ Column {
                             Icon {
                                 name: rb.cs.irConfigured(sub.c) ? "check" : "minus-circle"
                                 size: 13
-                                color: rb.cs.irConfigured(sub.c) ? "#32d74b" : Qt.rgba(1, 1, 1, 0.4)
+                                color: isMacOS ? (rb.cs.irConfigured(sub.c) ? MacColors.green : MacColors.secondaryLabel) : rb.cs.irConfigured(sub.c) ? "#32d74b" : Qt.rgba(1, 1, 1, 0.4)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 text: rb.cs.irConfigured(sub.c) ? rb.cs.irProtocolName(sub.c.protocol) + " 0x" + rb.cs.hex(sub.c.code, 8) : "Not learned"
                                 font.pixelSize: 12
                                 font.family: rb.cs.irConfigured(sub.c) ? "monospace" : Qt.application.font.family
-                                color: rb.cs.irConfigured(sub.c) ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                                color: isMacOS ? (rb.cs.irConfigured(sub.c) ? MacColors.label : MacColors.secondaryLabel) : rb.cs.irConfigured(sub.c) ? "white" : Qt.rgba(1, 1, 1, 0.5)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -99,7 +99,7 @@ Column {
                             elide: Text.ElideRight
                             text: rb.cs.irVerbPhrase(sub.c)
                             font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.5)
+                            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                         }
                         Row {
                             id: actions

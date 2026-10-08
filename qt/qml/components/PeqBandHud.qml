@@ -82,7 +82,7 @@ Rectangle {
         visible: hud.shapePage
         anchors.fill: parent
         ownType: hud.type
-        markColor: hud.tint
+        markColor: isMacOS ? (hud.bypass ? Qt.rgba(1, 1, 1, 0.4) : hud.tint) : hud.tint
         backTip: "Back to the band"
         onBack: hud.shapePage = false
         onPicked: { hud.editor.setBandType(hud.band, type); hud.shapePage = false }
@@ -101,21 +101,21 @@ Rectangle {
             width: shapeRow.width + 10
             height: 18
             radius: 5
-            color: shapeMouse.containsMouse && !hud.linkwitz ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            color: isMacOS ? (shapeMouse.containsMouse && !hud.linkwitz ? Qt.rgba(1, 1, 1, 0.09) : "transparent") : shapeMouse.containsMouse && !hud.linkwitz ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
             Row {
                 id: shapeRow
                 x: 5
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
-                PeqShapeGlyph { type: hud.type; color: hud.tint; width: 16; height: 10; anchors.verticalCenter: parent.verticalCenter }
+                PeqShapeGlyph { type: hud.type; color: isMacOS ? (hud.bypass ? Qt.rgba(1, 1, 1, 0.4) : hud.tint) : hud.tint; width: 16; height: 10; anchors.verticalCenter: parent.verticalCenter }
                 Text {
                     text: hud.codes[hud.type] || "?"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
-                    color: hud.tint
+                    color: isMacOS ? Qt.rgba(1, 1, 1, hud.linkwitz ? 0.7 : hud.bypass ? 0.5 : 0.85) : hud.tint
                     anchors.verticalCenter: parent.verticalCenter
                 }
-                Icon { visible: !hud.linkwitz; name: "chev-down"; size: 9; color: Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
+                Icon { visible: !hud.linkwitz; name: "chev-down"; size: 9; color: isMacOS ? Qt.rgba(1, 1, 1, 0.42) : Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
             }
             MouseArea {
                 id: shapeMouse
@@ -134,12 +134,12 @@ Rectangle {
             anchors.rightMargin: 3
             anchors.verticalCenter: parent.verticalCenter
             width: 18; height: 18; radius: 5
-            color: powerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            color: isMacOS ? (powerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent") : powerMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
             Icon {
                 anchors.centerIn: parent
                 name: "power"
                 size: 11
-                color: hud.bypass ? Qt.rgba(1, 1, 1, 0.35) : hud.tint
+                color: isMacOS ? (hud.bypass ? Qt.rgba(1, 1, 1, 0.4) : hud.tint) : hud.bypass ? Qt.rgba(1, 1, 1, 0.35) : hud.tint
             }
             MouseArea {
                 id: powerMouse
@@ -152,12 +152,12 @@ Rectangle {
             ToolTip.delay: 600
             ToolTip.text: hud.bypass ? "Enable this band" : "Bypass this band"
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.08) }
     }
 
     component Label: Text {
         font.pixelSize: 9
-        color: Qt.rgba(1, 1, 1, hud.bypass ? 0.3 : 0.45)
+        color: isMacOS ? Qt.rgba(1, 1, 1, hud.bypass ? 0.28 / 0.6 : 0.45) : Qt.rgba(1, 1, 1, hud.bypass ? 0.3 : 0.45)
         anchors.verticalCenter: parent.verticalCenter
     }
     component ReadRow: Item {
@@ -172,7 +172,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             text: parent.value
             font.pixelSize: 10
-            color: Qt.rgba(1, 1, 1, hud.bypass ? 0.45 : 0.88)
+            color: isMacOS ? Qt.rgba(1, 1, 1, hud.bypass ? 0.45 / 0.6 : 0.45) : Qt.rgba(1, 1, 1, hud.bypass ? 0.45 : 0.88)
         }
     }
 

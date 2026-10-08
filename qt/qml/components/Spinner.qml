@@ -5,7 +5,7 @@ Icon {
     id: spin
     name: "spinner"
     size: 24
-    color: "#3a96ff"
+    color: isMacOS ? MacColors.secondaryLabel : "#3a96ff"
     RotationAnimator on rotation {
         from: 0; to: 360
         duration: 900

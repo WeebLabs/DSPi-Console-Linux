@@ -135,7 +135,7 @@ Popup {
                 x: 8
                 width: parent.width - 16
                 height: 1
-                color: MenuStyle.separator
+                color: isMacOS ? Qt.rgba(1, 1, 1, 0.15) : MenuStyle.separator
             }
         }
     }
@@ -163,7 +163,7 @@ Popup {
                 anchors.verticalCenter: parent.verticalCenter
                 name: entry.icon || ""
                 size: MenuStyle.iconSize
-                color: row.hot ? "white" : !row.usable ? Qt.rgba(1, 1, 1, 0.25)
+                color: isMacOS ? (row.hot ? "white" : !row.usable ? MacColors.tertiaryLabel : MacColors.label) : row.hot ? "white" : !row.usable ? Qt.rgba(1, 1, 1, 0.25)
                      : row.danger ? MenuStyle.dangerText : MenuStyle.iconColor
             }
             Text {
@@ -172,7 +172,7 @@ Popup {
                 anchors.verticalCenter: parent.verticalCenter
                 text: entry.text
                 font.pixelSize: MenuStyle.fontSize
-                color: row.hot ? "white" : !row.usable ? Qt.rgba(1, 1, 1, 0.3)
+                color: isMacOS ? (row.hot ? "white" : !row.usable ? MacColors.tertiaryLabel : MacColors.label) : row.hot ? "white" : !row.usable ? Qt.rgba(1, 1, 1, 0.3)
                      : row.danger ? MenuStyle.dangerText : MenuStyle.text
             }
             Text {
@@ -181,7 +181,7 @@ Popup {
                 anchors.verticalCenter: parent.verticalCenter
                 text: entry.shortcut || ""
                 font.pixelSize: MenuStyle.smallFontSize
-                color: row.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
+                color: isMacOS ? (row.hot ? "white" : MenuStyle.dimText) : row.hot ? Qt.rgba(1, 1, 1, 0.8) : MenuStyle.dimText
             }
             MouseArea {
                 anchors.fill: parent

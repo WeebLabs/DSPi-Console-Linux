@@ -314,7 +314,7 @@ Column {
         wrapMode: Text.WordWrap
         text: "Reading control-surface capabilities from the device..."
         font.pixelSize: 12
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
     CsEmptyState {
@@ -365,7 +365,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             text: "All " + cs.slotCount + " control slots are in use."
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 
@@ -534,7 +534,7 @@ Column {
                                 horizontalAlignment: Text.AlignRight
                                 text: Math.round(levelSlider.value) + "%"
                                 font.pixelSize: 13
-                                color: Qt.rgba(1, 1, 1, 0.8)
+                                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.8)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Throttle {
@@ -636,7 +636,7 @@ Column {
                                 horizontalAlignment: Text.AlignRight
                                 text: Math.round(bootSlider.pressed ? bootSlider.value : card.b.value / 256) + "%"
                                 font.pixelSize: 13
-                                color: Qt.rgba(1, 1, 1, 0.8)
+                                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.8)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -665,16 +665,16 @@ Column {
                                     x: 14
                                     spacing: 6
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Icon { name: cs.typeIcon(parent.parent.d.type); size: 13; color: Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
+                                    Icon { name: cs.typeIcon(parent.parent.d.type); size: 13; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5); anchors.verticalCenter: parent.verticalCenter }
                                     Text {
                                         text: view.slotName(modelData) !== "" ? view.slotName(modelData) : cs.typeName(parent.parent.d.type)
                                         font.pixelSize: 12
-                                        color: "white"
+                                        color: isMacOS ? MacColors.label : "white"
                                     }
                                     Text {
                                         text: "- " + cs.actionName(parent.parent.d.action, parent.parent.d.noun) + " on " + cs.nounName(parent.parent.d.noun, parent.parent.d.type)
                                         font.pixelSize: 12
-                                        color: Qt.rgba(1, 1, 1, 0.5)
+                                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                                     }
                                 }
                             }

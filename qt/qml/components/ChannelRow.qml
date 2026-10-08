@@ -7,7 +7,7 @@ Rectangle {
     id: rowRoot
     height: 30
     radius: 6
-    color: isSelected ? Qt.rgba(1, 1, 1, 0.10)
+    color: isMacOS ? (isSelected || isLinkedHighlight ? MacColors.opacity(MacColors.label, 0.05) : "transparent") : isSelected ? Qt.rgba(1, 1, 1, 0.10)
          : isLinkedHighlight ? Qt.rgba(1, 1, 1, 0.05)
          : hover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent"
 
@@ -67,7 +67,7 @@ Rectangle {
         width: 72
         elide: Text.ElideRight
         font.pixelSize: 14
-        color: isMuted ? Qt.rgba(1, 1, 1, 0.35) : "#d6d6d6"
+        color: isMacOS ? (isSelected || isLinkedHighlight ? MacColors.label : MacColors.opacity(MacColors.label, 0.9)) : isMuted ? Qt.rgba(1, 1, 1, 0.35) : "#d6d6d6"
         anchors.left: parent.left
         anchors.leftMargin: 14
         anchors.verticalCenter: parent.verticalCenter
@@ -97,7 +97,7 @@ Rectangle {
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
         height: 6
-        opacity: isMuted ? 0.35 : 1.0
+        opacity: isMacOS ? (isMuted ? 0.4 : 1.0) : isMuted ? 0.35 : 1.0
         targetLevel: meterLevel
         clipping: isClipping
         barColor: channelColor
@@ -121,8 +121,8 @@ Rectangle {
         height: 20
         radius: 10
         readonly property color tint: curveVisible ? parsedColor : Qt.rgba(0.6, 0.6, 0.6, 1)
-        color: Qt.rgba(tint.r, tint.g, tint.b, 0.15)
-        border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.55)
+        color: isMacOS ? (curveVisible ? MacColors.opacity(parsedColor, 0.20) : MacColors.opacity(MacColors.gray, 0.12)) : Qt.rgba(tint.r, tint.g, tint.b, 0.15)
+        border.color: isMacOS ? (curveVisible ? MacColors.opacity(parsedColor, 0.60) : MacColors.opacity(MacColors.gray, 0.35)) : Qt.rgba(tint.r, tint.g, tint.b, 0.55)
         border.width: 1
 
         Text {
@@ -131,7 +131,7 @@ Rectangle {
             text: descriptor
             font.pixelSize: 10
             font.weight: Font.Bold
-            color: pill.tint
+            color: isMacOS ? (curveVisible ? parsedColor : MacColors.secondaryLabel) : pill.tint
         }
         MouseArea {
             anchors.fill: parent

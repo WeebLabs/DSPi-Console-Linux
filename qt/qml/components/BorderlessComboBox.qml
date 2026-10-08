@@ -7,8 +7,8 @@ ComboBox {
     font.pixelSize: 11
 
     background: Rectangle {
-        color: "transparent"
-        border.color: comboRoot.hovered ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
+        color: isMacOS ? (comboRoot.hovered && comboRoot.enabled ? Qt.rgba(1, 1, 1, 0.25) : "transparent") : "transparent"
+        border.color: isMacOS ? "transparent" : comboRoot.hovered ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
         border.width: 1
         radius: 4
     }
@@ -16,7 +16,7 @@ ComboBox {
     contentItem: Text {
         text: comboRoot.displayText
         font: comboRoot.font
-        color: comboRoot.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+        color: isMacOS ? (comboRoot.enabled ? Qt.rgba(1, 1, 1, 0.89) : Qt.rgba(1, 1, 1, 0.35)) : comboRoot.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
         verticalAlignment: Text.AlignVCenter
         leftPadding: 6
         rightPadding: 16
@@ -62,7 +62,7 @@ ComboBox {
         contentItem: Text {
             text: modelData
             font.pixelSize: 11
-            color: highlighted ? "white" : Qt.rgba(1, 1, 1, 0.8)
+            color: isMacOS ? (highlighted ? "white" : MacColors.label) : highlighted ? "white" : Qt.rgba(1, 1, 1, 0.8)
             verticalAlignment: Text.AlignVCenter
             leftPadding: 6
         }
@@ -70,7 +70,7 @@ ComboBox {
         highlighted: comboRoot.highlightedIndex === index
 
         background: Rectangle {
-            color: highlighted ? "#0078d4" : "transparent"
+            color: isMacOS ? (highlighted ? MacColors.selectedContentBackground : "transparent") : highlighted ? "#0078d4" : "transparent"
             radius: 3
         }
     }

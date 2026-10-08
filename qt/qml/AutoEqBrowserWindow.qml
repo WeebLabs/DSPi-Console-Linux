@@ -35,11 +35,11 @@ AppWindow {
     }
     function sourceColor(source) {
         switch (source) {
-        case "oratory1990": return "#ff9f0a"
-        case "crinacle": return "#bf5af2"
-        case "rtings": return "#0a84ff"
-        case "innerfidelity": return "#32d74b"
-        default: return "#8e8e93"
+        case "oratory1990": return isMacOS ? MacColors.orange : "#ff9f0a"
+        case "crinacle": return isMacOS ? MacColors.purple : "#bf5af2"
+        case "rtings": return isMacOS ? MacColors.blue : "#0a84ff"
+        case "innerfidelity": return isMacOS ? MacColors.green : "#32d74b"
+        default: return isMacOS ? MacColors.gray : "#8e8e93"
         }
     }
 
@@ -48,20 +48,20 @@ AppWindow {
         id: searchBar
         width: parent.width
         height: 44
-        color: "transparent"
+        color: isMacOS ? MacColors.controlBackground : "transparent"
         Rectangle {
             anchors.fill: parent
             anchors.margins: 8
             radius: 8
-            color: Qt.rgba(1, 1, 1, 0.08)
-            border.color: search.activeFocus ? "#0a7cff" : "transparent"
+            color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.08)
+            border.color: isMacOS ? "transparent" : search.activeFocus ? "#0a7cff" : "transparent"
             Icon {
                 id: searchIcon
                 x: 9
                 anchors.verticalCenter: parent.verticalCenter
                 name: "search"
                 size: 14
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.45)
             }
             TextInput {
                 id: search
@@ -71,7 +71,7 @@ AppWindow {
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: 13
-                color: "white"
+                color: isMacOS ? MacColors.label : "white"
                 selectByMouse: true
                 clip: true
                 text: autoeq.query
@@ -82,7 +82,7 @@ AppWindow {
                     visible: !search.text
                     text: "Search headphones..."
                     font: search.font
-                    color: Qt.rgba(1, 1, 1, 0.4)
+                    color: isMacOS ? MacColors.placeholderText : Qt.rgba(1, 1, 1, 0.4)
                 }
             }
             Icon {
@@ -93,11 +93,11 @@ AppWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "xmark"
                 size: 12
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                 MouseArea { anchors.fill: parent; anchors.margins: -4; onClicked: search.text = "" }
             }
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
     }
 
     // ── Results ──
@@ -127,7 +127,7 @@ AppWindow {
                 anchors.leftMargin: 6
                 anchors.rightMargin: 6
                 radius: 6
-                color: row.isSelected ? "#0a7cff" : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                color: isMacOS ? (row.isSelected ? MacColors.accent : "transparent") : row.isSelected ? "#0a7cff" : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
             }
             Icon {
                 id: kind
@@ -135,7 +135,7 @@ AppWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 name: model.formFactor === "over-ear" ? "headphones" : "earbuds"
                 size: 20
-                color: row.isSelected ? "white" : "#3a96ff"
+                color: isMacOS ? (row.isSelected ? "white" : MacColors.accent) : row.isSelected ? "white" : "#3a96ff"
             }
             Column {
                 anchors.left: kind.right
@@ -149,7 +149,7 @@ AppWindow {
                     elide: Text.ElideRight
                     text: model.name
                     font.pixelSize: 13
-                    color: "white"
+                    color: isMacOS ? (row.isSelected ? "white" : MacColors.label) : "white"
                 }
                 Row {
                     spacing: 8
@@ -160,8 +160,8 @@ AppWindow {
                         Rectangle {
                             anchors.fill: parent
                             radius: 8
-                            color: row.isSelected ? Qt.rgba(1, 1, 1, 0.25) : win.sourceColor(model.source)
-                            opacity: row.isSelected ? 1 : 0.18
+                            color: isMacOS ? win.sourceColor(model.source) : row.isSelected ? Qt.rgba(1, 1, 1, 0.25) : win.sourceColor(model.source)
+                            opacity: isMacOS ? (row.isSelected ? 0.3 : 0.15) : row.isSelected ? 1 : 0.18
                         }
                         Text {
                             id: sourceLabel
@@ -174,7 +174,7 @@ AppWindow {
                     Text {
                         text: model.formFactor
                         font.pixelSize: 11
-                        color: row.isSelected ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? (row.isSelected ? Qt.rgba(1, 1, 1, 0.8) : MacColors.secondaryLabel) : row.isSelected ? Qt.rgba(1, 1, 1, 0.8) : Qt.rgba(1, 1, 1, 0.5)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -195,7 +195,7 @@ AppWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 name: model.favorite ? "heart-fill" : "heart"
                 size: 15
-                color: model.favorite ? "#ff453a" : row.isSelected ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (model.favorite ? MacColors.red : row.isSelected ? Qt.rgba(1, 1, 1, 0.7) : MacColors.secondaryLabel) : model.favorite ? "#ff453a" : row.isSelected ? Qt.rgba(1, 1, 1, 0.75) : Qt.rgba(1, 1, 1, 0.5)
                 MouseArea {
                     id: heartMouse
                     anchors.fill: parent
@@ -220,7 +220,7 @@ AppWindow {
                 : autoeq.entryCount === 0 ? "Loading headphone database..."
                 : "No headphones found matching \"" + search.text + "\""
             font.pixelSize: 13
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 
@@ -230,7 +230,7 @@ AppWindow {
         anchors.bottom: parent.bottom
         width: parent.width
         height: 58
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.07) }
         Column {
             anchors.left: parent.left
             anchors.leftMargin: 16
@@ -245,13 +245,13 @@ AppWindow {
                     : win.selected.name || "Select a headphone to apply its EQ profile"
                 font.pixelSize: 13
                 font.weight: win.selected.name && win.message === "" ? Font.DemiBold : Font.Normal
-                color: win.message !== "" ? "#ff9f0a" : win.selected.name ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? (win.message !== "" ? MacColors.orange : win.selected.name ? MacColors.label : MacColors.secondaryLabel) : win.message !== "" ? "#ff9f0a" : win.selected.name ? "white" : Qt.rgba(1, 1, 1, 0.5)
             }
             Text {
                 visible: !!win.selected.name && win.message === ""
                 text: (win.selected.source || "") + "  ·  " + (win.selected.formFactor || "")
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
         }
         Row {

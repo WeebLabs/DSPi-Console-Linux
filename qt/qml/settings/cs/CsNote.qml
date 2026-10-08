@@ -27,6 +27,6 @@ Item {
         wrapMode: Text.WordWrap
         text: note.text
         font.pixelSize: 11
-        color: note.warning ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? (note.warning ? MacColors.orange : MacColors.secondaryLabel) : note.warning ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
     }
 }

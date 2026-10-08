@@ -34,7 +34,7 @@ Item {
                 anchors.centerIn: parent
                 font.pixelSize: 11
                 font.family: root.monoFont
-                color: activeFocus ? "#0078d4" : Qt.rgba(1, 1, 1, 0.65)
+                color: isMacOS ? (activeFocus ? MacColors.accent : MacColors.opacity(MacColors.label, 0.65)) : activeFocus ? "#0078d4" : Qt.rgba(1, 1, 1, 0.65)
                 horizontalAlignment: Text.AlignCenter
                 verticalAlignment: Text.AlignVCenter
                 selectByMouse: true
@@ -93,7 +93,7 @@ Item {
                     height: isConnected ? 16 : 18
                     radius: isConnected ? 8 : 9
                     color: isConnected ? inputColor : "transparent"
-                    border.color: isConnected ? "transparent" : (pointRoot.isHovering ? Qt.rgba(0.5, 0.5, 0.5, 0.3) : Qt.rgba(0.5, 0.5, 0.5, 0.12))
+                    border.color: isMacOS ? (isConnected ? "transparent" : MacColors.opacity(MacColors.secondaryLabel, pointRoot.isHovering ? 0.3 : 0.12)) : isConnected ? "transparent" : (pointRoot.isHovering ? Qt.rgba(0.5, 0.5, 0.5, 0.3) : Qt.rgba(0.5, 0.5, 0.5, 0.12))
                     border.width: pointRoot.isHovering ? 2 : 1.5
                 }
 
@@ -121,7 +121,7 @@ Item {
                 text: "INV"
                 font.pixelSize: 9
                 font.weight: isInverted ? Font.Bold : Font.Medium
-                color: isInverted ? "#ff9800" : Qt.rgba(1, 1, 1, 0.3)
+                color: isMacOS ? (isInverted ? MacColors.orange : MacColors.opacity(MacColors.secondaryLabel, 0.3)) : isInverted ? "#ff9800" : Qt.rgba(1, 1, 1, 0.3)
 
                 MouseArea {
                     anchors.fill: parent

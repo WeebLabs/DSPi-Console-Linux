@@ -6,6 +6,20 @@
 #include <QFontMetricsF>
 #include <cmath>
 #include <limits>
+#ifdef Q_OS_MACOS
+#include "MacSystemColors.h"
+
+// secondaryLabelColor as AppKit resolves it (SwiftUI .secondary), read once
+static QColor macSecondary(qreal opacity) {
+    static const QColor base = [] {
+        const QVariant v = macSystemColors().value(QStringLiteral("secondaryLabel"));
+        return v.isValid() ? v.value<QColor>() : QColor::fromRgbF(1, 1, 1, 0.549);
+    }();
+    QColor c = base;
+    c.setAlphaF(base.alphaF() * opacity);
+    return c;
+}
+#endif
 
 static const qreal kNaN = std::numeric_limits<qreal>::quiet_NaN();
 
@@ -480,10 +494,19 @@ void SpectrumBarsItem::paint(QPainter *p) {
     // Grid: a line every 12 dB, 0 dBFS stronger
     for (int db = int(std::floor(m_ceilingDb / 12.0)) * 12; db > m_floorDb; db -= 12) {
         qreal y = std::round(yForDb(db, 0, plotH)) + 0.5;
+#ifdef Q_OS_MACOS
+        // RtaBandGrid: .secondary at 0.35 (0 dBFS) or 0.12
+        p->setPen(QPen(macSecondary(db == 0 ? 0.35 : 0.12), db == 0 ? 1.0 : 0.5));
+#else
         p->setPen(QPen(QColor(255, 255, 255, db == 0 ? 50 : 18), db == 0 ? 1.0 : 0.5));
+#endif
         p->drawLine(QPointF(0, y), QPointF(w, y));
         if (m_levelLabels) {
+#ifdef Q_OS_MACOS
+            p->setPen(macSecondary(0.6));
+#else
             p->setPen(QColor(255, 255, 255, 90));
+#endif
             QString t = QString::number(db);
             p->drawText(QRectF(w - 40, y - 12, 38, 11), Qt::AlignRight | Qt::AlignBottom, t);
         }
@@ -518,7 +541,15 @@ void SpectrumBarsItem::paint(QPainter *p) {
         const qreal n = qBound<qreal>(0, (lv[b] - m_floorDb) / span, 1);
         if (n >= 0.001) {
             const qreal y = plotH * (1 - n);
+#ifdef Q_OS_MACOS
+            // rtaBarFragment: 0.95 at the bar's own top to 0.45 at its foot
+            QLinearGradient bar(0, y, 0, plotH);
+            bar.setColorAt(0, top);
+            bar.setColorAt(1, base);
+            p->setBrush(bar);
+#else
             p->setBrush(g);
+#endif
             p->drawRoundedRect(QRectF(x, y, barW, plotH - y + radius), radius, radius);
         }
         if (m_showPeak) {
@@ -535,7 +566,11 @@ void SpectrumBarsItem::paint(QPainter *p) {
     const RtaCapsInfo &caps = m_rta->caps();
     static const int marks[] = { 10, 100, 1000, 10000, 20, 200, 2000, 20000, 50, 500, 5000 };
     QVector<QRectF> placed;
+#ifdef Q_OS_MACOS
+    p->setPen(macSecondary(1.0));        // RtaBandGrid frequency labels: .secondary
+#else
     p->setPen(QColor(255, 255, 255, 115));
+#endif
     for (int hz : marks) {
         int at = -1;
         for (int i = 0; i < shown.size(); i++)

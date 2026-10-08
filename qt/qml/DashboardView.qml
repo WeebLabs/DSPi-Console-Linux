@@ -113,12 +113,12 @@ Flickable {
                         opacity: slot.gearShown ? 1 : 0
                         visible: opacity > 0
                         Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
-                        color: gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        color: isMacOS ? "transparent" : gearMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : gearMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                         Icon {
                             anchors.centerIn: parent
                             name: "gear"
                             size: 12
-                            color: Qt.rgba(1, 1, 1, layoutPopup.visible && layoutPopup.owner === slot ? 0.95 : 0.6)
+                            color: isMacOS ? (layoutPopup.visible && layoutPopup.owner === slot ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, layoutPopup.visible && layoutPopup.owner === slot ? 0.95 : 0.6)
                         }
                         MouseArea {
                             id: gearMouse

@@ -55,7 +55,9 @@ SettingsPage {
     function lockColor(st, adat) {
         var locked = st.state === 3
         var hunting = adat ? (st.state === 1 || st.state === 2 || st.state === 4) : (st.state === 1 || st.state === 2)
-        return locked ? "#32d74b" : hunting ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.35)
+        return isMacOS ? (locked ? MacColors.green : adat ? (st.state === 4 ? MacColors.orange : hunting ? MacColors.yellow : MacColors.gray)
+                                           : (st.state === 2 ? MacColors.orange : hunting ? MacColors.yellow : MacColors.gray))
+                       : locked ? "#32d74b" : hunting ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.35)
     }
     function lockDetail(st) {
         if (st.state === 3 && st.detectedRate > 0) return "Locked to the external clock at " + (st.detectedRate / 1000).toFixed(1) + " kHz."
@@ -97,7 +99,7 @@ SettingsPage {
             Text {
                 text: page.lockText(lockRow.lockState, lockRow.adat)
                 font.pixelSize: 13
-                color: Qt.rgba(1, 1, 1, 0.75)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.75)
             }
         }
     }
@@ -225,7 +227,7 @@ SettingsPage {
         SettingsButtonRow {
             visible: page.hw.adatInEnabled && page.hw.adatInClockMode === 0 && !page.hw.adatOutEnabled
             title: "Clock is free-running"
-            titleColor: "#ff9f0a"
+            titleColor: isMacOS ? MacColors.label : "#ff9f0a"
             detail: "In master mode the device sending ADAT must lock to DSPi's clock, which only the ADAT output provides. Turn it on, or switch to Slave above."
             buttonText: "Enable ADAT Output"
             onClicked: page.report(bridge.setAdatOutEnabled(true), page.hw.adatOutPin, "ADAT output enabled.")
@@ -244,7 +246,7 @@ SettingsPage {
         id: clockModeDialog
         property int pending: 0
         icon: "warning"
-        iconTint: "#ff453a"
+        iconTint: isMacOS ? MacColors.yellow : "#ff453a"
         title: "Change I2S clock mode?"
         message: "One or more I2S outputs are active. Switching between Master and Slave modes may cause sustained loud noises to be emitted by the connected I2S DAC if wiring has not been adjusted."
         buttons: [

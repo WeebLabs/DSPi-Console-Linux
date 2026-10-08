@@ -26,7 +26,8 @@ Rectangle {
         "Low Shelf (6dB)", "High Shelf (6dB)", "Linkwitz Transform",
         "High Cut (6dB)", "Low Cut (6dB)"]
     // Each band has its own colour (bypass dot and number)
-    readonly property var bandColors: ["#4A8FE3", "#F57373", "#73C78C", "#EDB34D", "#998CEB",
+    readonly property var bandColors: isMacOS ? ["#ED7873", "#F2A35C", "#EBC966", "#8CCC85", "#5CC4AD",
+        "#70ADF0", "#9499F0", "#BA91EB", "#E38AB8", "#CC9E80"] : ["#4A8FE3", "#F57373", "#73C78C", "#EDB34D", "#998CEB",
         "#E68CC7", "#66C7D1", "#CCB86B", "#F2A64D", "#8CB3F2"]
     readonly property bool isActive: filterType !== 0
     readonly property bool isLinkwitz: filterType === 11
@@ -40,7 +41,7 @@ Rectangle {
     signal numberClicked(int modifiers)
     signal pointerOver(bool over)
 
-    opacity: filterBypass ? 0.45 : 1.0
+    opacity: isMacOS ? 1.0 : filterBypass ? 0.45 : 1.0
 
     function chooseType(t) {
         if (t === filterType) return
@@ -90,9 +91,10 @@ Rectangle {
 
         Text {
             width: 24
+            leftPadding: isMacOS ? 12 : 0     // macOS: the native 12 pt gap after the dot
             text: (bandIndex + 1).toString()
             font.pixelSize: 13
-            color: isActive ? "#e0e0e0" : "#888888"
+            color: isMacOS ? (isActive && !filterBypass ? MacColors.label : MacColors.opacity(MacColors.secondaryLabel, 0.5)) : isActive ? "#e0e0e0" : "#888888"
             anchors.verticalCenter: parent.verticalCenter
             // Selects the band, with the modifiers of a click on its dot
             MouseArea {
@@ -111,7 +113,7 @@ Rectangle {
             height: 28
             radius: 6
             anchors.verticalCenter: parent.verticalCenter
-            color: typeMenu.visible ? Qt.rgba(1, 1, 1, 0.10)
+            color: isMacOS ? "transparent" : typeMenu.visible ? Qt.rgba(1, 1, 1, 0.10)
                  : typeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
 
             Text {
@@ -123,7 +125,7 @@ Rectangle {
                 elide: Text.ElideRight
                 text: typeNames[filterType] || "Unknown"
                 font.pixelSize: 14
-                color: "#cccccc"
+                color: isMacOS ? MacColors.opacity(MacColors.label, filterBypass || !isActive ? 0.45 : 1.0) : "#cccccc"
             }
             Column {
                 id: typeChevrons
@@ -131,8 +133,8 @@ Rectangle {
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: -4
-                Icon { name: "chev-up"; size: 10; color: Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
-                Icon { name: "chev-down"; size: 10; color: Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
+                Icon { name: "chev-up"; size: 10; color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass || !isActive ? 0.45 : 1.0) : Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
+                Icon { name: "chev-down"; size: 10; color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass || !isActive ? 0.45 : 1.0) : Qt.rgba(1, 1, 1, typeMouse.containsMouse ? 0.7 : 0.4) }
             }
             MouseArea {
                 id: typeMouse
@@ -159,13 +161,13 @@ Rectangle {
             height: 28
             radius: 4
             anchors.verticalCenter: parent.verticalCenter
-            color: ltMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04)
+            color: isMacOS ? "transparent" : ltMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04)
             Text {
                 anchors.fill: parent
                 leftPadding: 10
                 verticalAlignment: Text.AlignVCenter
                 font.pixelSize: 13
-                color: "#cccccc"
+                color: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass ? 0.45 : 1.0) : "#cccccc"
                 text: "⚙  f0 " + filterFreq.toFixed(0) + " Hz → fp " + filterGain.toFixed(0) + " Hz"
             }
             MouseArea {
@@ -185,7 +187,7 @@ Rectangle {
             height: parent.height
             ValueField {
                 anchors.verticalCenter: parent.verticalCenter
-                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
+                textColor: isMacOS ? MacColors.opacity(MacColors.label, filterBypass ? 0.45 : 1.0) : "#cccccc"; unitColor: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass ? 0.45 : 1.0) : "#888888"; unitSize: 10
                 fieldWidth: 70; height: 28; suffix: "Hz"; decimals: 1; wheelStep: 10; minValue: 10; maxValue: 20000
                 value: filterFreq
                 onValueEdited: filterRowRoot.filterChanged(filterType, newValue, filterGain, filterQ)
@@ -200,7 +202,7 @@ Rectangle {
             ValueField {
                 visible: hasGain
                 anchors.verticalCenter: parent.verticalCenter
-                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
+                textColor: isMacOS ? MacColors.opacity(MacColors.label, filterBypass ? 0.45 : 1.0) : "#cccccc"; unitColor: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass ? 0.45 : 1.0) : "#888888"; unitSize: 10
                 fieldWidth: 60; height: 28; suffix: "dB"; decimals: 1; minValue: -30; maxValue: 30
                 value: filterGain
                 onValueEdited: filterRowRoot.filterChanged(filterType, filterFreq, newValue, filterQ)
@@ -215,7 +217,7 @@ Rectangle {
             ValueField {
                 visible: hasQ
                 anchors.verticalCenter: parent.verticalCenter
-                textColor: "#cccccc"; unitColor: "#888888"; unitSize: 10
+                textColor: isMacOS ? MacColors.opacity(MacColors.label, filterBypass ? 0.45 : 1.0) : "#cccccc"; unitColor: isMacOS ? MacColors.opacity(MacColors.secondaryLabel, filterBypass ? 0.45 : 1.0) : "#888888"; unitSize: 10
                 fieldWidth: 56; height: 28; suffix: "Q"; decimals: 3; wheelStep: 0.1; minValue: 0.1; maxValue: 20
                 value: filterQ
                 onValueEdited: filterRowRoot.filterChanged(filterType, filterFreq, filterGain, newValue)

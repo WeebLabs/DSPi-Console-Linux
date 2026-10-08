@@ -148,7 +148,7 @@ Popup {
                         text: modelData.text
                         font.pixelSize: MenuStyle.fontSize
                         font.weight: menu.containsCurrent(index) ? Font.DemiBold : Font.Normal
-                        color: "white"
+                        color: isMacOS ? (row.hot ? "white" : MacColors.label) : "white"
                     }
                     Icon {
                         anchors.right: parent.right
@@ -156,7 +156,7 @@ Popup {
                         anchors.verticalCenter: parent.verticalCenter
                         name: "chev-right"
                         size: 12
-                        color: row.hot ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? (row.hot ? "white" : Qt.rgba(1, 1, 1, 0.75)) : row.hot ? "white" : Qt.rgba(1, 1, 1, 0.5)
                     }
                     MouseArea {
                         anchors.fill: parent

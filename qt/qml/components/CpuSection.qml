@@ -29,7 +29,7 @@ Item {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
 
     Rectangle {
@@ -40,14 +40,14 @@ Item {
         width: Math.max(28, Math.min(44, cpuRoot.width - cpuRoot.fixedLeft - status.width))
         height: 4
         radius: 2
-        color: Qt.rgba(1, 1, 1, 0.12)
+        color: isMacOS ? MacColors.opacity(MacColors.gray, 0.3) : Qt.rgba(1, 1, 1, 0.12)
 
         Rectangle {
             visible: cpuRoot.connected
             width: parent.width * Math.min(1, Math.max(0, cpuRoot.load / 100))
             height: parent.height
             radius: 2
-            color: cpuRoot.load > 80 ? "#ff9f0a" : "#0a7cff"
+            color: isMacOS ? (cpuRoot.load > 90 ? MacColors.red : MacColors.blue) : cpuRoot.load > 80 ? "#ff9f0a" : "#0a7cff"
         }
     }
 
@@ -59,7 +59,7 @@ Item {
         width: 28
         text: cpuRoot.connected ? cpuRoot.load + "%" : "—"
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.65)
+        color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.65)
 
         ToolTip.visible: cpuHover.containsMouse && cpuRoot.connected
         ToolTip.text: "Core 0: " + cpuRoot.cpu0 + "%   Core 1: " + cpuRoot.cpu1 + "%"
@@ -87,7 +87,7 @@ Item {
             Rectangle {
                 anchors.centerIn: parent
                 width: 6; height: 6; radius: 3
-                color: cpuRoot.connected ? "#32d74b" : "#ff453a"
+                color: isMacOS ? (cpuRoot.connected ? MacColors.green : MacColors.red) : cpuRoot.connected ? "#32d74b" : "#ff453a"
             }
         }
 
@@ -102,7 +102,7 @@ Item {
                 return fullNameMetrics.advanceWidth <= room || cpuRoot.serialTail === "" ? cpuRoot.fullName : cpuRoot.serialTail
             }
             font.pixelSize: 11
-            color: cpuRoot.connected ? Qt.rgba(1, 1, 1, 0.65)
+            color: isMacOS ? (!cpuRoot.connected && bridge.availableSerials.length === 0 ? MacColors.red : MacColors.label) : cpuRoot.connected ? Qt.rgba(1, 1, 1, 0.65)
                  : bridge.availableSerials.length === 0 ? "#ff453a" : Qt.rgba(1, 1, 1, 0.45)
         }
 

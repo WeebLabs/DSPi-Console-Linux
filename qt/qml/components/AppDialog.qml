@@ -107,7 +107,7 @@ Popup {
                     text: dlg.title
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
-                    color: "white"
+                    color: isMacOS ? MacColors.label : "white"
                 }
                 Text {
                     width: parent.width
@@ -115,7 +115,7 @@ Popup {
                     visible: dlg.message !== ""
                     text: dlg.message
                     font.pixelSize: 13
-                    color: Qt.rgba(1, 1, 1, 0.65)
+                    color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.65)
                 }
                 TextField {
                     id: input
@@ -128,19 +128,19 @@ Popup {
                     rightPadding: 10
                     verticalAlignment: Text.AlignVCenter
                     font.pixelSize: 13
-                    color: "white"
-                    selectionColor: "#0a7cff"
+                    color: isMacOS ? MacColors.label : "white"
+                    selectionColor: isMacOS ? MacColors.selectedControl : "#0a7cff"
                     selectedTextColor: "white"
                     selectByMouse: true
                     maximumLength: dlg.maxLength
                     placeholderText: dlg.placeholder
-                    placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
+                    placeholderTextColor: isMacOS ? Qt.rgba(1, 1, 1, 0.47) : Qt.rgba(1, 1, 1, 0.35)
                     onAccepted: dlg.choosePrimary()
                     background: Rectangle {
                         radius: 7
-                        color: Qt.rgba(1, 1, 1, 0.06)
+                        color: isMacOS ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.06)
                         border.width: input.activeFocus ? 1.5 : 1
-                        border.color: input.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.12)
+                        border.color: isMacOS ? (input.activeFocus ? MacColors.keyboardFocusIndicator : Qt.rgba(1, 1, 1, 0.11)) : input.activeFocus ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.12)
                     }
                 }
                 Rectangle {
@@ -199,9 +199,9 @@ Popup {
                                     id: box
                                     y: 5
                                     width: 16; height: 16; radius: 4
-                                    color: parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.06)
-                                    border.color: parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.25)
-                                    Icon { anchors.centerIn: parent; visible: parent.parent.ticked; name: "check"; size: 13; color: "white" }
+                                    color: isMacOS ? (parent.ticked ? MacColors.checkboxOn : Qt.rgba(1, 1, 1, 0.21)) : parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.06)
+                                    border.color: isMacOS ? (parent.ticked ? MacColors.checkboxOn : Qt.rgba(1, 1, 1, 0.21)) : parent.ticked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.25)
+                                    Icon { anchors.centerIn: parent; visible: parent.parent.ticked; name: "check"; size: 13; color: isMacOS ? Qt.rgba(1, 1, 1, 0.85) : "white" }
                                 }
                                 Column {
                                     id: checkText
@@ -209,7 +209,7 @@ Popup {
                                     anchors.leftMargin: 9
                                     anchors.right: parent.right
                                     y: 4
-                                    Text { width: parent.width; wrapMode: Text.WordWrap; text: modelData.text; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
+                                    Text { width: parent.width; wrapMode: Text.WordWrap; text: modelData.text; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
                                     Text { visible: !!modelData.detail; width: parent.width; wrapMode: Text.WordWrap; text: modelData.detail || ""; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
                                 }
                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: dlg.toggleCheck(modelData.key) }
@@ -249,12 +249,12 @@ Popup {
                     width: buttonRow.stacked ? buttonRow.width : buttonRow.share
                     height: 32
                     radius: 8
-                    color: filled ? (role === "destructive" ? (btnMouse.pressed ? "#b52a31" : "#d9363e")
+                    color: isMacOS ? (filled ? (btnMouse.pressed ? MacColors.defaultButtonPressed : MacColors.defaultButton) : btnMouse.pressed ? Qt.rgba(1, 1, 1, 0.36) : Qt.rgba(1, 1, 1, 0.25)) : filled ? (role === "destructive" ? (btnMouse.pressed ? "#b52a31" : "#d9363e")
                                                             : (btnMouse.pressed ? "#0062cc" : "#0a7cff"))
                          : btnMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : btnMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
                     border.width: filled ? 0 : 1
-                    border.color: Qt.rgba(1, 1, 1, 0.18)
-                    opacity: filled && btnMouse.containsMouse && !btnMouse.pressed ? 0.9 : 1.0
+                    border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+                    opacity: isMacOS ? 1.0 : filled && btnMouse.containsMouse && !btnMouse.pressed ? 0.9 : 1.0
                     Text {
                         id: btnText
                         anchors.centerIn: parent
@@ -264,7 +264,7 @@ Popup {
                         text: modelData.text
                         font.pixelSize: 13
                         font.weight: btn.filled ? Font.DemiBold : Font.Normal
-                        color: "white"
+                        color: isMacOS ? (btn.filled ? Qt.rgba(1, 1, 1, 0.86) : Qt.rgba(1, 1, 1, 0.89)) : "white"
                     }
                     MouseArea {
                         id: btnMouse

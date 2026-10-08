@@ -12,7 +12,7 @@ Switch {
         width: 40
         height: 24
         radius: 12
-        color: sw.checked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.18)
+        color: isMacOS ? (sw.checked ? MacColors.switchOn : Qt.rgba(1, 1, 1, 0.1)) : sw.checked ? "#0a7cff" : Qt.rgba(1, 1, 1, 0.18)
         opacity: sw.enabled ? 1.0 : 0.5
         Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -22,7 +22,7 @@ Switch {
             width: 20
             height: 20
             radius: 10
-            color: "white"
+            color: isMacOS ? "#cccccc" : "white"
             Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
         }
     }

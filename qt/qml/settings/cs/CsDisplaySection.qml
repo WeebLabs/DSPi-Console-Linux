@@ -126,7 +126,7 @@ Column {
         Text {
             text: ds.st.init === 2 ? "Running" : ds.st.init === 1 ? "Starting up" : ds.st.init === 3 ? "Not responding" : "Not started"
             font.pixelSize: 12
-            color: ds.st.init === 2 ? "#32d74b" : ds.st.init === 3 ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? (ds.st.init === 2 ? MacColors.green : ds.st.init === 3 ? MacColors.orange : MacColors.secondaryLabel) : ds.st.init === 2 ? "#32d74b" : ds.st.init === 3 ? "#ff9f0a" : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 
@@ -257,7 +257,7 @@ Column {
             Item {
                 width: parent.width
                 height: 40
-                Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+                Rectangle { x: 14; width: parent.width - 14; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
                 Row {
                     x: 14
                     anchors.verticalCenter: parent.verticalCenter
@@ -267,7 +267,7 @@ Column {
                         horizontalAlignment: Text.AlignRight
                         text: index + 1
                         font.pixelSize: 12
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     // Holds its place when another page is on screen, so the
@@ -275,7 +275,7 @@ Column {
                     Icon {
                         name: "eye"
                         size: 13
-                        color: "#3a96ff"
+                        color: isMacOS ? MacColors.accent : "#3a96ff"
                         opacity: pageRow.shown ? 1 : 0
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -354,7 +354,7 @@ Column {
     Item {
         width: parent.width
         height: 44
-        Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+        Rectangle { x: 14; width: parent.width - 14; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
         CsButton {
             x: 14
             anchors.verticalCenter: parent.verticalCenter
@@ -371,7 +371,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             text: "All " + ds.cs.pageCount + " page slots are in use."
             font.pixelSize: 12
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 }

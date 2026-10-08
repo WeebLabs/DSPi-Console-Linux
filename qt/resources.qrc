@@ -172,6 +172,7 @@
         <file>qml/components/AppWindow.qml</file>
         <file>qml/components/ChoiceMenu.qml</file>
         <file>qml/components/MenuStyle.qml</file>
+        <file>qml/components/MacColors.qml</file>
         <file>qml/components/ActionMenu.qml</file>
         <file>qml/components/AppDialog.qml</file>
         <file>qml/components/FilterTypeMenu.qml</file>

@@ -16,7 +16,7 @@ Item {
     width: parent ? parent.width : 400
     height: 40
 
-    Rectangle { x: 14; width: parent.width - 14; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
+    Rectangle { x: 14; width: parent.width - 14; height: 1; color: isMacOS ? Qt.rgba(1, 1, 1, 0.047) : Qt.rgba(1, 1, 1, 0.07) }
     Row {
         id: leadRow
         x: 14
@@ -47,7 +47,7 @@ Item {
         elide: Text.ElideRight
         text: row.hint
         font.pixelSize: 12
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
     Row {
         id: buttons

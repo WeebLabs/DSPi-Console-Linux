@@ -40,27 +40,27 @@ AppWindow {
     // keywords: extra search terms; needsDevice: hidden while disconnected.
     readonly property var groups: [
         { title: "Application", pages: [
-            { id: "about", title: "About", icon: "info", tint: "#8e8e93",
+            { id: "about", title: "About", icon: "info", tint: isMacOS ? "#646971" : "#8e8e93",
               source: "settings/pages/AboutPage.qml", keywords: "version links github discord patreon ko-fi youtube" },
-            { id: "advanced", title: "Advanced", icon: "wrench", tint: "#636366",
+            { id: "advanced", title: "Advanced", icon: "wrench", tint: isMacOS ? "#727880" : "#636366",
               source: "settings/pages/AdvancedPage.qml", keywords: "channel names reset device serial firmware" }
         ]},
         { title: "Display", pages: [
-            { id: "graphing", title: "Graphing", icon: "chart", tint: "#30b0c7",
+            { id: "graphing", title: "Graphing", icon: "chart", tint: isMacOS ? "#587a89" : "#30b0c7",
               source: "settings/pages/GraphingPage.qml", keywords: "graph glow line width grid opacity labels range center frequency pop out popout window follow phase readout" },
-            { id: "spectrum", title: "Spectrum Analyser", icon: "spectrum", tint: "#5e5ce6",
+            { id: "spectrum", title: "Spectrum Analyser", icon: "spectrum", tint: isMacOS ? "#4c808a" : "#5e5ce6",
               source: "settings/pages/SpectrumPage.qml", keywords: "rta fft spectrum analyser analyzer bars peak hold smoothing floor ceiling transform averaging decay" }
         ]},
         { title: "System", pages: [
-            { id: "overview", title: "Overview", icon: "pins", tint: "#636366", needsDevice: true,
+            { id: "overview", title: "Overview", icon: "pins", tint: isMacOS ? "#627080" : "#636366", needsDevice: true,
               source: "settings/pages/OverviewPage.qml", keywords: "gpio pins map assignments in use free" },
             { id: "inputs", title: "Inputs", icon: "input", tint: "#04856f", needsDevice: true,
               source: "settings/pages/InputsPage.qml", keywords: "spdif toslink receiver i2s adat clock slave master lock channels lg sound sync tv" },
-            { id: "outputs", title: "Outputs", icon: "output", tint: "#34c759", needsDevice: true,
+            { id: "outputs", title: "Outputs", icon: "output", tint: isMacOS ? "#0278c7" : "#34c759", needsDevice: true,
               source: "settings/pages/OutputsPage.qml", keywords: "pins gpio spdif i2s pdm sub adat optical type reset" },
             { id: "i2s", title: "I2S Configuration", icon: "clock", tint: "#ba3822", needsDevice: true,
               source: "settings/pages/I2SPage.qml", keywords: "bck lrclk bit clock mck master clock multiplier sample rate split unified" },
-            { id: "global", title: "Global Parameters", icon: "globe", tint: "#ff9f0a", needsDevice: true,
+            { id: "global", title: "Global Parameters", icon: "globe", tint: isMacOS ? "#807701" : "#ff9f0a", needsDevice: true,
               source: "settings/pages/GlobalParametersPage.qml", keywords: "startup default preset master volume hardware independent dac mute amplifier pop" }
         ]},
         { title: "Control", pages: [
@@ -165,7 +165,7 @@ AppWindow {
         height: parent.height
         color: windowEffects.blurAvailable ? Qt.rgba(0.13, 0.13, 0.14, 0.35) : "#262628"
 
-        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Qt.rgba(0, 0, 0, 0.6) }
+        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: isMacOS ? "black" : Qt.rgba(0, 0, 0, 0.6) }
 
         Column {
             anchors.fill: parent
@@ -256,7 +256,7 @@ AppWindow {
                         bottomPadding: 3
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
-                        color: Qt.rgba(1, 1, 1, 0.45)
+                        color: isMacOS ? MacColors.tertiaryLabel : Qt.rgba(1, 1, 1, 0.45)
                     }
                     Repeater {
                         model: group.groupData.pages
@@ -300,7 +300,7 @@ AppWindow {
         anchors.left: sidebar.right
         anchors.right: parent.right
         height: parent.height
-        color: "#1e1e20"
+        color: isMacOS ? "#282828" : "#1e1e20"
     }
     Item {
         id: content

@@ -26,9 +26,9 @@ Item {
         width: parent.width
         height: grid.height + 20
         radius: 10
-        color: isMacOS ? Qt.rgba(0.21, 0.21, 0.21, 0.6) : nativeAltBaseColor
+        color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : nativeAltBaseColor
         border.color: {
-            if (strip.count !== 1) return Qt.rgba(1, 1, 1, 0.1)
+            if (strip.count !== 1) return isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.2) : Qt.rgba(1, 1, 1, 0.1)
             var c = Qt.lighter(bridge.channelColor(rta.appChannel(strip.sel.tap, strip.sel.channels[0])), 1.0)
             return Qt.rgba(c.r, c.g, c.b, 0.3)
         }
@@ -58,7 +58,7 @@ Item {
                             text: bridge.channelName(parent.parent.app)
                             font.pixelSize: 11
                             font.weight: Font.DemiBold
-                            color: Qt.rgba(1, 1, 1, 0.6)
+                            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.6)
                             elide: Text.ElideRight
                             width: Math.min(implicitWidth, parent.parent.width - 30)
                         }
@@ -92,8 +92,8 @@ Item {
             opacity: cardHover.containsPointer || options.visible ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
-            color: gearMouse.containsMouse || options.visible ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-            Icon { anchors.centerIn: parent; name: "gear"; size: 12; color: Qt.rgba(1, 1, 1, 0.7) }
+            color: isMacOS ? "transparent" : gearMouse.containsMouse || options.visible ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            Icon { anchors.centerIn: parent; name: "gear"; size: 12; color: isMacOS ? (options.visible ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, 0.7) }
             MouseArea {
                 id: gearMouse
                 anchors.fill: parent
@@ -142,7 +142,7 @@ Item {
                 font.pixelSize: 11
                 font.weight: Font.Bold
                 font.letterSpacing: 0.4
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
             }
             Row {
                 visible: strip.count > 1
@@ -156,8 +156,8 @@ Item {
                         width: (180 - 12) / 4
                         height: 38
                         radius: 6
-                        color: isCurrent ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04)
-                        border.color: isCurrent ? Qt.rgba(0.04, 0.49, 1, 0.7) : Qt.rgba(1, 1, 1, 0.08)
+                        color: isMacOS ? (isCurrent ? MacColors.opacity(MacColors.accent, 0.16) : MacColors.opacity(MacColors.label, 0.05)) : isCurrent ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04)
+                        border.color: isMacOS ? (isCurrent ? MacColors.opacity(MacColors.accent, 0.7) : "transparent") : isCurrent ? Qt.rgba(0.04, 0.49, 1, 0.7) : Qt.rgba(1, 1, 1, 0.08)
                         Column {
                             anchors.centerIn: parent
                             spacing: 3
@@ -171,7 +171,7 @@ Item {
                                         width: (22 - 1.5 * (tile.cols - 1)) / tile.cols
                                         height: 13
                                         radius: 1.5
-                                        color: Qt.rgba(1, 1, 1, 0.45)
+                                        color: isMacOS ? (tile.isCurrent ? MacColors.accent : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, 0.45)
                                     }
                                 }
                             }
@@ -179,7 +179,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: tile.cols
                                 font.pixelSize: 10
-                                color: Qt.rgba(1, 1, 1, 0.75)
+                                color: isMacOS ? (tile.isCurrent ? MacColors.accent : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, 0.75)
                             }
                         }
                         MouseArea {
@@ -192,19 +192,19 @@ Item {
                     }
                 }
             }
-            Rectangle { visible: strip.count > 1; width: 180; height: 1; color: MenuStyle.separator }
+            Rectangle { visible: strip.count > 1; width: 180; height: 1; color: isMacOS ? MacColors.separator : MenuStyle.separator }
             Rectangle {
                 width: 180
                 height: 28
                 radius: 6
-                color: openMouse.containsMouse ? MenuStyle.highlight : "transparent"
+                color: isMacOS ? (openMouse.containsMouse ? MacColors.accent : "transparent") : openMouse.containsMouse ? MenuStyle.highlight : "transparent"
                 Row {
                     anchors.left: parent.left
                     anchors.leftMargin: 6
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
-                    Icon { name: "spectrum"; size: 15; color: openMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: "Open in Window"; font.pixelSize: 13; color: openMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
+                    Icon { name: "spectrum"; size: 15; color: isMacOS ? (openMouse.containsMouse ? "white" : MacColors.label) : openMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.65); anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "Open in Window"; font.pixelSize: 13; color: isMacOS ? (openMouse.containsMouse ? "white" : MacColors.label) : openMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.9); anchors.verticalCenter: parent.verticalCenter }
                 }
                 MouseArea {
                     id: openMouse

@@ -13,14 +13,18 @@ Item {
 
     signal toggled()
 
+    // macOS: the native BypassCheckbox (Components.swift:2391) - 12 pt, and an
+    // Off band keeps a faint hollow ring rather than no dot
     Rectangle {
         anchors.centerIn: parent
-        width: 9; height: 9; radius: 4.5
-        visible: dotRoot.active
-        color: dotRoot.bypassed ? "transparent" : dotRoot.dotColor
-        border.color: dotRoot.dotColor
-        border.width: 1.5
-        scale: mouse.containsMouse ? 1.25 : 1.0
+        width: isMacOS ? 12 : 9; height: isMacOS ? 12 : 9; radius: isMacOS ? 6 : 4.5
+        visible: isMacOS ? true : dotRoot.active
+        opacity: isMacOS ? (dotRoot.active ? 1 : 0.35) : 1
+        color: isMacOS ? (dotRoot.active && !dotRoot.bypassed ? dotRoot.dotColor : "transparent") : dotRoot.bypassed ? "transparent" : dotRoot.dotColor
+        border.color: isMacOS ? (!dotRoot.active ? MacColors.opacity(MacColors.secondaryLabel, 0.55) : dotRoot.bypassed ? MacColors.opacity(dotRoot.dotColor, 0.6) : dotRoot.dotColor) : dotRoot.dotColor
+        border.width: isMacOS ? 1.2 : 1.5
+        scale: isMacOS ? (mouse.containsMouse && dotRoot.active ? 1.1 : 1.0) : mouse.containsMouse ? 1.25 : 1.0
+        Behavior on scale { enabled: isMacOS; NumberAnimation { duration: 120; easing.type: Easing.InOutQuad } }
     }
 
     MouseArea {

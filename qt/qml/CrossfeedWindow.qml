@@ -36,9 +36,9 @@ AppWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
     ToolHeader {
         id: header
@@ -79,8 +79,8 @@ AppWindow {
                     width: parent.width
                     height: 170
                     radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.2)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
                     Canvas {
                         id: graph
@@ -136,8 +136,8 @@ AppWindow {
 
                             // Grid: decades and 10 dB lines
                             ctx.lineWidth = 1
-                            ctx.strokeStyle = "rgba(255,255,255,0.07)"
-                            ctx.fillStyle = "rgba(255,255,255,0.4)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.15) : "rgba(255,255,255,0.07)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.4)"
                             ctx.font = "10px sans-serif"
                             ctx.textAlign = "center"
                             var marks = [[100, "100"], [1000, "1k"], [10000, "10k"]]
@@ -155,7 +155,7 @@ AppWindow {
 
                             if (!active) {
                                 ctx.textAlign = "center"
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", left + w / 2, h / 2)
                                 return
@@ -172,8 +172,8 @@ AppWindow {
                                 }
                                 ctx.stroke()
                             }
-                            line(c.cf, "#ff9f0a")
-                            line(c.dr, "#0a7cff")
+                            line(c.cf, isMacOS ? MacColors.orange : "#ff9f0a")
+                            line(c.dr, isMacOS ? MacColors.accent : "#0a7cff")
                         }
                     }
 
@@ -185,15 +185,15 @@ AppWindow {
                         width: legend.width + 12
                         height: legend.height + 10
                         radius: 4
-                        color: Qt.rgba(0, 0, 0, 0.35)
+                        color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.85) : Qt.rgba(0, 0, 0, 0.35)
                         Column {
                             id: legend
                             anchors.centerIn: parent
                             spacing: 3
-                            Row { spacing: 6; Rectangle { width: 12; height: 2; radius: 1; color: "#0a7cff"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Direct"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
-                            Row { spacing: 6; Rectangle { width: 12; height: 2; radius: 1; color: "#ff9f0a"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Crossfeed"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
+                            Row { spacing: 6; Rectangle { width: 12; height: 2; radius: 1; color: isMacOS ? MacColors.accent : "#0a7cff"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Direct"; font.pixelSize: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) } }
+                            Row { spacing: 6; Rectangle { width: 12; height: 2; radius: 1; color: isMacOS ? MacColors.orange : "#ff9f0a"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Crossfeed"; font.pixelSize: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) } }
                         }
                     }
                 }
@@ -212,16 +212,16 @@ AppWindow {
                             width: parent.width
                             height: 38
                             radius: 7
-                            color: presetMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                            color: isMacOS ? "transparent" : presetMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
 
                             Rectangle {
                                 id: radio
                                 x: 8
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 16; height: 16; radius: 8
-                                color: parent.isCurrent ? "#0a7cff" : "transparent"
+                                color: isMacOS ? (parent.isCurrent ? MacColors.accent : "transparent") : parent.isCurrent ? "#0a7cff" : "transparent"
                                 border.width: parent.isCurrent ? 0 : 1.5
-                                border.color: Qt.rgba(1, 1, 1, 0.35)
+                                border.color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.35)
                                 Rectangle {
                                     visible: parent.parent.isCurrent
                                     anchors.centerIn: parent
@@ -239,14 +239,14 @@ AppWindow {
                                     text: modelData.name
                                     font.pixelSize: 13
                                     font.weight: parent.parent.isCurrent ? Font.DemiBold : Font.Normal
-                                    color: Qt.rgba(1, 1, 1, 0.9)
+                                    color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
                                 }
                                 Text {
                                     width: parent.width
                                     elide: Text.ElideRight
                                     text: modelData.detail
                                     font.pixelSize: 11
-                                    color: Qt.rgba(1, 1, 1, 0.5)
+                                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                                 }
                             }
                             MouseArea {
@@ -261,7 +261,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             // ── Right: parameters, ITD, output pairs ──
             Column {
@@ -274,7 +274,7 @@ AppWindow {
                 Column {
                     width: parent.width
                     spacing: 12
-                    opacity: win.isCustom ? 1.0 : 0.55
+                    opacity: isMacOS ? (win.isCustom ? 1.0 : 0.5) : win.isCustom ? 1.0 : 0.55
 
                     ParamRow {
                         id: freqRow
@@ -312,8 +312,8 @@ AppWindow {
                         anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
-                        Text { text: "Interaural Time Delay"; font.pixelSize: 13; color: Qt.rgba(1, 1, 1, 0.9) }
-                        Text { width: parent.width; wrapMode: Text.WordWrap; text: "Simulates a ~220 µs path difference via an all-pass filter"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: "Interaural Time Delay"; font.pixelSize: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
+                        Text { width: parent.width; wrapMode: Text.WordWrap; text: "Simulates a ~220 µs path difference via an all-pass filter"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                     }
                     ToggleSwitch {
                         id: itdSwitch
@@ -341,9 +341,9 @@ AppWindow {
                             Text {
                                 text: "Presets"
                                 font.pixelSize: 12
-                                color: pairMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                                color: isMacOS ? MacColors.label : pairMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
                             }
-                            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+                            Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
                         }
                         MouseArea {
                             id: pairMouse
@@ -359,7 +359,7 @@ AppWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     text: "Crossfeed only the stereo output pairs feeding headphones. Speaker pairs stay bit-accurate. The mono sub is never crossfed."
                 }
 

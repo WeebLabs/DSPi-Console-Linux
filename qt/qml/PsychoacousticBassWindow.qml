@@ -37,9 +37,9 @@ AppWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
-    component Divider: Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    component Divider: Rectangle { width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
     // "Presets ⌄" link that opens an ActionMenu under itself
     component MenuLink: Item {
         id: link
@@ -53,9 +53,9 @@ AppWindow {
             Text {
                 text: link.text
                 font.pixelSize: 12
-                color: linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                color: isMacOS ? MacColors.label : linkMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.75)
             }
-            Icon { name: "chev-down"; size: 11; color: Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
+            Icon { name: "chev-down"; size: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.6); anchors.verticalCenter: parent.verticalCenter }
         }
         MouseArea {
             id: linkMouse
@@ -116,8 +116,8 @@ AppWindow {
                     width: parent.width
                     height: 190
                     radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.2)
-                    border.color: Qt.rgba(1, 1, 1, 0.1)
+                    color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(0, 0, 0, 0.2)
+                    border.color: isMacOS ? MacColors.opacity(MacColors.gray, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
                     Canvas {
                         id: spectrum
@@ -142,8 +142,8 @@ AppWindow {
                             function xOf(f) { return (Math.log(f) - lo) / (hi - lo) * w }
 
                             // Decade grid and labels
-                            ctx.strokeStyle = "rgba(255,255,255,0.08)"
-                            ctx.fillStyle = "rgba(255,255,255,0.45)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.gray, 0.15) : "rgba(255,255,255,0.08)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.6) : "rgba(255,255,255,0.45)"
                             ctx.font = "10px sans-serif"
                             ctx.textAlign = "center"
                             var marks = [[100, "100"], [1000, "1k"], [10000, "10k"]]
@@ -155,7 +155,7 @@ AppWindow {
                             ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w, h); ctx.stroke()
 
                             if (!active) {
-                                ctx.fillStyle = "rgba(255,255,255,0.35)"
+                                ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.secondaryLabel, 0.5) : "rgba(255,255,255,0.35)"
                                 ctx.font = "12px sans-serif"
                                 ctx.fillText("Disabled", w / 2, h / 2)
                                 return
@@ -164,20 +164,20 @@ AppWindow {
                             // Original bass below fc (0 dB = full height, -60 dB = none)
                             var xfc = xOf(fc), x4 = xOf(Math.min(20000, fc * 4))
                             var oh = Math.max(0, Math.min(1, (orig + 60) / 60)) * h
-                            ctx.fillStyle = "#1f4a8c"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.accent, 0.35) : "#1f4a8c"
                             ctx.fillRect(0, h - oh, xfc, oh)
                             // Harmonics fc..4fc (-24..+12 dB)
                             var hh = Math.max(0, Math.min(1, (harm + 24) / 36)) * h
-                            ctx.fillStyle = "#a8691f"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.orange, 0.55) : "#a8691f"
                             ctx.fillRect(xfc, h - hh, x4 - xfc, hh)
 
                             // fc / 4fc markers
                             ctx.setLineDash([3, 3])
-                            ctx.strokeStyle = "rgba(255,255,255,0.45)"
+                            ctx.strokeStyle = isMacOS ? MacColors.opacity(MacColors.label, 0.4) : "rgba(255,255,255,0.45)"
                             ctx.beginPath(); ctx.moveTo(xfc, 0); ctx.lineTo(xfc, h); ctx.stroke()
                             ctx.beginPath(); ctx.moveTo(x4, 0); ctx.lineTo(x4, h); ctx.stroke()
                             ctx.setLineDash([])
-                            ctx.fillStyle = "rgba(255,255,255,0.5)"
+                            ctx.fillStyle = isMacOS ? MacColors.opacity(MacColors.label, 0.6) : "rgba(255,255,255,0.5)"
                             ctx.fillText("fc", xfc, 11)
                             ctx.fillText("4fc", x4, 11)
                         }
@@ -191,15 +191,15 @@ AppWindow {
                         width: legend.width + 12
                         height: legend.height + 10
                         radius: 4
-                        color: Qt.rgba(0, 0, 0, 0.35)
+                        color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.85) : Qt.rgba(0, 0, 0, 0.35)
                         Column {
                             id: legend
                             anchors.centerIn: parent
                             spacing: 4
-                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: "#2b6fd6"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Original"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
-                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: "#e8901f"; anchors.verticalCenter: parent.verticalCenter }
-                                  Text { text: "Harmonics"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.85) } }
+                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: isMacOS ? MacColors.accent : "#2b6fd6"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Original"; font.pixelSize: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) } }
+                            Row { spacing: 6; Rectangle { width: 10; height: 8; radius: 2; color: isMacOS ? MacColors.orange : "#e8901f"; anchors.verticalCenter: parent.verticalCenter }
+                                  Text { text: "Harmonics"; font.pixelSize: 11; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) } }
                         }
                     }
                 }
@@ -226,7 +226,7 @@ AppWindow {
                 }
             }
 
-            Rectangle { width: 1; height: columns.height; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: 1; height: columns.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
             // ── Right: outputs + shaping ──
             Column {
@@ -249,7 +249,7 @@ AppWindow {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     font.pixelSize: 11
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                     text: "Enhance only the small-speaker outputs. Mask off the sub and any full-range outputs: synthesizing harmonics on a channel that can reproduce real bass is counterproductive."
                 }
 

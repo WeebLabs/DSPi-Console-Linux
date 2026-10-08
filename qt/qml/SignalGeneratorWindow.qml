@@ -48,7 +48,7 @@ AppWindow {
     function typeName(t) { return (types[t] || types[0]).name }
 
     readonly property var stateNames: ["Idle", "Fading in", "Running", "Gap", "Fading out"]
-    readonly property var stateColors: [Qt.rgba(1, 1, 1, 0.4), "#32d74b", "#32d74b", "#ffd60a", "#ff9f0a"]
+    readonly property var stateColors: isMacOS ? [MacColors.secondaryLabel, MacColors.green, MacColors.green, MacColors.yellow, MacColors.orange] : [Qt.rgba(1, 1, 1, 0.4), "#32d74b", "#32d74b", "#ffd60a", "#ff9f0a"]
 
     readonly property int outputCount: siggen.outputChannels > 0 ? siggen.outputChannels : bridge.numOutputChannels
     function outputName(o) { var n = bridge.channelName(o + 2); return n !== "" ? n : "Out " + (o + 1) }
@@ -78,18 +78,18 @@ AppWindow {
         font.pixelSize: 11
         font.weight: Font.Bold
         font.letterSpacing: 0.4
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
     component Caption: Text {
         width: parent ? parent.width : 0
         wrapMode: Text.WordWrap
         font.pixelSize: 11
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
     }
     component LinkText: Text {
         signal clicked()
         font.pixelSize: 11
-        color: linkMouse.containsMouse ? "white" : "#3a96ff"
+        color: isMacOS ? MacColors.accent : linkMouse.containsMouse ? "white" : "#3a96ff"
         MouseArea { id: linkMouse; anchors.fill: parent; anchors.margins: -3; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
     }
     // Label left, value field right
@@ -107,13 +107,13 @@ AppWindow {
         signal edited(real v)
         width: parent ? parent.width : 0
         height: caption !== "" ? 44 : 28
-        Text { y: (26 - height) / 2; text: parent.label; font.pixelSize: 12; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.9) }
+        Text { y: (26 - height) / 2; text: parent.label; font.pixelSize: 12; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
         Text {
             visible: parent.caption !== ""
             y: 26
             text: parent.caption
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
         ValueField {
             anchors.right: parent.right
@@ -138,15 +138,15 @@ AppWindow {
         signal toggled(bool on)
         width: parent ? parent.width : 0
         height: Math.max(30, optText.height + 6)
-        opacity: enabled ? 1 : 0.45
+        opacity: isMacOS ? 1 : enabled ? 1 : 0.45
         Column {
             id: optText
             anchors.left: parent.left
             anchors.right: optSwitch.left
             anchors.rightMargin: 10
             spacing: 2
-            Text { text: opt.title; font.pixelSize: 12; font.weight: Font.Medium; color: Qt.rgba(1, 1, 1, 0.9) }
-            Text { width: parent.width; text: opt.caption; wrapMode: Text.WordWrap; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+            Text { text: opt.title; font.pixelSize: 12; font.weight: Font.Medium; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9) }
+            Text { width: parent.width; text: opt.caption; wrapMode: Text.WordWrap; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
         }
         ToggleSwitch {
             id: optSwitch
@@ -174,8 +174,8 @@ AppWindow {
                 width: pillRow.width + 20
                 height: 24
                 radius: 12
-                color: Qt.rgba(1, 1, 1, 0.06)
-                border.color: Qt.rgba(tint.r, tint.g, tint.b, siggen.running ? 0.5 : 0.2)
+                color: isMacOS ? MacColors.opacity(MacColors.controlBackground, 0.6) : Qt.rgba(1, 1, 1, 0.06)
+                border.color: isMacOS ? MacColors.opacity(tint, siggen.running ? 0.5 : 0.2) : Qt.rgba(tint.r, tint.g, tint.b, siggen.running ? 0.5 : 0.2)
                 Row {
                     id: pillRow
                     anchors.centerIn: parent
@@ -197,13 +197,13 @@ AppWindow {
                         text: win.stateNames[siggen.state] || "Idle"
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
-                        color: Qt.rgba(1, 1, 1, siggen.running ? 0.9 : 0.55)
+                        color: isMacOS ? (siggen.running ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, siggen.running ? 0.9 : 0.55)
                     }
                 }
             }
         ]
     }
-    Rectangle { id: headerRule; anchors.top: header.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    Rectangle { id: headerRule; anchors.top: header.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
     // ── Firmware without a generator ──
     Column {
@@ -211,15 +211,15 @@ AppWindow {
         anchors.centerIn: body
         spacing: 8
         width: 360
-        Icon { anchors.horizontalCenter: parent.horizontalCenter; name: "signal"; size: 32; color: Qt.rgba(1, 1, 1, 0.35) }
-        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Signal generator not available"; font.pixelSize: 13; font.weight: Font.DemiBold; color: Qt.rgba(1, 1, 1, 0.85) }
+        Icon { anchors.horizontalCenter: parent.horizontalCenter; name: "signal"; size: 32; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.35) }
+        Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Signal generator not available"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.85) }
         Text {
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             text: "The connected firmware does not include the onboard test signal generator. Update the DSPi firmware to use this tool."
             font.pixelSize: 11
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
         }
     }
 
@@ -263,8 +263,8 @@ AppWindow {
                             width: (leftColumn.width - 24) / 5
                             height: 42
                             radius: 7
-                            color: selected ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
-                            border.color: selected ? Qt.rgba(0.04, 0.49, 1, 0.7) : Qt.rgba(1, 1, 1, 0.08)
+                            color: isMacOS ? (selected ? MacColors.opacity(MacColors.accent, 0.16) : MacColors.opacity(MacColors.controlBackground, 0.6)) : selected ? Qt.rgba(0.04, 0.49, 1, 0.16) : tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
+                            border.color: isMacOS ? (selected ? MacColors.opacity(MacColors.accent, 0.7) : MacColors.opacity(MacColors.gray, 0.2)) : selected ? Qt.rgba(0.04, 0.49, 1, 0.7) : Qt.rgba(1, 1, 1, 0.08)
                             Column {
                                 anchors.centerIn: parent
                                 spacing: 3
@@ -272,14 +272,14 @@ AppWindow {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     width: 46; height: 20
                                     type: index
-                                    color: parent.parent.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.6)
+                                    color: isMacOS ? (parent.parent.selected ? MacColors.accent : MacColors.secondaryLabel) : parent.parent.selected ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.6)
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: modelData.tile
                                     font.pixelSize: 10
                                     font.weight: parent.parent.selected ? Font.DemiBold : Font.Normal
-                                    color: Qt.rgba(1, 1, 1, parent.parent.selected ? 0.95 : 0.7)
+                                    color: isMacOS ? (parent.parent.selected ? MacColors.accent : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, parent.parent.selected ? 0.95 : 0.7)
                                 }
                             }
                             MouseArea {
@@ -322,9 +322,9 @@ AppWindow {
                             height: 26
                             radius: 6
                             opacity: silent ? 0.4 : 1
-                            color: on ? Qt.rgba(0.04, 0.49, 1, 0.18) : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
+                            color: isMacOS ? (on ? MacColors.opacity(MacColors.accent, 0.18) : MacColors.opacity(MacColors.controlBackground, 0.6)) : on ? Qt.rgba(0.04, 0.49, 1, 0.18) : chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
                             border.width: walkActive ? 1.5 : 1
-                            border.color: walkActive ? "#32d74b" : on ? Qt.rgba(0.04, 0.49, 1, 0.6) : Qt.rgba(1, 1, 1, 0.08)
+                            border.color: isMacOS ? (walkActive ? MacColors.green : on ? MacColors.opacity(MacColors.accent, 0.6) : MacColors.opacity(MacColors.gray, 0.2)) : walkActive ? "#32d74b" : on ? Qt.rgba(0.04, 0.49, 1, 0.6) : Qt.rgba(1, 1, 1, 0.08)
                             Row {
                                 anchors.centerIn: parent
                                 spacing: 4
@@ -332,7 +332,7 @@ AppWindow {
                                     text: win.outputName(index)
                                     font.pixelSize: 11
                                     font.weight: parent.parent.on ? Font.DemiBold : Font.Normal
-                                    color: Qt.rgba(1, 1, 1, parent.parent.on ? 0.95 : 0.65)
+                                    color: isMacOS ? (parent.parent.on ? MacColors.label : MacColors.secondaryLabel) : Qt.rgba(1, 1, 1, parent.parent.on ? 0.95 : 0.65)
                                     elide: Text.ElideRight
                                     width: Math.min(implicitWidth, (leftColumn.width - 12) / 3 - 26)
                                 }
@@ -341,7 +341,7 @@ AppWindow {
                                     text: "ø"
                                     font.pixelSize: 12
                                     font.bold: true
-                                    color: "#ff9f0a"
+                                    color: isMacOS ? MacColors.orange : "#ff9f0a"
                                 }
                             }
                             MouseArea {
@@ -386,7 +386,7 @@ AppWindow {
         }
         }
 
-        Rectangle { id: colRule; x: leftFlick.width; width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.08) }
+        Rectangle { id: colRule; x: leftFlick.width; width: 1; height: parent.height; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 
         // Right: parameters, timing, options
         Flickable {
@@ -443,7 +443,7 @@ AppWindow {
                     Row {
                         visible: win.d.type === 11
                         spacing: 10
-                        Text { text: "Presets:"; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+                        Text { text: "Presets:"; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
                         LinkText { text: "SMPTE 60/7k"; onClicked: { siggen.setParam(0, 60); siggen.setParam(1, 7000); siggen.setParam(2, 4) } }
                         LinkText { text: "CCIF 19k/20k"; onClicked: { siggen.setParam(0, 19000); siggen.setParam(1, 20000); siggen.setParam(2, 1) } }
                     }
@@ -527,7 +527,7 @@ AppWindow {
     }
 
     // ── Transport ──
-    Rectangle { id: transportRule; anchors.bottom: transport.top; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    Rectangle { id: transportRule; anchors.bottom: transport.top; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
     Item {
         id: transport
         anchors.bottom: parent.bottom
@@ -545,7 +545,7 @@ AppWindow {
                 elide: Text.ElideRight
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
-                color: Qt.rgba(1, 1, 1, 0.9)
+                color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.9)
                 text: siggen.running ? win.stateNames[siggen.state] + " · " + win.typeName(siggen.signalType)
                     : win.blocker !== "" && bridge.connected && siggen.supported ? win.blocker
                     : "Ready · " + win.typeName(win.d.type)
@@ -554,7 +554,7 @@ AppWindow {
                 width: parent.width
                 elide: Text.ElideRight
                 font.pixelSize: 11
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5)
                 text: {
                     if (siggen.running) {
                         var parts = [win.fmtTime(siggen.elapsedMs)]
@@ -583,9 +583,9 @@ AppWindow {
             Rectangle {
                 visible: siggen.running
                 width: 30; height: 28; radius: 8
-                color: nowMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : nowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-                border.color: Qt.rgba(1, 1, 1, 0.18)
-                Icon { anchors.centerIn: parent; name: "stop"; size: 13; color: Qt.rgba(1, 1, 1, 0.8) }
+                color: isMacOS ? (nowMouse.pressed ? MacColors.opacity(MacColors.control, 1.6) : MacColors.control) : nowMouse.pressed ? Qt.rgba(1, 1, 1, 0.14) : nowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                border.color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.18)
+                Icon { anchors.centerIn: parent; name: "stop"; size: 13; color: isMacOS ? MacColors.label : Qt.rgba(1, 1, 1, 0.8) }
                 MouseArea {
                     id: nowMouse
                     anchors.fill: parent
@@ -603,15 +603,15 @@ AppWindow {
                 width: mainRow.width + 28
                 height: 28
                 radius: 8
-                opacity: siggen.running || canStart ? 1 : 0.4
-                color: siggen.running ? (mainMouse.pressed ? "#b52e35" : "#d9363e")
+                opacity: isMacOS ? 1 : siggen.running || canStart ? 1 : 0.4
+                color: isMacOS ? (siggen.running ? (mainMouse.pressed ? Qt.darker(MacColors.red, 1.2) : MacColors.red) : !canStart ? MacColors.control : mainMouse.pressed ? MacColors.defaultButtonPressed : MacColors.prominentButton) : siggen.running ? (mainMouse.pressed ? "#b52e35" : "#d9363e")
                                       : (mainMouse.pressed ? "#0868d6" : "#0a7cff")
                 Row {
                     id: mainRow
                     anchors.centerIn: parent
                     spacing: 6
-                    Icon { name: siggen.running ? "stop" : "play"; size: 13; color: "white"; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: siggen.running ? "Stop" : "Start"; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white"; anchors.verticalCenter: parent.verticalCenter }
+                    Icon { name: siggen.running ? "stop" : "play"; size: 13; color: isMacOS ? (siggen.running || parent.parent.canStart ? "white" : MacColors.tertiaryLabel) : "white"; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: siggen.running ? "Stop" : "Start"; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? (siggen.running || parent.parent.canStart ? "white" : MacColors.tertiaryLabel) : "white"; anchors.verticalCenter: parent.verticalCenter }
                 }
                 MouseArea {
                     id: mainMouse

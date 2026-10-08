@@ -15,19 +15,19 @@ Rectangle {
     signal toggled(bool enable)
 
     height: 52
-    color: Qt.rgba(1, 1, 1, 0.03)
+    color: isMacOS ? "transparent" : Qt.rgba(1, 1, 1, 0.03)
 
     Rectangle {
         id: tile
         x: 16
         anchors.verticalCenter: parent.verticalCenter
         width: 28; height: 28; radius: 7
-        color: Qt.rgba(0.04, 0.49, 1, hdr.checked || !hdr.showSwitch ? 0.18 : 0.08)
+        color: isMacOS ? "transparent" : Qt.rgba(0.04, 0.49, 1, hdr.checked || !hdr.showSwitch ? 0.18 : 0.08)
         Icon {
             anchors.centerIn: parent
             name: hdr.icon
             size: 16
-            color: hdr.checked || !hdr.showSwitch ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.45)
+            color: isMacOS ? MacColors.accent : hdr.checked || !hdr.showSwitch ? "#3a96ff" : Qt.rgba(1, 1, 1, 0.45)
         }
     }
     Column {
@@ -37,8 +37,8 @@ Rectangle {
         anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
-        Text { width: parent.width; elide: Text.ElideRight; text: hdr.title; font.pixelSize: 13; font.weight: Font.DemiBold; color: "white" }
-        Text { width: parent.width; elide: Text.ElideRight; text: hdr.subtitle; font.pixelSize: 11; color: Qt.rgba(1, 1, 1, 0.5) }
+        Text { width: parent.width; elide: Text.ElideRight; text: hdr.title; font.pixelSize: 13; font.weight: Font.DemiBold; color: isMacOS ? MacColors.label : "white" }
+        Text { width: parent.width; elide: Text.ElideRight; text: hdr.subtitle; font.pixelSize: 11; color: isMacOS ? MacColors.secondaryLabel : Qt.rgba(1, 1, 1, 0.5) }
     }
     Row {
         id: accessoryRow
@@ -57,5 +57,5 @@ Rectangle {
         enabled: bridge.connected
         onToggled: hdr.toggled(checked)
     }
-    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: isMacOS ? MacColors.separator : Qt.rgba(1, 1, 1, 0.08) }
 }

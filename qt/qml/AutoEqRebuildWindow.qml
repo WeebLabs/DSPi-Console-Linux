@@ -28,7 +28,7 @@ AppWindow {
             Text {
                 text: autoeq.rebuildStatus || "Connecting to GitHub..."
                 font.pixelSize: 13
-                color: "white"
+                color: isMacOS ? MacColors.secondaryLabel : "white"
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -36,8 +36,8 @@ AppWindow {
             width: parent.width
             height: 4
             radius: 2
-            color: Qt.rgba(1, 1, 1, 0.14)
-            Rectangle { width: parent.width * autoeq.rebuildProgress; height: parent.height; radius: 2; color: "#0a7cff" }
+            color: isMacOS ? MacColors.quaternaryLabel : Qt.rgba(1, 1, 1, 0.14)
+            Rectangle { width: parent.width * autoeq.rebuildProgress; height: parent.height; radius: 2; color: isMacOS ? MacColors.accent : "#0a7cff" }
         }
         Text {
             width: parent.width
