@@ -13,6 +13,10 @@ RtaController::RtaController(DSPiBridge *bridge, QObject *parent)
     m_snap.first_band = 0xFF;
     // A reconnect may change which channels exist
     connect(m_bridge, &DSPiBridge::devicesChanged, this, &RtaController::pushRequest);
+    // The bridge connects before this exists, so the probe may already have
+    // finished and woken nobody: read what it found (after the callback is
+    // set, so a probe finishing now is caught either way)
+    onWake();
 }
 
 RtaController::~RtaController() {
