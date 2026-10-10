@@ -3,7 +3,7 @@
 pkgname=dspi-console
 pkgver=1.1.6beta4
 pkgrel=1
-_commit=c52952b7dd4d681d0034fb17ca8796da94c6c0a3
+_commit=7b9143787b1f3d60f4a9f757e617e93292c35ea7
 pkgdesc="Control application for the DSPi audio processor"
 arch=('x86_64')
 url="https://github.com/WeebLabs/DSPi-Console-Linux"
